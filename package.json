@@ -1,0 +1,59 @@
+{
+  "name": "contextkit",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "description": "Context Infrastructure for AI Agents.",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "lint": "next lint",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "api:dev": "tsx src/server.ts",
+    "deploy:vercel": "vercel --prod",
+    "pages:build": "npx @cloudflare/next-on-pages",
+    "deploy:cloudflare": "npm run pages:build && wrangler pages deploy .vercel/output/static"
+  },
+  "dependencies": {
+    "@asteasolutions/zod-to-openapi": "^7.3.4",
+    "@hono/node-server": "^1.13.8",
+    "@hono/zod-validator": "^0.4.2",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "dotenv": "^16.6.1",
+    "drizzle-orm": "^0.38.4",
+    "framer-motion": "^11.18.2",
+    "gpt-tokenizer": "^2.8.1",
+    "hono": "^4.6.16",
+    "lucide-react": "^0.468.0",
+    "next": "^15.1.3",
+    "postgres": "^3.4.9",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "tailwind-merge": "^2.6.0",
+    "x402": "^0.4.1",
+    "x402-hono": "^0.4.1",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@cloudflare/next-on-pages": "^1.13.13",
+    "@cloudflare/workers-types": "^4.20241230.0",
+    "@types/node": "^22.10.2",
+    "@types/react": "^19.0.2",
+    "@types/react-dom": "^19.0.2",
+    "autoprefixer": "^10.4.20",
+    "drizzle-kit": "^0.30.6",
+    "eslint": "^9.17.0",
+    "eslint-config-next": "^15.1.3",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.17",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "wrangler": "^4.86.0"
+  }
+}

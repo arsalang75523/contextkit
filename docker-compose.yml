@@ -1,0 +1,38 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: contextkit
+      POSTGRES_USER: contextkit
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-contextkit_password}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U contextkit -d contextkit"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://contextkit:${POSTGRES_PASSWORD:-contextkit_password}@postgres:5432/contextkit
+      CONTEXTKIT_ADMIN_TOKEN: ${CONTEXTKIT_ADMIN_TOKEN}
+      CONTEXTKIT_WEBHOOK_SECRET: ${CONTEXTKIT_WEBHOOK_SECRET}
+      CONTEXTKIT_BASE_URL: ${CONTEXTKIT_BASE_URL:-http://localhost:3000}
+      BANKR_LLM_KEY: ${BANKR_LLM_KEY}
+      BANKR_LLM_BASE_URL: ${BANKR_LLM_BASE_URL:-https://llm.bankr.bot/v1}
+      BANKR_LLM_MODEL: ${BANKR_LLM_MODEL:-claude-sonnet-4.5}
+      X402_PAY_TO: ${X402_PAY_TO}
+      X402_NETWORK: ${X402_NETWORK:-base}
+      X402_FACILITATOR_URL: ${X402_FACILITATOR_URL:-https://facilitator.x402.org}
+    ports:
+      - "3000:3000"
+
+volumes:
+  postgres_data:

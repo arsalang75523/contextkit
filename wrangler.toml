@@ -1,0 +1,17 @@
+name = "contextkit"
+compatibility_date = "2026-05-29"
+pages_build_output_dir = ".vercel/output/static"
+
+[vars]
+BANKR_LLM_BASE_URL = "https://llm.bankr.bot/v1"
+BANKR_LLM_MODEL = "claude-sonnet-4.5"
+X402_NETWORK = "base"
+X402_FACILITATOR_URL = "https://facilitator.x402.org"
+
+[[kv_namespaces]]
+binding = "CONTEXTKIT_KV"
+id = "replace-with-production-kv-id"
+
+[[r2_buckets]]
+binding = "CONTEXTKIT_FILES"
+bucket_name = "contextkit-audit"

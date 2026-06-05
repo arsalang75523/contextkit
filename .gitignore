@@ -1,0 +1,12 @@
+node_modules
+.next
+.vercel
+.wrangler
+.dev.vars
+.env
+.env.local
+dist
+coverage
+*.log
+tmp
+.contextkit

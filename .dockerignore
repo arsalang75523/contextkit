@@ -1,0 +1,9 @@
+node_modules
+.next
+.git
+.contextkit
+.env
+.env.local
+coverage
+tmp
+*.log
