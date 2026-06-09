@@ -67,6 +67,52 @@ contextRoutes.post(
   }
 );
 
+contextRoutes.post("/x402/summarize", x402PaymentRequired("summarize"), zValidator("json", conversationRequestSchema), async (c) => {
+  const request = { ...c.req.valid("json"), messages: sanitizeMessages(c.req.valid("json").messages) };
+  const service = new ContextService({ env: c.env ?? {}, requestId: c.get("requestId") });
+  const result = await service.summarize(request);
+  await complete(c, "/x402/summarize", request, JSON.stringify(result), c.get("payment")?.paymentId);
+  await service.emitCompleted(request, "summarization.completed", result);
+  return c.json(result);
+});
+
+contextRoutes.post(
+  "/x402/compress-context",
+  x402PaymentRequired("compress-context"),
+  zValidator("json", conversationRequestSchema),
+  async (c) => {
+    const request = { ...c.req.valid("json"), messages: sanitizeMessages(c.req.valid("json").messages) };
+    const service = new ContextService({ env: c.env ?? {}, requestId: c.get("requestId") });
+    const result = await service.compress(request);
+    await complete(c, "/x402/compress-context", request, JSON.stringify(result), c.get("payment")?.paymentId);
+    await service.emitCompleted(request, "context.compressed", result);
+    return c.json(result);
+  }
+);
+
+contextRoutes.post("/x402/handoff", x402PaymentRequired("handoff"), zValidator("json", conversationRequestSchema), async (c) => {
+  const request = { ...c.req.valid("json"), messages: sanitizeMessages(c.req.valid("json").messages) };
+  const service = new ContextService({ env: c.env ?? {}, requestId: c.get("requestId") });
+  const result = await service.handoff(request);
+  await complete(c, "/x402/handoff", request, JSON.stringify(result), c.get("payment")?.paymentId);
+  await service.emitCompleted(request, "handoff.generated", result);
+  return c.json(result);
+});
+
+contextRoutes.post(
+  "/x402/extract-profile",
+  x402PaymentRequired("extract-profile"),
+  zValidator("json", conversationRequestSchema),
+  async (c) => {
+    const request = { ...c.req.valid("json"), messages: sanitizeMessages(c.req.valid("json").messages) };
+    const service = new ContextService({ env: c.env ?? {}, requestId: c.get("requestId") });
+    const result = await service.profile(request);
+    await complete(c, "/x402/extract-profile", request, JSON.stringify(result), c.get("payment")?.paymentId);
+    await service.emitCompleted(request, "profile.extracted", result);
+    return c.json(result);
+  }
+);
+
 async function complete(
   c: Context<AppBindings>,
   route: string,
