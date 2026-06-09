@@ -8,18 +8,22 @@ import { endpointPricing } from "@/lib/pricing";
 export function x402PaymentRequired(endpoint: ContextEndpoint): MiddlewareHandler<AppBindings> {
   return async (c, next) => {
     const amountUsd = endpointPricing[endpoint];
-    const paymentHeader = c.req.header("x-payment") ?? c.req.header("x402-payment");
+    const paymentHeader =
+      c.req.header("x-payment") ??
+      c.req.header("x402-payment") ??
+      c.req.header("payment-signature") ??
+      c.req.header("x-payment-payload");
     const paymentService = new PaymentService(c.env ?? {});
 
     if (!paymentHeader) {
+      const accepts = paymentService.paymentRequirements(c.req.url, amountUsd);
+      addPaymentRequiredHeaders(c, accepts);
       return c.json(
         {
-          error: {
-            code: "payment_required",
-            message: "This endpoint requires an x402 payment.",
-            requestId: c.get("requestId")
-          },
-          accepts: paymentService.paymentRequirements(c.req.url, amountUsd)
+          x402Version: 1,
+          error: "Payment required to access this resource",
+          accepts,
+          requestId: c.get("requestId")
         },
         402
       );
@@ -27,15 +31,15 @@ export function x402PaymentRequired(endpoint: ContextEndpoint): MiddlewareHandle
 
     const verification = await paymentService.verify(paymentHeader, c.req.url, amountUsd);
     if (!verification.ok || !verification.paymentId) {
+      const accepts = paymentService.paymentRequirements(c.req.url, amountUsd);
+      addPaymentRequiredHeaders(c, accepts);
       return c.json(
         {
-          error: {
-            code: "payment_verification_failed",
-            message: "x402 payment could not be verified.",
-            requestId: c.get("requestId"),
-            details: verification.error
-          },
-          accepts: paymentService.paymentRequirements(c.req.url, amountUsd)
+          x402Version: 1,
+          error: "Payment verification failed",
+          accepts,
+          requestId: c.get("requestId"),
+          details: verification.error
         },
         402
       );
@@ -59,4 +63,14 @@ export function x402PaymentRequired(endpoint: ContextEndpoint): MiddlewareHandle
     log("info", "x402 payment accepted", { requestId: c.get("requestId"), ...payment });
     await next();
   };
+}
+
+function addPaymentRequiredHeaders(c: Parameters<MiddlewareHandler<AppBindings>>[0], accepts: unknown) {
+  const payload = JSON.stringify({ x402Version: 1, accepts });
+  const encoded =
+    typeof btoa === "function"
+      ? btoa(payload)
+      : Buffer.from(payload, "utf8").toString("base64");
+  c.header("PAYMENT-REQUIRED", encoded);
+  c.header("X-PAYMENT-REQUIRED", encoded);
 }
