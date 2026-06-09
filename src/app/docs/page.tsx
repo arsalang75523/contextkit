@@ -35,10 +35,24 @@ export default function DocsPage() {
               ContextKit is a payable context service for autonomous agents. It turns verbose conversations into compact memory, handoff payloads, and durable user profiles.
             </DocSection>
             <DocSection id="quick-start" title="Quick Start">
+              For the normal public paid flow, use Bankr-hosted x402. You do not need a ContextKit API key for these paid generation calls.
               <CodeBlock code={quickStart} />
             </DocSection>
             <DocSection id="authentication" title="Authentication">
-              API-key routes use <code>Authorization: Bearer &lt;api_key&gt;</code>. Bankr-hosted x402 routes do not require a ContextKit API key; Bankr handles payment and forwards the paid request.
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="rounded-md border border-mint/20 bg-mint/10 p-4">
+                  <h3 className="font-semibold text-white">Bankr-hosted x402 calls</h3>
+                  <p className="mt-2 text-sm leading-6 text-white/60">
+                    Best for new users and agents. Call <code>x402.bankr.bot</code>, approve payment with Bankr, and receive JSON. No ContextKit API key is required.
+                  </p>
+                </div>
+                <div className="rounded-md border border-aqua/20 bg-aqua/10 p-4">
+                  <h3 className="font-semibold text-white">ContextKit API keys</h3>
+                  <p className="mt-2 text-sm leading-6 text-white/60">
+                    Used for dashboard data, analytics, token estimates, webhook management, and advanced direct API integrations. Keys are scoped and can be revoked.
+                  </p>
+                </div>
+              </div>
             </DocSection>
             <DocSection id="x402-payments" title="x402 Payments">
               Recommended production flow is Bankr-hosted x402: agents call <code>x402.bankr.bot</code>, Bankr settles USDC on Base, then forwards to ContextKit internal endpoints. Advanced self-hosted clients can still use direct HTTP 402 challenge/retry flows.

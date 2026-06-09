@@ -14,10 +14,12 @@
 
 html {
   scroll-behavior: smooth;
+  overflow-x: hidden;
 }
 
 body {
   margin: 0;
+  overflow-x: hidden;
   background:
     linear-gradient(140deg, rgba(115, 243, 195, 0.09), transparent 28%),
     linear-gradient(60deg, rgba(255, 123, 107, 0.09), transparent 24%),
@@ -39,7 +41,8 @@ body {
 }
 
 .code-block {
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
   border: 1px solid rgba(219, 255, 239, 0.12);
   background: rgba(5, 7, 6, 0.72);
   padding: 1rem;
@@ -47,6 +50,9 @@ body {
   font-family: var(--font-mono);
   font-size: 0.82rem;
   line-height: 1.65;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .text-balance {

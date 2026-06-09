@@ -30,13 +30,13 @@ export function GetStartedCard() {
         </p>
         <div className="mt-6 grid gap-3 text-sm text-white/65">
           <div className="rounded border border-line bg-ink/65 p-4">
-            <span className="text-mint">1.</span> Generate <code>ck_test_</code> or <code>ck_live_</code> keys with scoped permissions.
+            <span className="text-mint">1.</span> New users call paid endpoints through Bankr-hosted x402. They only need Bankr CLI/account payment access.
           </div>
           <div className="rounded border border-line bg-ink/65 p-4">
-            <span className="text-mint">2.</span> Use <code>ContextKit</code> SDK methods: summarize, compressContext, handoff, extractProfile.
+            <span className="text-mint">2.</span> ContextKit API keys are for dashboards, analytics, token estimates, webhooks, and advanced direct API usage.
           </div>
           <div className="rounded border border-line bg-ink/65 p-4">
-            <span className="text-mint">3.</span> Call Bankr-hosted x402 endpoints directly from Bankr agents or CLI. No payment password is pasted into ContextKit.
+            <span className="text-mint">3.</span> In the current admin-issued flow, the ContextKit team creates scoped <code>ck_live_</code> or <code>ck_test_</code> keys for developers.
           </div>
         </div>
       </div>

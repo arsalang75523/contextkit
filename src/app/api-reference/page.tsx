@@ -11,6 +11,16 @@ export default function ApiReferencePage() {
         <GetStartedCard />
       </Section>
       <Section eyebrow="API Reference" title="Typed context APIs with x402 pricing and signed webhooks.">
+        <div className="mb-8 grid gap-4 md:grid-cols-2">
+          <div className="rounded-md border border-mint/20 bg-mint/10 p-5">
+            <h2 className="font-semibold text-white">Recommended: Bankr-hosted x402</h2>
+            <p className="mt-2 text-sm leading-6 text-white/60">Use these URLs for public paid calls. Bankr handles payment, then forwards the request to ContextKit. No ContextKit API key is required.</p>
+          </div>
+          <div className="rounded-md border border-aqua/20 bg-aqua/10 p-5">
+            <h2 className="font-semibold text-white">Advanced: direct API routes</h2>
+            <p className="mt-2 text-sm leading-6 text-white/60">Direct <code>/api/*</code> routes are for API-key users, dashboards, webhooks, analytics, token estimates, and custom x402 clients.</p>
+          </div>
+        </div>
         <div className="space-y-8">
           {endpoints.map((endpoint) => {
             const request = JSON.stringify({ messages: [{ role: "user", content: "Long-running agent conversation..." }] }, null, 2);
@@ -20,7 +30,7 @@ export default function ApiReferencePage() {
               <article key={endpoint.slug} className="rounded-md border border-line bg-white/[0.035] p-6">
                 <div className="flex flex-wrap items-center justify-between gap-4">
                   <div>
-                    <p className="font-mono text-sm text-mint">{endpoint.method} {bankrHostedUrl(endpoint.slug)}</p>
+                    <p className="break-all font-mono text-sm text-mint">{endpoint.method} {bankrHostedUrl(endpoint.slug)}</p>
                     <h2 className="mt-2 text-2xl font-semibold text-white">{endpoint.description}</h2>
                   </div>
                   <span className="rounded-md border border-aqua/25 bg-aqua/10 px-3 py-1 text-sm text-aqua">{endpoint.price}</span>

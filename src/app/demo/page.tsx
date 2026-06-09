@@ -52,8 +52,19 @@ export default function DemoPage() {
         <p className="text-sm uppercase tracking-[0.22em] text-mint">Killer Demo</p>
         <h1 className="mt-4 text-4xl font-semibold text-white md:text-6xl">Show real value without fake payment fields.</h1>
         <p className="mt-4 max-w-3xl leading-7 text-white/65">
-          Browser demos should not ask users to paste payment credentials. ContextKit exposes real Bankr-hosted paid endpoints, copyable agent commands, and measurable token savings for API-key users.
+          This page separates the two real workflows: Bankr-hosted x402 commands for paid AI generation, and ContextKit API keys for measuring tokens or reading dashboard data.
         </p>
+
+        <div className="mt-8 grid gap-4 md:grid-cols-2">
+          <div className="rounded-md border border-mint/20 bg-mint/10 p-4">
+            <h2 className="font-semibold text-white">Paid generation</h2>
+            <p className="mt-2 text-sm leading-6 text-white/60">Copy the Bankr x402 command, run it in a Bankr-authenticated terminal, approve USDC payment, and get the JSON response.</p>
+          </div>
+          <div className="rounded-md border border-aqua/20 bg-aqua/10 p-4">
+            <h2 className="font-semibold text-white">Token measurement</h2>
+            <p className="mt-2 text-sm leading-6 text-white/60">Paste a ContextKit API key only if you want this page to estimate tokens without running a paid generation request.</p>
+          </div>
+        </div>
 
         <div className="mt-8 grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">
           <section className="space-y-4 rounded-md border border-line bg-white/[0.035] p-5">

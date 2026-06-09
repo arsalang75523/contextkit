@@ -6,7 +6,6 @@ Return only valid minified JSON matching the requested schema. Do not include ma
 Preserve facts, user goals, constraints, preferences, and unresolved tasks.
 Do not invent details. Use empty arrays or "unknown" when evidence is insufficient.
 Optimize for future LLM context efficiency and agent handoff reliability.
-When users say "Finglish" in this product context, interpret it as Persian-English transliteration unless they explicitly mention Finnish.
 `;
 
 const schemas: Record<ContextEndpoint, string> = {

@@ -55,13 +55,29 @@ export default function PlaygroundPage() {
     <main className="px-5 py-16">
       <div className="mx-auto max-w-7xl">
         <p className="text-sm uppercase tracking-[0.22em] text-mint">Interactive Playground</p>
-        <h1 className="mt-4 text-4xl font-semibold text-white md:text-6xl">Build real Bankr x402 calls.</h1>
+        <h1 className="mt-4 text-4xl font-semibold text-white md:text-6xl">Test ContextKit like a real user.</h1>
         <p className="mt-4 max-w-3xl leading-7 text-white/65">
-          ContextKit does not ask for an x402 password. Paid calls are made by Bankr CLI, Bankr agents, or an x402-compatible wallet/client. This playground builds real commands and lets API-key users inspect token counts.
+          New users do not need a ContextKit API key to call the paid AI endpoints. They copy the Bankr x402 command, run it from a Bankr-authenticated terminal or agent, approve the USDC payment, and receive JSON back.
         </p>
+
+        <div className="mt-8 grid gap-4 md:grid-cols-3">
+          {[
+            ["1. Choose a service", "Summarize, compress, handoff, or profile. The hosted URL changes when you switch services."],
+            ["2. Copy the command", "The command calls x402.bankr.bot. Bankr handles payment and forwards the paid request to ContextKit."],
+            ["3. Optional API key", "API keys are only for dashboard, analytics, token estimates, webhooks, and advanced direct API usage."]
+          ].map(([title, text]) => (
+            <div key={title} className="rounded-md border border-line bg-white/[0.035] p-4">
+              <h2 className="font-semibold text-white">{title}</h2>
+              <p className="mt-2 text-sm leading-6 text-white/60">{text}</p>
+            </div>
+          ))}
+        </div>
 
         <div className="mt-10 grid gap-5 lg:grid-cols-[1fr_0.85fr]">
           <section className="rounded-md border border-line bg-white/[0.035] p-5">
+            <div className="mb-4 rounded-md border border-aqua/20 bg-aqua/10 p-4 text-sm leading-6 text-white/65">
+              Pick one service below. <span className="text-aqua">Summarize</span> is selected by default because it is the easiest first test. The other services are here too; clicking them changes the paid endpoint and command.
+            </div>
             <div className="mb-4 flex flex-wrap gap-2">
               {endpoints.map((item) => (
                 <button
@@ -81,8 +97,11 @@ export default function PlaygroundPage() {
             />
             <div className="mt-4 grid gap-3 rounded-md border border-line bg-carbon/60 p-4">
               <label htmlFor="api-key" className="text-sm text-white/55">
-                Optional API key for token estimation
+                Optional ContextKit API key for token estimation
               </label>
+              <p className="text-sm leading-6 text-white/45">
+                This does not run the paid AI endpoint. It only measures token counts for developers who already have a ContextKit key.
+              </p>
               <div className="flex flex-col gap-3 sm:flex-row">
                 <input id="api-key" value={apiKey} onChange={(event) => setApiKey(event.target.value)} placeholder="ck_live_... or ck_test_..." className="h-11 flex-1 rounded-md border border-line bg-ink/80 px-3 font-mono text-sm text-white outline-none focus:border-mint" />
                 <button type="button" onClick={estimateTokens} disabled={isPending} className="inline-flex h-11 items-center justify-center gap-2 rounded-md bg-mint px-5 text-sm font-medium text-ink disabled:opacity-50">
@@ -97,12 +116,17 @@ export default function PlaygroundPage() {
           <section className="space-y-5 rounded-md border border-line bg-carbon/72 p-5">
             <div className="rounded-md border border-mint/25 bg-mint/10 p-4">
               <p className="font-mono text-sm text-mint">{bankrHostedUrl(active.slug)}</p>
-              <p className="mt-2 text-sm text-white/60">{active.price} via Bankr-hosted x402. No ContextKit API key required for this hosted paid endpoint.</p>
+              <p className="mt-2 text-sm text-white/60">
+                {active.price} via Bankr-hosted x402. This is the real paid endpoint for <span className="text-mint">{active.slug}</span>. No ContextKit API key is required for this hosted paid endpoint.
+              </p>
             </div>
             <div>
               <div className="mb-3 flex items-center gap-2 text-sm uppercase tracking-[0.18em] text-white/45">
                 <Terminal className="h-4 w-4" /> Copyable paid request
               </div>
+              <p className="mb-3 text-sm leading-6 text-white/55">
+                Copy this command into a terminal where <code>bankr login</code> is already configured. Bankr will ask for payment approval, then return the ContextKit JSON response.
+              </p>
               <CodeBlock code={command} />
             </div>
             <div>
