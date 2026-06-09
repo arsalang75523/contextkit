@@ -21,7 +21,16 @@ analyticsRoutes.get("/analytics/tokens", requireApiKey("analytics:read"), async 
 });
 
 analyticsRoutes.get("/analytics/payments", requireApiKey("analytics:read"), async (c) => {
-  return c.json({ payments: await new PaymentService(c.env ?? {}).listPayments() });
+  const overview = await new AnalyticsService(c.env ?? {}).overview();
+  const payments = await new PaymentService(c.env ?? {}).listPayments();
+  return c.json({
+    summary: {
+      paymentTotal: overview.paymentTotal,
+      paymentCount: payments.length,
+      note: "ContextKit tracks Bankr-hosted x402 payments forwarded through the v2 wrapper. Earlier Bankr earnings remain visible in Bankr x402 list."
+    },
+    payments
+  });
 });
 
 analyticsRoutes.get("/analytics/usage", requireApiKey("analytics:read"), async (c) => {

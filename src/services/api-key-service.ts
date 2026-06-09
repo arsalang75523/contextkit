@@ -17,6 +17,7 @@ export type ApiKeyRecord = {
   totalRequests: number;
   totalSpend: number;
   endpointUsage: Record<string, number>;
+  ownerId?: string;
 };
 
 export class ApiKeyService {
@@ -26,7 +27,7 @@ export class ApiKeyService {
     this.kv = new AppKV(env.CONTEXTKIT_KV);
   }
 
-  async create(input: CreateApiKeyInput) {
+  async create(input: CreateApiKeyInput, ownerId?: string) {
     const id = createId("key");
     const prefix = input.environment === "live" ? "ck_live" : "ck_test";
     const secret = `${prefix}_${randomSecret(30)}`;
@@ -41,7 +42,8 @@ export class ApiKeyService {
       createdAt: new Date().toISOString(),
       totalRequests: 0,
       totalSpend: 0,
-      endpointUsage: {}
+      endpointUsage: {},
+      ownerId
     };
 
     await Promise.all([
@@ -72,10 +74,13 @@ export class ApiKeyService {
     return true;
   }
 
-  async list() {
+  async list(ownerId?: string) {
     const index = await this.kv.getMany<{ id: string; hash: string }>("api-key-index:");
     const records = await Promise.all(index.map((item) => this.kv.get<ApiKeyRecord>(`api-key:${item.hash}`)));
-    return records.filter((record): record is ApiKeyRecord => Boolean(record)).map((record) => this.publicRecord(record));
+    return records
+      .filter((record): record is ApiKeyRecord => Boolean(record))
+      .filter((record) => !ownerId || record.ownerId === ownerId)
+      .map((record) => this.publicRecord(record));
   }
 
   async recordUsage(hash: string, route: string, spend: number) {
@@ -116,7 +121,8 @@ export class ApiKeyService {
       lastUsedAt: record.lastUsedAt,
       totalRequests: record.totalRequests,
       totalSpend: record.totalSpend,
-      endpointUsage: record.endpointUsage
+      endpointUsage: record.endpointUsage,
+      ownerId: record.ownerId
     };
   }
 }

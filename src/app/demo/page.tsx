@@ -8,7 +8,13 @@ const starter = `user: We are building ContextKit, a Bankr-native context infras
 assistant: The backend runs on Hetzner with Docker Compose, Next.js, Hono, Postgres, and Drizzle migrations.
 user: Bankr-hosted x402 endpoints live at x402.bankr.bot and forward paid requests to internal ContextKit endpoints.
 assistant: Production fixes included Docker env forwarding, public HTTPS resource URLs, and robust JSON parsing for fenced LLM responses.
-user: Summarize this deployment state for a new AI agent and preserve next steps.`;
+user: The product has four paid services: summarize, compress-context, handoff, and extract-profile. Summarize costs $0.002, compress-context costs $0.003, handoff costs $0.003, and profile costs $0.004.
+assistant: The dashboard should support signup, login, API key creation, revocation, usage analytics, webhook management, payment history, and token savings charts.
+user: New users should not be asked for an x402 password. They should copy a Bankr x402 command, run it from a Bankr-authenticated terminal, approve payment, and receive JSON.
+assistant: ContextKit API keys are separate. They are for dashboards, analytics, token estimates, webhook management, and advanced direct API usage.
+user: Webhooks need registration, signed delivery, replay, delivery logs, and secret rotation. Billing should show Bankr-hosted x402 payments that ContextKit records after paid requests are forwarded.
+assistant: The next production priorities are real account onboarding, better dashboard UX, webhook UI, payment reconciliation, monitoring, backups, and a real domain.
+user: Summarize this deployment state for a new AI agent and preserve exact next steps without repeating every implementation detail.`;
 
 type TokenResult = {
   inputTokens?: number;

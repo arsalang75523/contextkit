@@ -1,41 +1,92 @@
 "use client";
 
 import { useState } from "react";
+import { CodeBlock } from "@/components/code-block";
+
+type Mode = "login" | "signup" | "api-key";
 
 export default function DashboardLoginPage() {
+  const [mode, setMode] = useState<Mode>("signup");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
+  const [company, setCompany] = useState("");
   const [apiKey, setApiKey] = useState("");
+  const [result, setResult] = useState<object | null>(null);
   const [error, setError] = useState("");
 
-  async function login() {
+  async function submit() {
     setError("");
-    const response = await fetch("/api/dashboard/session", {
+    setResult(null);
+    const endpoint = mode === "signup" ? "/api/dashboard/signup" : mode === "login" ? "/api/dashboard/login" : "/api/dashboard/session";
+    const body = mode === "signup" ? { email, password, name, company } : mode === "login" ? { email, password } : { apiKey };
+    const response = await fetch(endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ apiKey })
+      body: JSON.stringify(body)
     });
+    const payload = (await response.json().catch(() => ({}))) as Record<string, unknown>;
     if (!response.ok) {
-      setError(await response.text());
+      setError(JSON.stringify(payload, null, 2));
       return;
     }
-    window.localStorage.setItem("contextkit_api_key", apiKey);
+    if (mode === "api-key") {
+      window.localStorage.setItem("contextkit_api_key", apiKey);
+    }
+    if (mode === "signup" && typeof payload.key === "string") {
+      window.localStorage.setItem("contextkit_api_key", payload.key);
+      setResult(payload);
+      return;
+    }
     window.location.href = "/dashboard";
   }
 
   return (
-    <main className="grid min-h-screen place-items-center px-5">
-      <section className="w-full max-w-md rounded-md border border-line bg-white/[0.035] p-6">
-        <p className="text-sm uppercase tracking-[0.22em] text-mint">Dashboard Login</p>
-        <h1 className="mt-4 text-3xl font-semibold text-white">Authenticate with a ContextKit API key.</h1>
-        <input
-          value={apiKey}
-          onChange={(event) => setApiKey(event.target.value)}
-          placeholder="ck_live_..."
-          className="mt-6 h-11 w-full rounded-md border border-line bg-ink/80 px-3 font-mono text-sm text-white outline-none focus:border-mint"
-        />
-        <button type="button" onClick={login} className="mt-4 h-11 w-full rounded-md bg-mint px-5 text-sm font-medium text-ink">
-          Continue
-        </button>
-        {error ? <pre className="mt-4 overflow-auto rounded border border-coral/40 bg-coral/10 p-3 text-xs text-coral">{error}</pre> : null}
+    <main className="grid min-h-screen place-items-center px-5 py-16">
+      <section className="w-full max-w-3xl rounded-md border border-line bg-white/[0.035] p-6">
+        <p className="text-sm uppercase tracking-[0.22em] text-mint">Dashboard Access</p>
+        <h1 className="mt-4 text-3xl font-semibold text-white">Create an account, issue keys, and manage production usage.</h1>
+        <div className="mt-6 grid gap-2 sm:grid-cols-3">
+          {[
+            ["signup", "Sign up"],
+            ["login", "Login"],
+            ["api-key", "Use API key"]
+          ].map(([key, label]) => (
+            <button key={key} type="button" onClick={() => setMode(key as Mode)} className={`h-10 rounded-md border text-sm ${mode === key ? "border-mint bg-mint/10 text-mint" : "border-line text-white/65"}`}>
+              {label}
+            </button>
+          ))}
+        </div>
+        <div className="mt-6 grid gap-3">
+          {mode !== "api-key" ? (
+            <>
+              {mode === "signup" ? <input value={name} onChange={(event) => setName(event.target.value)} placeholder="Your name" className="h-11 rounded-md border border-line bg-ink/80 px-3 text-sm text-white outline-none focus:border-mint" /> : null}
+              {mode === "signup" ? <input value={company} onChange={(event) => setCompany(event.target.value)} placeholder="Company or project" className="h-11 rounded-md border border-line bg-ink/80 px-3 text-sm text-white outline-none focus:border-mint" /> : null}
+              <input value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@company.com" className="h-11 rounded-md border border-line bg-ink/80 px-3 text-sm text-white outline-none focus:border-mint" />
+              <input value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Password, 12+ chars" type="password" className="h-11 rounded-md border border-line bg-ink/80 px-3 text-sm text-white outline-none focus:border-mint" />
+            </>
+          ) : (
+            <input value={apiKey} onChange={(event) => setApiKey(event.target.value)} placeholder="ck_live_..." className="h-11 rounded-md border border-line bg-ink/80 px-3 font-mono text-sm text-white outline-none focus:border-mint" />
+          )}
+          <button type="button" onClick={submit} className="h-11 rounded-md bg-mint px-5 text-sm font-medium text-ink">
+            {mode === "signup" ? "Create account + first API key" : "Continue"}
+          </button>
+        </div>
+        {mode === "signup" ? (
+          <p className="mt-4 text-sm leading-6 text-white/55">
+            The first key is shown once. Store it securely. You can create/revoke more scoped keys from the dashboard.
+          </p>
+        ) : null}
+        {result ? (
+          <div className="mt-5">
+            <p className="mb-3 text-sm text-mint">Account created. Store this API key now, then open the dashboard.</p>
+            <CodeBlock code={JSON.stringify(result, null, 2)} />
+            <button type="button" onClick={() => (window.location.href = "/dashboard")} className="mt-4 h-11 rounded-md border border-mint/40 px-5 text-sm text-mint">
+              Open dashboard
+            </button>
+          </div>
+        ) : null}
+        {error ? <pre className="mt-4 whitespace-pre-wrap rounded border border-coral/40 bg-coral/10 p-3 text-xs text-coral">{error}</pre> : null}
       </section>
     </main>
   );

@@ -30,6 +30,18 @@ webhookRoutes.post("/webhooks/register", requireApiKey("webhooks:write"), zValid
   return c.json({ id, secret, status: "active" }, 201);
 });
 
+webhookRoutes.get("/webhooks/endpoints", requireApiKey("webhooks:write"), async (c) => {
+  const kv = new AppKV((c.env ?? {}).CONTEXTKIT_KV);
+  const index = await kv.getMany<{ id: string }>("webhook-index:");
+  const endpoints = await Promise.all(index.map((item) => kv.get<Record<string, unknown>>(`webhook:${item.id}`)));
+  return c.json({
+    endpoints: endpoints.filter(Boolean).map((endpoint) => ({
+      ...endpoint,
+      secret: endpoint?.secret ? "whsec_..." : undefined
+    }))
+  });
+});
+
 webhookRoutes.post("/webhooks/verify", async (c) => {
   const signature = c.req.header("ContextKit-Signature") ?? "";
   const body = await c.req.text();

@@ -23,6 +23,18 @@ export const createApiKeySchema = z.object({
   scopes: z.array(z.enum(["context:write", "analytics:read", "webhooks:write", "keys:read"])).default(["context:write"])
 });
 
+export const signupSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(12).max(128),
+  name: z.string().min(1).max(80),
+  company: z.string().min(1).max(120).optional()
+});
+
+export const loginSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(1).max(128)
+});
+
 export const revokeApiKeySchema = z.object({
   keyId: z.string().min(1)
 });
@@ -41,6 +53,7 @@ export const webhookReplaySchema = z.object({
 export type ConversationRequest = z.infer<typeof conversationRequestSchema>;
 export type ConversationMessage = z.infer<typeof messageSchema>;
 export type CreateApiKeyInput = z.infer<typeof createApiKeySchema>;
+export type SignupInput = z.infer<typeof signupSchema>;
 
 export type ContextEndpoint = "summarize" | "compress-context" | "handoff" | "extract-profile";
 

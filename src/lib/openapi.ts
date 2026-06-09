@@ -3,7 +3,9 @@ import { z } from "zod";
 import {
   conversationRequestSchema,
   createApiKeySchema,
+  loginSchema,
   revokeApiKeySchema,
+  signupSchema,
   tokenEstimateSchema,
   webhookRegistrationSchema,
   webhookReplaySchema
@@ -114,6 +116,39 @@ registry.registerPath({
   responses: {
     201: response("API key created.", z.object({ key: z.string(), apiKey: z.record(z.unknown()) })),
     401: response("Unauthorized.", errorSchema)
+  }
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/api/dashboard/signup",
+  summary: "Create a self-serve dashboard account",
+  request: { body: { content: { "application/json": { schema: signupSchema } } } },
+  responses: {
+    201: response("Account and first API key created.", z.object({ account: z.record(z.unknown()), key: z.string(), apiKey: z.record(z.unknown()) })),
+    409: response("Account already exists.", errorSchema)
+  }
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/api/dashboard/login",
+  summary: "Login to dashboard",
+  request: { body: { content: { "application/json": { schema: loginSchema } } } },
+  responses: {
+    200: response("Dashboard session created.", z.object({ ok: z.boolean(), account: z.record(z.unknown()) })),
+    401: response("Invalid login.", errorSchema)
+  }
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/api/dashboard/create-key",
+  summary: "Create an API key for the current dashboard account",
+  request: { body: { content: { "application/json": { schema: createApiKeySchema } } } },
+  responses: {
+    201: response("API key created.", z.object({ key: z.string(), apiKey: z.record(z.unknown()) })),
+    401: response("Dashboard session required.", errorSchema)
   }
 });
 
