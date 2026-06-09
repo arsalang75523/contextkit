@@ -9,7 +9,8 @@ import { AppKV } from "@/storage/app-kv";
 import { createId } from "@/utils/id";
 import { sanitizeMessages } from "@/utils/sanitize";
 import { estimateReduction, estimateTokens } from "@/utils/tokens";
-import { createApiKeySchema, forgotPasswordSchema, loginSchema, playgroundRunSchema, resetPasswordSchema, signupSchema } from "@/types/api";
+import { endpointPricing } from "@/lib/pricing";
+import { createApiKeySchema, demoRunSchema, forgotPasswordSchema, loginSchema, playgroundRunSchema, resetPasswordSchema, signupSchema } from "@/types/api";
 import type { AppBindings } from "@/types/bindings";
 import type { ConversationMessage, ConversationRequest } from "@/types/api";
 
@@ -104,7 +105,7 @@ dashboardSessionRoutes.post("/playground/run", zValidator("json", playgroundRunS
   }
 
   const ownerId = session.accountId ?? `api-key:${session.apiKeyId}`;
-  const quota = await consumePlaygroundQuota(c, ownerId);
+  const quota = await consumeDailyQuota(c, "playground-quota", ownerId, 3);
   if (!quota.allowed) {
     return c.json({
       error: {
@@ -150,6 +151,72 @@ dashboardSessionRoutes.post("/playground/run", zValidator("json", playgroundRunS
   });
 });
 
+dashboardSessionRoutes.post("/demo/run", zValidator("json", demoRunSchema), async (c) => {
+  const session = await readDashboardSession(c);
+  if (!session?.accountId && !session?.apiKeyId) {
+    return c.json({ error: { code: "unauthorized", message: "Login or API-key session required to run the live demo.", requestId: c.get("requestId") } }, 401);
+  }
+
+  const ownerId = session.accountId ?? `api-key:${session.apiKeyId}`;
+  const quota = await consumeDailyQuota(c, "demo-quota", ownerId, 3);
+  if (!quota.allowed) {
+    return c.json({
+      error: {
+        code: "demo_daily_limit",
+        message: "Daily demo limit reached. Use Bankr-hosted x402 or the API playground for more tests.",
+        requestId: c.get("requestId")
+      },
+      quota
+    }, 429);
+  }
+
+  const request: ConversationRequest = { messages: sanitizeMessages(c.req.valid("json").messages) };
+  const startedAt = Date.now();
+  const service = new ContextService({ env: c.env ?? {}, requestId: c.get("requestId") });
+  const [summary, compression, handoff, profile] = await Promise.all([
+    service.summarize(request),
+    service.compress(request),
+    service.handoff(request),
+    service.profile(request)
+  ]);
+
+  const inputTokens = estimateTokens(request.messages as ConversationMessage[]);
+  const compressedTokens = estimateTokens(compression.compressedContext);
+  const outputTokens = estimateTokens(JSON.stringify({ summary, compression, handoff, profile }));
+  const latencyMs = Date.now() - startedAt;
+  const totalX402CostUsd = Number(Object.values(endpointPricing).reduce((sum, price) => sum + price, 0).toFixed(3));
+
+  await new AnalyticsService(c.env ?? {}).recordRequest({
+    requestId: c.get("requestId"),
+    route: "/demo/full",
+    latencyMs,
+    inputTokens,
+    outputTokens,
+    ownerId,
+    status: "success"
+  });
+
+  return c.json({
+    requestId: c.get("requestId"),
+    outputs: {
+      summary,
+      compression,
+      handoff,
+      profile
+    },
+    metrics: {
+      inputTokens,
+      compressedTokens,
+      outputTokens,
+      compressionReductionPercent: estimateReduction(inputTokens, compressedTokens),
+      fullOutputReductionPercent: estimateReduction(inputTokens, outputTokens),
+      latencyMs,
+      totalX402CostUsd
+    },
+    quota
+  });
+});
+
 dashboardSessionRoutes.post("/dashboard/session", async (c) => {
   const body = (await c.req.json().catch(() => ({}))) as { apiKey?: string };
   if (!body.apiKey) {
@@ -172,10 +239,9 @@ dashboardSessionRoutes.post("/dashboard/session", async (c) => {
   return c.json({ ok: true, apiKeyId: record.id, accountId: record.ownerId });
 });
 
-async function consumePlaygroundQuota(c: Context<AppBindings>, ownerId: string) {
-  const limit = 3;
+async function consumeDailyQuota(c: Context<AppBindings>, namespace: string, ownerId: string, limit: number) {
   const day = new Date().toISOString().slice(0, 10);
-  const key = `playground-quota:${ownerId}:${day}`;
+  const key = `${namespace}:${ownerId}:${day}`;
   const kv = new AppKV((c.env ?? {}).CONTEXTKIT_KV);
   const used = (await kv.get<number>(key)) ?? 0;
   if (used >= limit) {

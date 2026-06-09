@@ -59,6 +59,10 @@ export const playgroundRunSchema = z.object({
   messages: z.array(messageSchema).min(1).max(50)
 });
 
+export const demoRunSchema = z.object({
+  messages: z.array(messageSchema).min(1).max(80)
+});
+
 export const webhookReplaySchema = z.object({
   eventId: z.string().min(1),
   url: z.string().url().optional()

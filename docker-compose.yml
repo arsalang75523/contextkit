@@ -33,6 +33,8 @@ services:
       X402_PAY_TO: ${X402_PAY_TO}
       X402_NETWORK: ${X402_NETWORK:-base}
       X402_FACILITATOR_URL: ${X402_FACILITATOR_URL:-https://facilitator.x402.org}
+      RESEND_API_KEY: ${RESEND_API_KEY}
+      CONTEXTKIT_EMAIL_FROM: ${CONTEXTKIT_EMAIL_FROM}
     ports:
       - "3000:3000"
 

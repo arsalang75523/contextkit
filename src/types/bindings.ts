@@ -31,5 +31,7 @@ export type AppBindings = {
     X402_PAY_TO?: string;
     X402_NETWORK?: string;
     X402_FACILITATOR_URL?: string;
+    RESEND_API_KEY?: string;
+    CONTEXTKIT_EMAIL_FROM?: string;
   };
 };

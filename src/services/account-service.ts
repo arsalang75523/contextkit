@@ -17,7 +17,7 @@ export type AccountRecord = {
 export class AccountService {
   private readonly kv: AppKV;
 
-  constructor(env: AppBindings["Bindings"] = {}) {
+  constructor(private readonly env: AppBindings["Bindings"] = {}) {
     this.kv = new AppKV(env.CONTEXTKIT_KV);
   }
 
@@ -59,18 +59,20 @@ export class AccountService {
   async createPasswordReset(emailInput: string) {
     const email = normalizeEmail(emailInput);
     const accountId = await this.kv.get<string>(`account-email:${email}`);
+    const genericResponse = {
+      ok: true,
+      message: "If this email belongs to a ContextKit account, a password reset email will be sent."
+    };
 
     if (!accountId) {
-      return {
-        ok: true,
-        resetId: createId("rst"),
-        message: "If this email exists, a reset token was created."
-      };
+      return genericResponse;
     }
 
     const token = `ck_reset_${randomSecret(32)}`;
     const tokenHash = await sha256(token);
     const resetId = createId("rst");
+    const baseUrl = this.env.CONTEXTKIT_BASE_URL || this.env.CONTEXTKIT_BACKEND_URL || "http://localhost:3000";
+    const resetUrl = `${baseUrl.replace(/\/$/, "")}/dashboard/reset-password?token=${encodeURIComponent(token)}`;
 
     await this.kv.set(`password-reset:${tokenHash}`, {
       resetId,
@@ -78,13 +80,8 @@ export class AccountService {
       createdAt: new Date().toISOString()
     }, 15 * 60);
 
-    return {
-      ok: true,
-      resetId,
-      resetToken: token,
-      expiresInSeconds: 15 * 60,
-      message: "Password reset token created. Self-hosted deployments can copy this token directly; production email delivery can be wired to the same flow."
-    };
+    await sendPasswordResetEmail(this.env, email, resetUrl);
+    return genericResponse;
   }
 
   async resetPassword(token: string, password: string) {
@@ -140,4 +137,39 @@ function normalizeEmail(email: string) {
 
 async function hashPassword(password: string) {
   return sha256(`contextkit-password-v1:${password}`);
+}
+
+async function sendPasswordResetEmail(env: AppBindings["Bindings"], to: string, resetUrl: string) {
+  if (!env.RESEND_API_KEY || !env.CONTEXTKIT_EMAIL_FROM) {
+    return;
+  }
+
+  await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${env.RESEND_API_KEY}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      from: env.CONTEXTKIT_EMAIL_FROM,
+      to,
+      subject: "Reset your ContextKit password",
+      html: `
+        <div style="font-family:Inter,Arial,sans-serif;line-height:1.6;color:#111827">
+          <h2>Reset your ContextKit password</h2>
+          <p>This link expires in 15 minutes.</p>
+          <p><a href="${escapeHtml(resetUrl)}" style="display:inline-block;background:#8fffd2;color:#07110d;padding:12px 16px;border-radius:8px;text-decoration:none">Reset password</a></p>
+          <p>If you did not request this, you can ignore this email.</p>
+        </div>
+      `
+    })
+  });
+}
+
+function escapeHtml(value: string) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;");
 }
