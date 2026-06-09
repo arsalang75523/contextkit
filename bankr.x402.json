@@ -1,0 +1,149 @@
+{
+  "network": "base",
+  "currency": "USDC",
+  "services": {
+    "contextkit-summarize": {
+      "description": "Summarize long AI conversations into concise reusable context for autonomous agents.",
+      "price": "0.002",
+      "methods": ["POST"],
+      "category": "ai-infrastructure",
+      "tags": ["ai-agents", "context", "summarization", "bankr", "token-optimization"],
+      "schema": {
+        "input": {
+          "type": "object",
+          "properties": {
+            "messages": {
+              "type": "array",
+              "description": "Conversation messages to summarize.",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "role": { "type": "string", "description": "Message role: user, assistant, system, or tool." },
+                  "content": { "type": "string", "description": "Message content." }
+                },
+                "required": ["role", "content"]
+              }
+            }
+          },
+          "required": ["messages"]
+        },
+        "output": {
+          "type": "object",
+          "properties": {
+            "summary": { "type": "string", "description": "Optimized context summary." },
+            "tokenReductionEstimate": { "type": "number", "description": "Estimated token reduction percentage." }
+          }
+        }
+      }
+    },
+    "contextkit-compress": {
+      "description": "Compress agent conversation context into compact structured memory.",
+      "price": "0.003",
+      "methods": ["POST"],
+      "category": "ai-infrastructure",
+      "tags": ["ai-agents", "context-compression", "memory", "bankr"],
+      "schema": {
+        "input": {
+          "type": "object",
+          "properties": {
+            "messages": {
+              "type": "array",
+              "description": "Conversation messages to compress.",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "role": { "type": "string" },
+                  "content": { "type": "string" }
+                },
+                "required": ["role", "content"]
+              }
+            }
+          },
+          "required": ["messages"]
+        },
+        "output": {
+          "type": "object",
+          "properties": {
+            "compressedContext": { "type": "string" },
+            "estimatedSavings": { "type": "string" }
+          }
+        }
+      }
+    },
+    "contextkit-handoff": {
+      "description": "Generate structured agent-to-agent handoff payloads.",
+      "price": "0.003",
+      "methods": ["POST"],
+      "category": "ai-infrastructure",
+      "tags": ["multi-agent", "handoff", "workflow", "bankr"],
+      "schema": {
+        "input": {
+          "type": "object",
+          "properties": {
+            "messages": {
+              "type": "array",
+              "description": "Conversation messages to convert into a handoff.",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "role": { "type": "string" },
+                  "content": { "type": "string" }
+                },
+                "required": ["role", "content"]
+              }
+            }
+          },
+          "required": ["messages"]
+        },
+        "output": {
+          "type": "object",
+          "properties": {
+            "goal": { "type": "string" },
+            "importantFacts": { "type": "array", "items": { "type": "string" } },
+            "constraints": { "type": "array", "items": { "type": "string" } },
+            "recommendedNextActions": { "type": "array", "items": { "type": "string" } },
+            "tone": { "type": "string" },
+            "userIntent": { "type": "string" }
+          }
+        }
+      }
+    },
+    "contextkit-profile": {
+      "description": "Extract reusable user profile memory for autonomous AI agents.",
+      "price": "0.004",
+      "methods": ["POST"],
+      "category": "ai-infrastructure",
+      "tags": ["profile", "memory", "personalization", "ai-agents"],
+      "schema": {
+        "input": {
+          "type": "object",
+          "properties": {
+            "messages": {
+              "type": "array",
+              "description": "Conversation messages to extract profile data from.",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "role": { "type": "string" },
+                  "content": { "type": "string" }
+                },
+                "required": ["role", "content"]
+              }
+            }
+          },
+          "required": ["messages"]
+        },
+        "output": {
+          "type": "object",
+          "properties": {
+            "interests": { "type": "array", "items": { "type": "string" } },
+            "riskTolerance": { "type": "string" },
+            "communicationStyle": { "type": "string" },
+            "preferences": { "type": "array", "items": { "type": "string" } },
+            "importantContext": { "type": "array", "items": { "type": "string" } }
+          }
+        }
+      }
+    }
+  }
+}

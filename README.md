@@ -214,8 +214,10 @@ Create a `.env` on the server:
 POSTGRES_PASSWORD=replace_with_strong_password
 DATABASE_URL=postgres://contextkit:replace_with_strong_password@postgres:5432/contextkit
 CONTEXTKIT_ADMIN_TOKEN=replace_with_admin_token
+CONTEXTKIT_INTERNAL_TOKEN=replace_with_internal_forwarder_token
 CONTEXTKIT_WEBHOOK_SECRET=replace_with_webhook_secret
 CONTEXTKIT_BASE_URL=https://your-domain.com
+CONTEXTKIT_BACKEND_URL=https://your-domain.com
 BANKR_LLM_KEY=bk_replace_me
 BANKR_LLM_BASE_URL=https://llm.bankr.bot/v1
 BANKR_LLM_MODEL=claude-sonnet-4.5
@@ -251,6 +253,66 @@ Local Postgres without Docker app:
 docker compose up -d postgres
 npm run db:migrate
 npm run dev
+```
+
+### Bankr-Hosted x402 Cloud
+
+For Bankr-native x402 distribution, deploy the lightweight handlers in `x402/` to Bankr x402 Cloud. Bankr hosts the paid public URL, handles the x402 payment challenge/settlement, and forwards paid requests to your ContextKit backend through private internal endpoints:
+
+```mermaid
+flowchart LR
+  A[Agent or developer] --> B[Bankr x402 Cloud]
+  B --> C[USDC payment on Base]
+  B --> D[ContextKit internal endpoint]
+  D --> E[Bankr LLM Gateway]
+  D --> F[Postgres analytics and logs]
+```
+
+Set encrypted Bankr x402 Cloud environment variables:
+
+```bash
+bankr x402 env set CONTEXTKIT_BACKEND_URL=https://your-domain.com
+bankr x402 env set CONTEXTKIT_INTERNAL_TOKEN=replace_with_internal_forwarder_token
+```
+
+Deploy every paid service from `bankr.x402.json`:
+
+```bash
+bankr x402 deploy
+bankr x402 list
+```
+
+Bankr will return URLs like:
+
+```txt
+https://x402.bankr.bot/<your-wallet>/contextkit-summarize
+https://x402.bankr.bot/<your-wallet>/contextkit-compress
+https://x402.bankr.bot/<your-wallet>/contextkit-handoff
+https://x402.bankr.bot/<your-wallet>/contextkit-profile
+```
+
+Call a Bankr-hosted endpoint with automatic x402 payment:
+
+```bash
+bankr x402 call https://x402.bankr.bot/<your-wallet>/contextkit-summarize \
+  -X POST \
+  -d '{"messages":[{"role":"user","content":"Summarize this context for an AI agent."}]}'
+```
+
+Interactive mode works on Bankr-hosted endpoints because the CLI can read the schema from `bankr.x402.json`:
+
+```bash
+bankr x402 schema https://x402.bankr.bot/<your-wallet>/contextkit-summarize
+bankr x402 call https://x402.bankr.bot/<your-wallet>/contextkit-summarize -i
+```
+
+Use the direct self-hosted x402 routes only when testing your own x402-compatible client:
+
+```txt
+POST /api/x402/summarize
+POST /api/x402/compress-context
+POST /api/x402/handoff
+POST /api/x402/extract-profile
 ```
 
 ### Vercel

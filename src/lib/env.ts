@@ -12,6 +12,7 @@ export function readEnv(c?: { env?: Record<string, unknown> }) {
     bankrLlmBaseUrl: get("BANKR_LLM_BASE_URL", "https://llm.bankr.bot/v1"),
     bankrLlmModel: get("BANKR_LLM_MODEL", "claude-sonnet-4.5"),
     contextkitBaseUrl: get("CONTEXTKIT_BASE_URL"),
+    internalToken: get("CONTEXTKIT_INTERNAL_TOKEN"),
     webhookSecret: get("CONTEXTKIT_WEBHOOK_SECRET", "dev-webhook-secret-change-me"),
     adminToken: get("CONTEXTKIT_ADMIN_TOKEN"),
     x402PayTo: get("X402_PAY_TO", "0x0000000000000000000000000000000000000000"),

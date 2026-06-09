@@ -47,3 +47,19 @@ export function requireAdmin(): MiddlewareHandler<AppBindings> {
     await next();
   };
 }
+
+export function requireInternalToken(): MiddlewareHandler<AppBindings> {
+  return async (c, next) => {
+    const expected = readEnv({ env: c.env ?? {} }).internalToken;
+    if (!expected) {
+      return c.json({ error: { code: "internal_not_configured", message: "CONTEXTKIT_INTERNAL_TOKEN is required.", requestId: c.get("requestId") } }, 503);
+    }
+
+    const authorization = c.req.header("authorization") ?? "";
+    if (authorization !== `Bearer ${expected}`) {
+      return c.json({ error: { code: "internal_unauthorized", message: "Internal bearer token required.", requestId: c.get("requestId") } }, 401);
+    }
+
+    await next();
+  };
+}

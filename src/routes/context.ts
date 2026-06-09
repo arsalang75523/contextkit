@@ -8,7 +8,7 @@ import { ContextService } from "@/services/context-service";
 import { AnalyticsService } from "@/services/analytics-service";
 import { ApiKeyService } from "@/services/api-key-service";
 import { x402PaymentRequired } from "@/middleware/x402";
-import { requireApiKey } from "@/middleware/auth";
+import { requireApiKey, requireInternalToken } from "@/middleware/auth";
 import { apiKeyRateLimit } from "@/middleware/rate-limit";
 import { dispatchWebhook } from "@/webhooks/dispatcher";
 import { createId } from "@/utils/id";
@@ -112,6 +112,42 @@ contextRoutes.post(
     return c.json(result);
   }
 );
+
+contextRoutes.post("/internal/summarize", requireInternalToken(), zValidator("json", conversationRequestSchema), async (c) => {
+  const request = { ...c.req.valid("json"), messages: sanitizeMessages(c.req.valid("json").messages) };
+  const service = new ContextService({ env: c.env ?? {}, requestId: c.get("requestId") });
+  const result = await service.summarize(request);
+  await complete(c, "/internal/summarize", request, JSON.stringify(result));
+  await service.emitCompleted(request, "summarization.completed", result);
+  return c.json(result);
+});
+
+contextRoutes.post("/internal/compress-context", requireInternalToken(), zValidator("json", conversationRequestSchema), async (c) => {
+  const request = { ...c.req.valid("json"), messages: sanitizeMessages(c.req.valid("json").messages) };
+  const service = new ContextService({ env: c.env ?? {}, requestId: c.get("requestId") });
+  const result = await service.compress(request);
+  await complete(c, "/internal/compress-context", request, JSON.stringify(result));
+  await service.emitCompleted(request, "context.compressed", result);
+  return c.json(result);
+});
+
+contextRoutes.post("/internal/handoff", requireInternalToken(), zValidator("json", conversationRequestSchema), async (c) => {
+  const request = { ...c.req.valid("json"), messages: sanitizeMessages(c.req.valid("json").messages) };
+  const service = new ContextService({ env: c.env ?? {}, requestId: c.get("requestId") });
+  const result = await service.handoff(request);
+  await complete(c, "/internal/handoff", request, JSON.stringify(result));
+  await service.emitCompleted(request, "handoff.generated", result);
+  return c.json(result);
+});
+
+contextRoutes.post("/internal/extract-profile", requireInternalToken(), zValidator("json", conversationRequestSchema), async (c) => {
+  const request = { ...c.req.valid("json"), messages: sanitizeMessages(c.req.valid("json").messages) };
+  const service = new ContextService({ env: c.env ?? {}, requestId: c.get("requestId") });
+  const result = await service.profile(request);
+  await complete(c, "/internal/extract-profile", request, JSON.stringify(result));
+  await service.emitCompleted(request, "profile.extracted", result);
+  return c.json(result);
+});
 
 async function complete(
   c: Context<AppBindings>,

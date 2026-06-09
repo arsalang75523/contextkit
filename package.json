@@ -15,6 +15,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "api:dev": "tsx src/server.ts",
+    "x402:deploy": "bankr x402 deploy",
     "deploy:vercel": "vercel --prod",
     "pages:build": "npx @cloudflare/next-on-pages",
     "deploy:cloudflare": "npm run pages:build && wrangler pages deploy .vercel/output/static"
