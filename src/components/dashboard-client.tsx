@@ -22,6 +22,7 @@ export function DashboardClient({ view = "overview" }: { view?: View }) {
   const [data, setData] = useState<ApiData | null>(null);
   const [account, setAccount] = useState<ApiData | null>(null);
   const [message, setMessage] = useState("");
+  const [newKey, setNewKey] = useState<Record<string, unknown> | null>(null);
   const [keyName, setKeyName] = useState("Production key");
   const [environment, setEnvironment] = useState<"test" | "live">("live");
   const [scopes, setScopes] = useState<string[]>([...allScopes]);
@@ -50,6 +51,11 @@ export function DashboardClient({ view = "overview" }: { view?: View }) {
   async function load() {
     window.localStorage.setItem("contextkit_api_key", apiKey);
     const headers: Record<string, string> = apiKey ? { Authorization: `Bearer ${apiKey}` } : {};
+    if (view === "keys") {
+      const response = await fetch("/api/auth/my-keys");
+      setData(await response.json());
+      return;
+    }
     const response = await fetch(route[2], { headers });
     setData(await response.json());
   }
@@ -61,10 +67,11 @@ export function DashboardClient({ view = "overview" }: { view?: View }) {
       body: JSON.stringify({ name: keyName, environment, scopes })
     });
     const payload = (await response.json()) as Record<string, unknown>;
-    setMessage(JSON.stringify(payload, null, 2));
+    setMessage("");
     if (typeof payload.key === "string") {
       window.localStorage.setItem("contextkit_api_key", payload.key);
       setApiKey(payload.key);
+      setNewKey(payload);
     }
     await load();
   }
@@ -76,6 +83,7 @@ export function DashboardClient({ view = "overview" }: { view?: View }) {
       body: JSON.stringify({ keyId })
     });
     setMessage(JSON.stringify(await response.json(), null, 2));
+    setNewKey(null);
     await load();
   }
 
@@ -159,6 +167,15 @@ export function DashboardClient({ view = "overview" }: { view?: View }) {
         {view === "keys" ? (
           <section className="mt-6 rounded-md border border-line bg-white/[0.035] p-5">
             <h2 className="text-xl font-semibold text-white">Create scoped API key</h2>
+            {newKey ? (
+              <div className="mt-4 rounded-md border border-mint/30 bg-mint/10 p-4">
+                <p className="text-sm font-semibold text-mint">New API key created. Copy it now; it will not be shown again.</p>
+                <div className="mt-3">
+                  <CodeBlock code={JSON.stringify(newKey, null, 2)} />
+                </div>
+                <button type="button" onClick={() => setNewKey(null)} className="mt-3 h-10 rounded-md border border-line px-4 text-sm text-white/70">I saved this key</button>
+              </div>
+            ) : null}
             <div className="mt-4 grid gap-3 md:grid-cols-[1fr_160px]">
               <input value={keyName} onChange={(event) => setKeyName(event.target.value)} className="h-11 rounded-md border border-line bg-ink/80 px-3 text-sm text-white outline-none focus:border-mint" />
               <select value={environment} onChange={(event) => setEnvironment(event.target.value as "test" | "live")} className="h-11 rounded-md border border-line bg-ink/80 px-3 text-sm text-white outline-none focus:border-mint">

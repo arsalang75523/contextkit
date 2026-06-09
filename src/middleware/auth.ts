@@ -26,7 +26,8 @@ export function requireApiKey(scope?: string): MiddlewareHandler<AppBindings> {
       hash: record.hash,
       environment: record.environment,
       scopes: record.scopes,
-      name: record.name
+      name: record.name,
+      ownerId: record.ownerId
     });
     await next();
   };

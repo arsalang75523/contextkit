@@ -10,6 +10,7 @@ type RequestLogInput = {
   outputTokens: number;
   paymentId?: string;
   apiKeyId?: string;
+  ownerId?: string;
   amountUsd?: number;
   status?: "success" | "error";
 };
@@ -43,6 +44,33 @@ export class AnalyticsService {
   }
 
   async overview() {
+    return this.globalOverview();
+  }
+
+  async overviewForOwner(ownerId?: string) {
+    if (!ownerId) return emptyOverview();
+    const requests = await this.requestsForOwner(ownerId);
+    const totalRequests = requests.length;
+    const totalInputTokens = sum(requests, "inputTokens");
+    const totalOutputTokens = sum(requests, "outputTokens");
+    const latencyMs = sum(requests, "latencyMs");
+    const paymentTotal = Number(sum(requests, "amountUsd").toFixed(6));
+
+    return {
+      ...buildOverview({
+        totalRequests,
+        totalInputTokens,
+        totalOutputTokens,
+        latencyMs,
+        webhookDeliveries: 0,
+        webhookFailures: 0,
+        paymentTotal
+      }),
+      scope: "account"
+    };
+  }
+
+  private async globalOverview() {
     const kv = new AppKV(this.env.CONTEXTKIT_KV);
     const [requests, inputTokens, outputTokens, latencyMs, webhookDeliveries, webhookFailures, paymentTotal] = await Promise.all([
       kv.get<number>("analytics:requests"),
@@ -59,21 +87,15 @@ export class AnalyticsService {
     const totalWebhookDeliveries = webhookDeliveries ?? 0;
     const failedWebhookDeliveries = webhookFailures ?? 0;
 
-    return {
+    return buildOverview({
       totalRequests,
       totalInputTokens,
       totalOutputTokens,
-      savedTokens: Math.max(0, totalInputTokens - totalOutputTokens),
-      averageTokenReduction: totalInputTokens === 0 ? 0 : Math.max(0, Math.round(((totalInputTokens - totalOutputTokens) / totalInputTokens) * 100)),
-      averageLatencyMs: totalRequests === 0 ? 0 : Math.round((latencyMs ?? 0) / totalRequests),
+      latencyMs: latencyMs ?? 0,
       webhookDeliveries: totalWebhookDeliveries,
-      webhookDeliverySuccessRate:
-        totalWebhookDeliveries + failedWebhookDeliveries === 0
-          ? 0
-          : Number((totalWebhookDeliveries / (totalWebhookDeliveries + failedWebhookDeliveries)).toFixed(4)),
-      paymentTotal: paymentTotal ?? 0,
-      monthlySavingsEstimateUsd: Number((((Math.max(0, totalInputTokens - totalOutputTokens) / 1_000_000) * 15)).toFixed(2))
-    };
+      webhookFailures: failedWebhookDeliveries,
+      paymentTotal: paymentTotal ?? 0
+    });
   }
 
   async requests() {
@@ -81,6 +103,14 @@ export class AnalyticsService {
     const index = await kv.getMany<{ id: string }>("request-index:");
     const requests = await Promise.all(index.map((item) => kv.get(`request:${item.id}`)));
     return requests.filter(Boolean);
+  }
+
+  async requestsForOwner(ownerId?: string) {
+    if (!ownerId) return [];
+    const requests = await this.requests();
+    return requests.filter((request): request is RequestLogInput & { completedAt?: string; reductionPercent?: number } => {
+      return Boolean(request && typeof request === "object" && "ownerId" in request && request.ownerId === ownerId);
+    });
   }
 
   async endpointUsage() {
@@ -94,4 +124,52 @@ export class AnalyticsService {
     );
     return entries.sort((a: { requests: number }, b: { requests: number }) => b.requests - a.requests);
   }
+
+  async endpointUsageForOwner(ownerId?: string) {
+    const requests = await this.requestsForOwner(ownerId);
+    const counts = new Map<string, number>();
+    for (const request of requests) {
+      counts.set(request.route, (counts.get(request.route) ?? 0) + 1);
+    }
+    return Array.from(counts.entries())
+      .map(([endpoint, requests]) => ({ endpoint, requests }))
+      .sort((a, b) => b.requests - a.requests);
+  }
+}
+
+type OverviewInput = {
+  totalRequests: number;
+  totalInputTokens: number;
+  totalOutputTokens: number;
+  latencyMs: number;
+  webhookDeliveries: number;
+  webhookFailures: number;
+  paymentTotal: number;
+};
+
+function buildOverview(input: OverviewInput) {
+  const savedTokens = Math.max(0, input.totalInputTokens - input.totalOutputTokens);
+  return {
+    totalRequests: input.totalRequests,
+    totalInputTokens: input.totalInputTokens,
+    totalOutputTokens: input.totalOutputTokens,
+    savedTokens,
+    averageTokenReduction: input.totalInputTokens === 0 ? 0 : Math.max(0, Math.round(((input.totalInputTokens - input.totalOutputTokens) / input.totalInputTokens) * 100)),
+    averageLatencyMs: input.totalRequests === 0 ? 0 : Math.round(input.latencyMs / input.totalRequests),
+    webhookDeliveries: input.webhookDeliveries,
+    webhookDeliverySuccessRate:
+      input.webhookDeliveries + input.webhookFailures === 0
+        ? 0
+        : Number((input.webhookDeliveries / (input.webhookDeliveries + input.webhookFailures)).toFixed(4)),
+    paymentTotal: input.paymentTotal,
+    monthlySavingsEstimateUsd: Number(((savedTokens / 1_000_000) * 15).toFixed(2))
+  };
+}
+
+function emptyOverview() {
+  return buildOverview({ totalRequests: 0, totalInputTokens: 0, totalOutputTokens: 0, latencyMs: 0, webhookDeliveries: 0, webhookFailures: 0, paymentTotal: 0 });
+}
+
+function sum(items: Array<Record<string, unknown>>, key: string) {
+  return items.reduce((total, item) => total + (typeof item[key] === "number" ? item[key] as number : 0), 0);
 }

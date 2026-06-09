@@ -76,6 +76,7 @@ export class PaymentService {
     requestId: string;
     payer?: string;
     apiKeyId?: string;
+    ownerId?: string;
     facilitatorResponse?: unknown;
   }) {
     const event = {
@@ -91,10 +92,14 @@ export class PaymentService {
     ]);
   }
 
-  async listPayments() {
+  async listPayments(ownerId?: string) {
     const index = await this.kv.getMany<{ id: string }>("payment-index:");
     const payments = await Promise.all(index.map((item) => this.kv.get(`payment:${item.id}`)));
-    return payments.filter(Boolean);
+    return payments.filter((payment): payment is Record<string, unknown> => {
+      if (!payment || typeof payment !== "object") return false;
+      const record = payment as Record<string, unknown>;
+      return !ownerId || record.ownerId === ownerId;
+    });
   }
 }
 

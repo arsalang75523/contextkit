@@ -14,6 +14,7 @@ export type AppBindings = {
       environment: "test" | "live";
       scopes: string[];
       name: string;
+      ownerId?: string;
     };
   };
   Bindings: {

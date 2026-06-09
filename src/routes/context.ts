@@ -197,6 +197,7 @@ async function complete(
     outputTokens: estimateTokens(output),
     paymentId,
     apiKeyId: apiKey?.id,
+    ownerId: apiKey?.ownerId,
     amountUsd: payment?.amountUsd,
     status: "success"
   });

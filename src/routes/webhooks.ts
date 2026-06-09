@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import type { Context } from "hono";
 import { zValidator } from "@hono/zod-validator";
 import { webhookRegistrationSchema, webhookReplaySchema } from "@/types/api";
 import { AppKV } from "@/storage/app-kv";
@@ -8,6 +9,7 @@ import { verifyWebhook } from "@/webhooks/signature";
 import { dispatchWebhook } from "@/webhooks/dispatcher";
 import { randomSecret } from "@/utils/crypto";
 import { requireApiKey } from "@/middleware/auth";
+import { ApiKeyService } from "@/services/api-key-service";
 import type { AppBindings } from "@/types/bindings";
 import type { WebhookEvent } from "@/types/api";
 
@@ -33,12 +35,16 @@ webhookRoutes.post("/webhooks/register", requireApiKey("webhooks:write"), zValid
 webhookRoutes.get("/webhooks/endpoints", requireApiKey("webhooks:write"), async (c) => {
   const kv = new AppKV((c.env ?? {}).CONTEXTKIT_KV);
   const index = await kv.getMany<{ id: string }>("webhook-index:");
+  const allowedApiKeyIds = await visibleApiKeyIds(c);
   const endpoints = await Promise.all(index.map((item) => kv.get<Record<string, unknown>>(`webhook:${item.id}`)));
   return c.json({
-    endpoints: endpoints.filter(Boolean).map((endpoint) => ({
-      ...endpoint,
-      secret: endpoint?.secret ? "whsec_..." : undefined
-    }))
+    endpoints: endpoints
+      .filter((endpoint): endpoint is Record<string, unknown> => Boolean(endpoint))
+      .filter((endpoint) => !allowedApiKeyIds || allowedApiKeyIds.has(String(endpoint.apiKeyId)))
+      .map((endpoint) => ({
+        ...endpoint,
+        secret: endpoint.secret ? "whsec_..." : undefined
+      }))
   });
 });
 
@@ -62,14 +68,23 @@ webhookRoutes.post("/webhooks/replay", requireApiKey("webhooks:write"), zValidat
 
 webhookRoutes.get("/webhooks/events", requireApiKey("webhooks:write"), async (c) => {
   const kv = new AppKV((c.env ?? {}).CONTEXTKIT_KV);
-  return c.json({ events: await kv.getMany("webhook-event:") });
+  const allowedApiKeyIds = await visibleApiKeyIds(c);
+  const events = await kv.getMany<Record<string, unknown>>("webhook-event:");
+  return c.json({ events: events.filter((event) => !allowedApiKeyIds || allowedApiKeyIds.has(String(event.apiKeyId))) });
 });
 
 webhookRoutes.get("/webhooks/deliveries", requireApiKey("webhooks:write"), async (c) => {
   const kv = new AppKV((c.env ?? {}).CONTEXTKIT_KV);
+  const allowedApiKeyIds = await visibleApiKeyIds(c);
   const index = await kv.getMany<{ id: string }>("webhook-delivery-index:");
   const deliveries = await Promise.all(index.map((item) => kv.get(`webhook-delivery:${item.id}`)));
-  return c.json({ deliveries: deliveries.filter(Boolean) });
+  return c.json({
+    deliveries: deliveries.filter((delivery): delivery is Record<string, unknown> => {
+      if (!delivery || typeof delivery !== "object") return false;
+      const record = delivery as Record<string, unknown>;
+      return !allowedApiKeyIds || allowedApiKeyIds.has(String(record.apiKeyId));
+    })
+  });
 });
 
 webhookRoutes.post("/webhooks/:id/rotate-secret", requireApiKey("webhooks:write"), async (c) => {
@@ -83,3 +98,10 @@ webhookRoutes.post("/webhooks/:id/rotate-secret", requireApiKey("webhooks:write"
   await kv.set(`webhook:${id}`, { ...webhook, secret, rotatedAt: new Date().toISOString() });
   return c.json({ id, secret });
 });
+
+async function visibleApiKeyIds(c: Context<AppBindings>) {
+  const ownerId = c.get("apiKey")?.ownerId;
+  if (!ownerId) return undefined;
+  const keys = await new ApiKeyService(c.env ?? {}).list(ownerId);
+  return new Set(keys.map((key) => key.id));
+}
