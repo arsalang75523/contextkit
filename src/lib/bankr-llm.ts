@@ -39,7 +39,7 @@ export class BankrLlmClient {
 
         const payload = (await response.json()) as { choices?: { message?: { content?: string } }[] };
         const content = payload.choices?.[0]?.message?.content ?? "{}";
-        return JSON.parse(content) as JsonObject;
+        return parseJsonObject(content);
       } catch (error) {
         lastError = error;
         log("warn", "Bankr LLM JSON generation attempt failed", { endpoint, attempt, error: String(error) });
@@ -58,4 +58,19 @@ function repairPrompt(messages: readonly { role: string; content: string }[]) {
       content: "The previous response was malformed. Return only parseable JSON matching the schema, without markdown."
     }
   ];
+}
+
+function parseJsonObject(content: string): JsonObject {
+  const normalized = content.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
+
+  try {
+    return JSON.parse(normalized) as JsonObject;
+  } catch {
+    const start = normalized.indexOf("{");
+    const end = normalized.lastIndexOf("}");
+    if (start >= 0 && end > start) {
+      return JSON.parse(normalized.slice(start, end + 1)) as JsonObject;
+    }
+    throw new SyntaxError("Bankr LLM Gateway returned content without a parseable JSON object.");
+  }
 }

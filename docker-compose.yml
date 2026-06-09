@@ -23,8 +23,10 @@ services:
     environment:
       DATABASE_URL: postgres://contextkit:${POSTGRES_PASSWORD:-contextkit_password}@postgres:5432/contextkit
       CONTEXTKIT_ADMIN_TOKEN: ${CONTEXTKIT_ADMIN_TOKEN}
+      CONTEXTKIT_INTERNAL_TOKEN: ${CONTEXTKIT_INTERNAL_TOKEN}
       CONTEXTKIT_WEBHOOK_SECRET: ${CONTEXTKIT_WEBHOOK_SECRET}
       CONTEXTKIT_BASE_URL: ${CONTEXTKIT_BASE_URL:-http://localhost:3000}
+      CONTEXTKIT_BACKEND_URL: ${CONTEXTKIT_BACKEND_URL:-http://localhost:3000}
       BANKR_LLM_KEY: ${BANKR_LLM_KEY}
       BANKR_LLM_BASE_URL: ${BANKR_LLM_BASE_URL:-https://llm.bankr.bot/v1}
       BANKR_LLM_MODEL: ${BANKR_LLM_MODEL:-claude-sonnet-4.5}
