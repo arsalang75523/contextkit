@@ -42,7 +42,7 @@ export default function HomePage() {
               Reduce token costs, compress conversations, and enable seamless agent handoffs using x402-powered APIs.
             </p>
             <div className="mt-9 flex flex-col gap-3 sm:flex-row">
-              <Button href="/dashboard/login">
+              <Button href="/api-reference">
                 Get API Key <KeyRound className="h-4 w-4" />
               </Button>
               <Button href="/docs" variant="secondary">

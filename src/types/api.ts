@@ -35,6 +35,15 @@ export const loginSchema = z.object({
   password: z.string().min(1).max(128)
 });
 
+export const forgotPasswordSchema = z.object({
+  email: z.string().email()
+});
+
+export const resetPasswordSchema = z.object({
+  token: z.string().min(24),
+  password: z.string().min(12).max(128)
+});
+
 export const revokeApiKeySchema = z.object({
   keyId: z.string().min(1)
 });
@@ -54,6 +63,8 @@ export type ConversationRequest = z.infer<typeof conversationRequestSchema>;
 export type ConversationMessage = z.infer<typeof messageSchema>;
 export type CreateApiKeyInput = z.infer<typeof createApiKeySchema>;
 export type SignupInput = z.infer<typeof signupSchema>;
+export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
+export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 
 export type ContextEndpoint = "summarize" | "compress-context" | "handoff" | "extract-profile";
 

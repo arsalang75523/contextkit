@@ -8,6 +8,16 @@ export default function ApiReferencePage() {
   return (
     <main>
       <Section eyebrow="Get Started" title="Install ContextKit and create your first scoped API key.">
+        <div className="mb-6 grid gap-4 md:grid-cols-2">
+          <a href="/dashboard/login" className="rounded-md border border-mint/25 bg-mint/10 p-5 transition hover:border-mint/60">
+            <h2 className="font-semibold text-white">Human flow: create key in dashboard</h2>
+            <p className="mt-2 text-sm leading-6 text-white/62">Sign up, get the first full API key once, then manage keys, usage, payments, and webhooks from the dashboard.</p>
+          </a>
+          <div className="rounded-md border border-aqua/25 bg-aqua/10 p-5">
+            <h2 className="font-semibold text-white">Agent flow: create key from terminal</h2>
+            <p className="mt-2 text-sm leading-6 text-white/62">Autonomous agents can call the signup endpoint with curl, store the returned <code>ck_live_</code> key, and use ContextKit without clicking UI.</p>
+          </div>
+        </div>
         <GetStartedCard />
       </Section>
       <Section eyebrow="API Reference" title="Typed context APIs with x402 pricing and signed webhooks.">

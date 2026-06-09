@@ -2,7 +2,7 @@ import { AppKV } from "@/storage/app-kv";
 import type { AppBindings } from "@/types/bindings";
 import type { SignupInput } from "@/types/api";
 import { createId } from "@/utils/id";
-import { sha256 } from "@/utils/crypto";
+import { randomSecret, sha256 } from "@/utils/crypto";
 
 export type AccountRecord = {
   id: string;
@@ -54,6 +54,53 @@ export class AccountService {
     if (!account) return null;
     const ok = account.passwordHash === await hashPassword(password);
     return ok ? publicAccount(account) : null;
+  }
+
+  async createPasswordReset(emailInput: string) {
+    const email = normalizeEmail(emailInput);
+    const accountId = await this.kv.get<string>(`account-email:${email}`);
+
+    if (!accountId) {
+      return {
+        ok: true,
+        resetId: createId("rst"),
+        message: "If this email exists, a reset token was created."
+      };
+    }
+
+    const token = `ck_reset_${randomSecret(32)}`;
+    const tokenHash = await sha256(token);
+    const resetId = createId("rst");
+
+    await this.kv.set(`password-reset:${tokenHash}`, {
+      resetId,
+      accountId,
+      createdAt: new Date().toISOString()
+    }, 15 * 60);
+
+    return {
+      ok: true,
+      resetId,
+      resetToken: token,
+      expiresInSeconds: 15 * 60,
+      message: "Password reset token created. Self-hosted deployments can copy this token directly; production email delivery can be wired to the same flow."
+    };
+  }
+
+  async resetPassword(token: string, password: string) {
+    const tokenHash = await sha256(token);
+    const reset = await this.kv.get<{ accountId: string }>(`password-reset:${tokenHash}`);
+    if (!reset?.accountId) return false;
+
+    const account = await this.kv.get<AccountRecord>(`account:${reset.accountId}`);
+    if (!account) return false;
+
+    await this.kv.set(`account:${account.id}`, {
+      ...account,
+      passwordHash: await hashPassword(password)
+    });
+    await this.kv.set(`password-reset:${tokenHash}`, { ...reset, usedAt: new Date().toISOString() }, 1);
+    return true;
   }
 
   async get(id: string) {

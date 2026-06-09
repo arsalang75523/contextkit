@@ -5,7 +5,7 @@ import { ApiKeyService } from "@/services/api-key-service";
 import { AccountService } from "@/services/account-service";
 import { AppKV } from "@/storage/app-kv";
 import { createId } from "@/utils/id";
-import { createApiKeySchema, loginSchema, signupSchema } from "@/types/api";
+import { createApiKeySchema, forgotPasswordSchema, loginSchema, resetPasswordSchema, signupSchema } from "@/types/api";
 import type { AppBindings } from "@/types/bindings";
 
 export const dashboardSessionRoutes = new Hono<AppBindings>();
@@ -41,12 +41,45 @@ dashboardSessionRoutes.post("/dashboard/login", zValidator("json", loginSchema),
   return c.json({ ok: true, account });
 });
 
+dashboardSessionRoutes.post("/dashboard/forgot-password", zValidator("json", forgotPasswordSchema), async (c) => {
+  const result = await new AccountService(c.env ?? {}).createPasswordReset(c.req.valid("json").email);
+  return c.json(result);
+});
+
+dashboardSessionRoutes.post("/dashboard/reset-password", zValidator("json", resetPasswordSchema), async (c) => {
+  const body = c.req.valid("json");
+  const ok = await new AccountService(c.env ?? {}).resetPassword(body.token, body.password);
+  if (!ok) {
+    return c.json({ error: { code: "invalid_reset_token", message: "Reset token is invalid or expired.", requestId: c.get("requestId") } }, 401);
+  }
+  return c.json({ ok: true });
+});
+
 dashboardSessionRoutes.get("/dashboard/me", async (c) => {
   const session = await readDashboardSession(c);
-  if (!session?.accountId) {
+  if (!session?.accountId && !session?.apiKeyId) {
     return c.json({ authenticated: false });
   }
-  const account = await new AccountService(c.env ?? {}).get(session.accountId);
+
+  if (!session.accountId && session.apiKeyId) {
+    return c.json({
+      authenticated: true,
+      mode: "api-key",
+      account: {
+        id: session.apiKeyId,
+        email: "api-key-session@contextkit.local",
+        name: "API key session",
+        company: "No dashboard account attached",
+        defaultEnvironment: "live"
+      }
+    });
+  }
+
+  const accountId = session.accountId;
+  if (!accountId) {
+    return c.json({ authenticated: false });
+  }
+  const account = await new AccountService(c.env ?? {}).get(accountId);
   return c.json({ authenticated: Boolean(account), account });
 });
 
@@ -72,12 +105,13 @@ dashboardSessionRoutes.post("/dashboard/session", async (c) => {
 
   const sessionId = createId("sess");
   await new AppKV((c.env ?? {}).CONTEXTKIT_KV).set(`dashboard-session:${sessionId}`, {
+    accountId: record.ownerId,
     apiKeyId: record.id,
     createdAt: new Date().toISOString()
   }, 60 * 60 * 12);
 
   setSessionCookie(c, sessionId);
-  return c.json({ ok: true, apiKeyId: record.id });
+  return c.json({ ok: true, apiKeyId: record.id, accountId: record.ownerId });
 });
 
 async function readDashboardSession(c: Context<AppBindings>) {
