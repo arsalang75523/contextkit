@@ -3,10 +3,15 @@ import type { Context } from "hono";
 import { zValidator } from "@hono/zod-validator";
 import { ApiKeyService } from "@/services/api-key-service";
 import { AccountService } from "@/services/account-service";
+import { AnalyticsService } from "@/services/analytics-service";
+import { ContextService } from "@/services/context-service";
 import { AppKV } from "@/storage/app-kv";
 import { createId } from "@/utils/id";
-import { createApiKeySchema, forgotPasswordSchema, loginSchema, resetPasswordSchema, signupSchema } from "@/types/api";
+import { sanitizeMessages } from "@/utils/sanitize";
+import { estimateReduction, estimateTokens } from "@/utils/tokens";
+import { createApiKeySchema, forgotPasswordSchema, loginSchema, playgroundRunSchema, resetPasswordSchema, signupSchema } from "@/types/api";
 import type { AppBindings } from "@/types/bindings";
+import type { ConversationMessage, ConversationRequest } from "@/types/api";
 
 export const dashboardSessionRoutes = new Hono<AppBindings>();
 
@@ -92,6 +97,59 @@ dashboardSessionRoutes.post("/dashboard/create-key", zValidator("json", createAp
   return c.json({ key: result.key, apiKey: result.record }, 201);
 });
 
+dashboardSessionRoutes.post("/playground/run", zValidator("json", playgroundRunSchema), async (c) => {
+  const session = await readDashboardSession(c);
+  if (!session?.accountId && !session?.apiKeyId) {
+    return c.json({ error: { code: "unauthorized", message: "Login or API-key session required to run the live playground.", requestId: c.get("requestId") } }, 401);
+  }
+
+  const ownerId = session.accountId ?? `api-key:${session.apiKeyId}`;
+  const quota = await consumePlaygroundQuota(c, ownerId);
+  if (!quota.allowed) {
+    return c.json({
+      error: {
+        code: "playground_daily_limit",
+        message: "Daily playground limit reached. Use Bankr-hosted x402 or direct API keys for production traffic.",
+        requestId: c.get("requestId")
+      },
+      quota
+    }, 429);
+  }
+
+  const body = c.req.valid("json");
+  const request: ConversationRequest = { messages: sanitizeMessages(body.messages) };
+  const startedAt = Date.now();
+  const service = new ContextService({ env: c.env ?? {}, requestId: c.get("requestId") });
+  const result = await runPlaygroundEndpoint(service, body.endpoint, request);
+  const output = JSON.stringify(result);
+  const inputTokens = estimateTokens(request.messages as ConversationMessage[]);
+  const outputTokens = estimateTokens(output);
+  const latencyMs = Date.now() - startedAt;
+
+  await new AnalyticsService(c.env ?? {}).recordRequest({
+    requestId: c.get("requestId"),
+    route: `/playground/${body.endpoint}`,
+    latencyMs,
+    inputTokens,
+    outputTokens,
+    ownerId,
+    status: "success"
+  });
+
+  return c.json({
+    endpoint: body.endpoint,
+    requestId: c.get("requestId"),
+    response: result,
+    metrics: {
+      inputTokens,
+      outputTokens,
+      reductionPercent: estimateReduction(inputTokens, outputTokens),
+      latencyMs
+    },
+    quota
+  });
+});
+
 dashboardSessionRoutes.post("/dashboard/session", async (c) => {
   const body = (await c.req.json().catch(() => ({}))) as { apiKey?: string };
   if (!body.apiKey) {
@@ -113,6 +171,32 @@ dashboardSessionRoutes.post("/dashboard/session", async (c) => {
   setSessionCookie(c, sessionId);
   return c.json({ ok: true, apiKeyId: record.id, accountId: record.ownerId });
 });
+
+async function consumePlaygroundQuota(c: Context<AppBindings>, ownerId: string) {
+  const limit = 3;
+  const day = new Date().toISOString().slice(0, 10);
+  const key = `playground-quota:${ownerId}:${day}`;
+  const kv = new AppKV((c.env ?? {}).CONTEXTKIT_KV);
+  const used = (await kv.get<number>(key)) ?? 0;
+  if (used >= limit) {
+    return { allowed: false, used, remaining: 0, limit, resetAt: nextUtcDayIso() };
+  }
+  const next = used + 1;
+  await kv.set(key, next, 36 * 60 * 60);
+  return { allowed: true, used: next, remaining: Math.max(0, limit - next), limit, resetAt: nextUtcDayIso() };
+}
+
+async function runPlaygroundEndpoint(service: ContextService, endpoint: string, request: ConversationRequest) {
+  if (endpoint === "compress-context") return service.compress(request);
+  if (endpoint === "handoff") return service.handoff(request);
+  if (endpoint === "extract-profile") return service.profile(request);
+  return service.summarize(request);
+}
+
+function nextUtcDayIso() {
+  const now = new Date();
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1)).toISOString();
+}
 
 async function readDashboardSession(c: Context<AppBindings>) {
   const cookie = c.req.header("cookie") ?? "";

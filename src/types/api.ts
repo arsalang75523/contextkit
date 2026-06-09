@@ -54,6 +54,11 @@ export const tokenEstimateSchema = z.object({
   modelFamily: z.enum(["openai", "claude", "gemini"]).default("openai")
 });
 
+export const playgroundRunSchema = z.object({
+  endpoint: z.enum(["summarize", "compress-context", "handoff", "extract-profile"]).default("summarize"),
+  messages: z.array(messageSchema).min(1).max(50)
+});
+
 export const webhookReplaySchema = z.object({
   eventId: z.string().min(1),
   url: z.string().url().optional()
@@ -65,6 +70,7 @@ export type CreateApiKeyInput = z.infer<typeof createApiKeySchema>;
 export type SignupInput = z.infer<typeof signupSchema>;
 export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
+export type PlaygroundRunInput = z.infer<typeof playgroundRunSchema>;
 
 export type ContextEndpoint = "summarize" | "compress-context" | "handoff" | "extract-profile";
 

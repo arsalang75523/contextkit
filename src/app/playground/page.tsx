@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { Calculator, RotateCcw, Terminal } from "lucide-react";
+import { Calculator, Play, RotateCcw, Terminal } from "lucide-react";
 import { CodeBlock } from "@/components/code-block";
 import { endpoints } from "@/content/docs";
 import { bankrHostedUrl, bankrX402Command } from "@/lib/bankr-x402";
@@ -16,6 +16,7 @@ export default function PlaygroundPage() {
   const [input, setInput] = useState(seed);
   const [apiKey, setApiKey] = useState("");
   const [tokenResult, setTokenResult] = useState<object | null>(null);
+  const [runResult, setRunResult] = useState<object | null>(null);
   const [error, setError] = useState("");
   const [isPending, startTransition] = useTransition();
 
@@ -28,6 +29,30 @@ export default function PlaygroundPage() {
     }
   }, [input]);
   const command = useMemo(() => bankrX402Command(active.slug, payload), [active.slug, payload]);
+
+  function runLivePlayground() {
+    setError("");
+    setRunResult(null);
+    startTransition(() => {
+      void (async () => {
+        try {
+          const messages = JSON.parse(input);
+          const response = await fetch("/api/playground/run", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ endpoint: active.slug, messages })
+          });
+          const result = (await response.json()) as Record<string, unknown>;
+          setRunResult(result);
+          if (!response.ok) {
+            setError(JSON.stringify(result, null, 2));
+          }
+        } catch (err) {
+          setError(err instanceof Error ? err.message : "Invalid JSON input.");
+        }
+      })();
+    });
+  }
 
   function estimateTokens() {
     setError("");
@@ -62,9 +87,9 @@ export default function PlaygroundPage() {
 
         <div className="mt-8 grid gap-4 md:grid-cols-3">
           {[
-            ["1. Choose a service", "Summarize, compress, handoff, or profile. The hosted URL changes when you switch services."],
-            ["2. Copy the command", "The command calls x402.bankr.bot. Bankr handles payment and forwards the paid request to ContextKit."],
-            ["3. Optional API key", "API keys are only for dashboard, analytics, token estimates, webhooks, and advanced direct API usage."]
+            ["1. Login once", "The live playground runs from your dashboard session and is limited to 3 real AI requests per account per day."],
+            ["2. Paste messages", "Write JSON messages on the left, choose summarize, compress, handoff, or profile, then run the real ContextKit processor."],
+            ["3. Production path", "For unlimited paid agent traffic, copy the Bankr-hosted x402 command and let Bankr handle payment."]
           ].map(([title, text]) => (
             <div key={title} className="rounded-md border border-line bg-white/[0.035] p-4">
               <h2 className="font-semibold text-white">{title}</h2>
@@ -100,10 +125,13 @@ export default function PlaygroundPage() {
                 Optional ContextKit API key for token estimation
               </label>
               <p className="text-sm leading-6 text-white/45">
-                This does not run the paid AI endpoint. It only measures token counts for developers who already have a ContextKit key.
+              This only measures token counts for developers who already have a ContextKit key. To run the full process here, use the live playground button below.
               </p>
               <div className="flex flex-col gap-3 sm:flex-row">
                 <input id="api-key" value={apiKey} onChange={(event) => setApiKey(event.target.value)} placeholder="ck_live_... or ck_test_..." className="h-11 flex-1 rounded-md border border-line bg-ink/80 px-3 font-mono text-sm text-white outline-none focus:border-mint" />
+                <button type="button" onClick={runLivePlayground} disabled={isPending} className="inline-flex h-11 items-center justify-center gap-2 rounded-md bg-aqua px-5 text-sm font-medium text-ink disabled:opacity-50">
+                  <Play className="h-4 w-4" /> Run full process
+                </button>
                 <button type="button" onClick={estimateTokens} disabled={isPending} className="inline-flex h-11 items-center justify-center gap-2 rounded-md bg-mint px-5 text-sm font-medium text-ink disabled:opacity-50">
                   <Calculator className="h-4 w-4" /> Estimate tokens
                 </button>
@@ -119,6 +147,13 @@ export default function PlaygroundPage() {
               <p className="mt-2 text-sm text-white/60">
                 {active.price} via Bankr-hosted x402. This is the real paid endpoint for <span className="text-mint">{active.slug}</span>. No ContextKit API key is required for this hosted paid endpoint.
               </p>
+            </div>
+            <div>
+              <p className="mb-3 text-sm uppercase tracking-[0.18em] text-white/45">Live ContextKit response</p>
+              <p className="mb-3 text-sm leading-6 text-white/55">
+                This calls <code>/api/playground/run</code> with your current dashboard session. Limit: 3 real AI runs per account per day.
+              </p>
+              <CodeBlock code={JSON.stringify(runResult ?? { status: "Login, paste messages, then click Run full process." }, null, 2)} />
             </div>
             <div>
               <div className="mb-3 flex items-center gap-2 text-sm uppercase tracking-[0.18em] text-white/45">
