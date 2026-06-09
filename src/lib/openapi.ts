@@ -40,12 +40,35 @@ const errorSchema = z.object({
 
 const summarizeResponse = z.object({
   summary: z.string(),
-  tokenReductionEstimate: z.number()
+  tokenReductionEstimate: z.number(),
+  keyDecisions: z.array(z.string()),
+  actionItems: z.array(z.string()),
+  openQuestions: z.array(z.string()),
+  risks: z.array(z.string()),
+  confidence: z.number()
 });
 
 const compressResponse = z.object({
   compressedContext: z.string(),
   estimatedSavings: z.string(),
+  micro: z.string(),
+  compact: z.string(),
+  extended: z.string(),
+  prioritizedFacts: z.array(z.object({ fact: z.string(), importance: z.number() })),
+  entities: z.object({
+    project: z.string(),
+    people: z.array(z.string()),
+    stack: z.array(z.string()),
+    deadlines: z.array(z.string()),
+    constraints: z.array(z.string())
+  }),
+  conflicts: z.array(z.object({ current: z.string(), superseded: z.array(z.string()) })),
+  metrics: z.object({
+    originalTokens: z.number(),
+    compressedTokens: z.number(),
+    actualReductionPercent: z.number(),
+    factRetentionScore: z.number()
+  }),
   quality: z.object({
     duplicateDensity: z.number(),
     contextScore: z.number(),
@@ -60,7 +83,18 @@ const handoffResponse = z.object({
   constraints: z.array(z.string()),
   recommendedNextActions: z.array(z.string()),
   tone: z.string(),
-  userIntent: z.string()
+  userIntent: z.string(),
+  projectSummary: z.string(),
+  currentState: z.string(),
+  completedWork: z.array(z.string()),
+  inProgress: z.array(z.string()),
+  pendingTasks: z.array(z.string()),
+  knownIssues: z.array(z.string()),
+  failedApproaches: z.array(z.object({ attempt: z.string(), result: z.string(), decision: z.string() })),
+  importantDecisions: z.array(z.object({ decision: z.string(), reason: z.string() })),
+  blockers: z.array(z.string()),
+  agentNotes: z.array(z.string()),
+  confidence: z.number()
 });
 
 const profileResponse = z.object({
@@ -68,7 +102,21 @@ const profileResponse = z.object({
   riskTolerance: z.string(),
   communicationStyle: z.string(),
   preferences: z.array(z.string()),
-  importantContext: z.array(z.string())
+  importantContext: z.array(z.string()),
+  identity: z.object({
+    profession: z.string().optional(),
+    location: z.string().optional(),
+    age: z.number().nullable().optional()
+  }),
+  skills: z.array(z.string()),
+  goals: z.array(z.string()),
+  futurePlans: z.array(z.string()),
+  behaviorPatterns: z.array(z.string()),
+  dislikes: z.array(z.string()),
+  careerStage: z.string(),
+  managementIntent: z.boolean(),
+  entrepreneurial: z.boolean(),
+  confidence: z.number()
 });
 
 const routes = [

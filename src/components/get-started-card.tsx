@@ -26,7 +26,7 @@ export function GetStartedCard() {
         </div>
         <h3 className="mt-6 text-2xl font-semibold text-white">Self-serve onboarding for humans and agents.</h3>
         <p className="mt-4 leading-7 text-white/62">
-          Create an account from the dashboard or terminal. ContextKit returns the first full API key once, so agents can store it and operate without a human clicking through the UI.
+          Create an account from the dashboard or terminal, verify the email, then issue scoped API keys from the dashboard. Paid generation can still run directly through Bankr-hosted x402.
         </p>
         <div className="mt-6 grid gap-3 text-sm text-white/65">
           <div className="rounded border border-line bg-ink/65 p-4">
@@ -36,7 +36,7 @@ export function GetStartedCard() {
             <span className="text-mint">2.</span> ContextKit API keys are for dashboards, analytics, token estimates, webhooks, and advanced direct API usage.
           </div>
           <div className="rounded border border-line bg-ink/65 p-4">
-            <span className="text-mint">3.</span> Signup returns a scoped <code>ck_live_</code> key once. Save it immediately; later dashboard views only show masked keys.
+            <span className="text-mint">3.</span> Email verification is required before dashboard access or API key creation. Full API keys are shown once when created.
           </div>
         </div>
       </div>

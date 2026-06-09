@@ -1,0 +1,66 @@
+"use client";
+
+import { Suspense, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
+
+export default function VerifyEmailPage() {
+  return (
+    <Suspense fallback={<VerifyShell title="Verifying email..." />}>
+      <VerifyEmailForm />
+    </Suspense>
+  );
+}
+
+function VerifyEmailForm() {
+  const searchParams = useSearchParams();
+  const [status, setStatus] = useState("Verifying your ContextKit account...");
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const token = searchParams.get("token") ?? "";
+    if (!token) {
+      setError("Verification token is missing.");
+      setStatus("");
+      return;
+    }
+
+    void (async () => {
+      const response = await fetch("/api/dashboard/verify-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token })
+      });
+      const payload = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+      if (!response.ok) {
+        setError(JSON.stringify(payload, null, 2));
+        setStatus("");
+        return;
+      }
+      setStatus("Email verified. You can login and create API keys now.");
+    })();
+  }, [searchParams]);
+
+  return (
+    <main className="grid min-h-screen place-items-center px-5 py-16">
+      <section className="w-full max-w-xl rounded-md border border-line bg-white/[0.035] p-6">
+        <p className="text-sm uppercase tracking-[0.22em] text-mint">Email Verification</p>
+        <h1 className="mt-4 text-3xl font-semibold text-white">{status || "Verification failed"}</h1>
+        {error ? <pre className="mt-4 whitespace-pre-wrap rounded border border-coral/40 bg-coral/10 p-3 text-xs text-coral">{error}</pre> : null}
+        <a href="/dashboard/login" className="mt-6 inline-flex h-11 items-center rounded-md border border-mint/40 px-5 text-sm text-mint">
+          Go to login
+        </a>
+      </section>
+    </main>
+  );
+}
+
+function VerifyShell({ title }: { title: string }) {
+  return (
+    <main className="grid min-h-screen place-items-center px-5 py-16">
+      <section className="w-full max-w-xl rounded-md border border-line bg-white/[0.035] p-6">
+        <p className="text-sm uppercase tracking-[0.22em] text-mint">Email Verification</p>
+        <h1 className="mt-4 text-3xl font-semibold text-white">{title}</h1>
+      </section>
+    </main>
+  );
+}

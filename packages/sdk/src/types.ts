@@ -14,11 +14,34 @@ export type ContextRequest = {
 export type SummarizeResponse = {
   summary: string;
   tokenReductionEstimate: number;
+  keyDecisions: string[];
+  actionItems: string[];
+  openQuestions: string[];
+  risks: string[];
+  confidence: number;
 };
 
 export type CompressContextResponse = {
   compressedContext: string;
   estimatedSavings: string;
+  micro: string;
+  compact: string;
+  extended: string;
+  prioritizedFacts: Array<{ fact: string; importance: number }>;
+  entities: {
+    project: string;
+    people: string[];
+    stack: string[];
+    deadlines: string[];
+    constraints: string[];
+  };
+  conflicts: Array<{ current: string; superseded: string[] }>;
+  metrics: {
+    originalTokens: number;
+    compressedTokens: number;
+    actualReductionPercent: number;
+    factRetentionScore: number;
+  };
   quality: {
     duplicateDensity: number;
     contextScore: number;
@@ -34,6 +57,17 @@ export type HandoffResponse = {
   recommendedNextActions: string[];
   tone: string;
   userIntent: string;
+  projectSummary: string;
+  currentState: string;
+  completedWork: string[];
+  inProgress: string[];
+  pendingTasks: string[];
+  knownIssues: string[];
+  failedApproaches: Array<{ attempt: string; result: string; decision: string }>;
+  importantDecisions: Array<{ decision: string; reason: string }>;
+  blockers: string[];
+  agentNotes: string[];
+  confidence: number;
 };
 
 export type ProfileResponse = {
@@ -42,6 +76,20 @@ export type ProfileResponse = {
   communicationStyle: string;
   preferences: string[];
   importantContext: string[];
+  identity: {
+    profession?: string;
+    location?: string;
+    age?: number | null;
+  };
+  skills: string[];
+  goals: string[];
+  futurePlans: string[];
+  behaviorPatterns: string[];
+  dislikes: string[];
+  careerStage: string;
+  managementIntent: boolean;
+  entrepreneurial: boolean;
+  confidence: number;
 };
 
 export type X402PaymentHandler = (challenge: unknown, request: RequestInit & { url: string }) => Promise<string>;

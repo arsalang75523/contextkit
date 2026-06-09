@@ -116,7 +116,8 @@ export function DashboardClient({ view = "overview" }: { view?: View }) {
     setMessage(JSON.stringify(await response.json(), null, 2));
   }
 
-  function logout() {
+  async function logout() {
+    await fetch("/api/dashboard/logout", { method: "POST" }).catch(() => null);
     window.localStorage.removeItem("contextkit_api_key");
     setApiKey("");
     setAccount(null);

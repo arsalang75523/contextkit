@@ -14,11 +14,24 @@ export default function DashboardLoginPage() {
   const [apiKey, setApiKey] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [result, setResult] = useState<object | null>(null);
+  const [resultMode, setResultMode] = useState<Mode | null>(null);
   const [error, setError] = useState("");
+  const [unverifiedEmail, setUnverifiedEmail] = useState("");
+
+  function switchMode(nextMode: Mode) {
+    setMode(nextMode);
+    setResult(null);
+    setResultMode(null);
+    setError("");
+    setUnverifiedEmail("");
+    setPassword("");
+    setShowPassword(false);
+  }
 
   async function submit() {
     setError("");
     setResult(null);
+    setResultMode(null);
     const endpoint = mode === "signup" ? "/api/dashboard/signup" : mode === "login" ? "/api/dashboard/login" : mode === "forgot" ? "/api/dashboard/forgot-password" : "/api/dashboard/session";
     const body = mode === "signup" ? { email, password, name, company } : mode === "login" ? { email, password } : mode === "forgot" ? { email } : { apiKey };
     const response = await fetch(endpoint, {
@@ -28,22 +41,43 @@ export default function DashboardLoginPage() {
     });
     const payload = (await response.json().catch(() => ({}))) as Record<string, unknown>;
     if (!response.ok) {
+      if (payload.error && typeof payload.error === "object" && "code" in payload.error && payload.error.code === "email_not_verified") {
+        setUnverifiedEmail(email);
+      }
       setError(JSON.stringify(payload, null, 2));
       return;
     }
     if (mode === "forgot") {
       setResult(payload);
+      setResultMode(mode);
       return;
     }
     if (mode === "api-key") {
       window.localStorage.setItem("contextkit_api_key", apiKey);
     }
-    if (mode === "signup" && typeof payload.key === "string") {
-      window.localStorage.setItem("contextkit_api_key", payload.key);
+    if (mode === "signup") {
       setResult(payload);
+      setResultMode(mode);
       return;
     }
     window.location.href = "/dashboard";
+  }
+
+  async function resendVerification() {
+    setError("");
+    setResult(null);
+    const response = await fetch("/api/dashboard/resend-verification", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: unverifiedEmail || email })
+    });
+    const payload = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+    if (!response.ok) {
+      setError(JSON.stringify(payload, null, 2));
+      return;
+    }
+    setResult(payload);
+    setResultMode("forgot");
   }
 
   return (
@@ -57,7 +91,7 @@ export default function DashboardLoginPage() {
             ["login", "Login"],
             ["api-key", "Use API key"]
           ].map(([key, label]) => (
-            <button key={key} type="button" onClick={() => setMode(key as Mode)} className={`h-10 rounded-md border text-sm ${mode === key ? "border-mint bg-mint/10 text-mint" : "border-line text-white/65"}`}>
+            <button key={key} type="button" onClick={() => switchMode(key as Mode)} className={`h-10 rounded-md border text-sm ${mode === key ? "border-mint bg-mint/10 text-mint" : "border-line text-white/65"}`}>
               {label}
             </button>
           ))}
@@ -82,7 +116,7 @@ export default function DashboardLoginPage() {
                 </button>
               </div>
               {mode === "login" ? (
-                <button type="button" onClick={() => setMode("forgot")} className="w-fit text-sm text-aqua hover:text-mint">
+                <button type="button" onClick={() => switchMode("forgot")} className="w-fit text-sm text-aqua hover:text-mint">
                   Forgot password?
                 </button>
               ) : null}
@@ -91,30 +125,33 @@ export default function DashboardLoginPage() {
             <input value={apiKey} onChange={(event) => setApiKey(event.target.value)} placeholder="ck_live_..." className="h-11 rounded-md border border-line bg-ink/80 px-3 font-mono text-sm text-white outline-none focus:border-mint" />
           )}
           <button type="button" onClick={submit} className="h-11 rounded-md bg-mint px-5 text-sm font-medium text-ink">
-            {mode === "signup" ? "Create account + first API key" : mode === "forgot" ? "Send reset email" : "Continue"}
+            {mode === "signup" ? "Create account" : mode === "forgot" ? "Send reset email" : "Continue"}
           </button>
         </div>
         {mode === "forgot" ? (
-          <button type="button" onClick={() => setMode("login")} className="mt-4 text-sm text-aqua hover:text-mint">
+          <button type="button" onClick={() => switchMode("login")} className="mt-4 text-sm text-aqua hover:text-mint">
             Back to login
           </button>
         ) : null}
         {mode === "signup" ? (
           <p className="mt-4 text-sm leading-6 text-white/55">
-            The first key is shown once. Store it securely. You can create/revoke more scoped keys from the dashboard.
+            Email verification is required before dashboard access or API key creation. After verifying, login and create scoped keys from the dashboard.
           </p>
+        ) : null}
+        {unverifiedEmail ? (
+          <div className="mt-4 rounded border border-aqua/30 bg-aqua/10 p-4">
+            <p className="text-sm text-aqua">This account is not verified yet.</p>
+            <button type="button" onClick={resendVerification} className="mt-3 h-10 rounded-md border border-aqua/40 px-4 text-sm text-aqua">
+              Resend verification email
+            </button>
+          </div>
         ) : null}
         {result ? (
           <div className="mt-5">
             <p className="mb-3 text-sm text-mint">
-              {mode === "signup" ? "Account created. Store this API key now, then open the dashboard." : "Check your email"}
+              {resultMode === "signup" ? "Account created. Check your email to verify it before login." : "Check your email"}
             </p>
             <CodeBlock code={JSON.stringify(result, null, 2)} />
-            {mode !== "forgot" ? (
-              <button type="button" onClick={() => (window.location.href = "/dashboard")} className="mt-4 h-11 rounded-md border border-mint/40 px-5 text-sm text-mint">
-                Open dashboard
-              </button>
-            ) : null}
           </div>
         ) : null}
         {error ? <pre className="mt-4 whitespace-pre-wrap rounded border border-coral/40 bg-coral/10 p-3 text-xs text-coral">{error}</pre> : null}

@@ -44,6 +44,10 @@ export const resetPasswordSchema = z.object({
   password: z.string().min(12).max(128)
 });
 
+export const verifyEmailSchema = z.object({
+  token: z.string().min(24)
+});
+
 export const revokeApiKeySchema = z.object({
   keyId: z.string().min(1)
 });
@@ -74,6 +78,7 @@ export type CreateApiKeyInput = z.infer<typeof createApiKeySchema>;
 export type SignupInput = z.infer<typeof signupSchema>;
 export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
+export type VerifyEmailInput = z.infer<typeof verifyEmailSchema>;
 export type PlaygroundRunInput = z.infer<typeof playgroundRunSchema>;
 
 export type ContextEndpoint = "summarize" | "compress-context" | "handoff" | "extract-profile";
@@ -90,11 +95,40 @@ export type ApiError = {
 export type SummarizeResponse = {
   summary: string;
   tokenReductionEstimate: number;
+  keyDecisions: string[];
+  actionItems: string[];
+  openQuestions: string[];
+  risks: string[];
+  confidence: number;
 };
 
 export type CompressContextResponse = {
   compressedContext: string;
   estimatedSavings: string;
+  micro: string;
+  compact: string;
+  extended: string;
+  prioritizedFacts: Array<{
+    fact: string;
+    importance: number;
+  }>;
+  entities: {
+    project: string;
+    people: string[];
+    stack: string[];
+    deadlines: string[];
+    constraints: string[];
+  };
+  conflicts: Array<{
+    current: string;
+    superseded: string[];
+  }>;
+  metrics: {
+    originalTokens: number;
+    compressedTokens: number;
+    actualReductionPercent: number;
+    factRetentionScore: number;
+  };
   quality: {
     duplicateDensity: number;
     contextScore: number;
@@ -110,6 +144,24 @@ export type HandoffResponse = {
   recommendedNextActions: string[];
   tone: string;
   userIntent: string;
+  projectSummary: string;
+  currentState: string;
+  completedWork: string[];
+  inProgress: string[];
+  pendingTasks: string[];
+  knownIssues: string[];
+  failedApproaches: Array<{
+    attempt: string;
+    result: string;
+    decision: string;
+  }>;
+  importantDecisions: Array<{
+    decision: string;
+    reason: string;
+  }>;
+  blockers: string[];
+  agentNotes: string[];
+  confidence: number;
 };
 
 export type ProfileResponse = {
@@ -118,6 +170,20 @@ export type ProfileResponse = {
   communicationStyle: string;
   preferences: string[];
   importantContext: string[];
+  identity: {
+    profession?: string;
+    location?: string;
+    age?: number | null;
+  };
+  skills: string[];
+  goals: string[];
+  futurePlans: string[];
+  behaviorPatterns: string[];
+  dislikes: string[];
+  careerStage: string;
+  managementIntent: boolean;
+  entrepreneurial: boolean;
+  confidence: number;
 };
 
 export type WebhookEventName =

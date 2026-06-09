@@ -10,13 +10,16 @@ import { createId } from "@/utils/id";
 import { sanitizeMessages } from "@/utils/sanitize";
 import { estimateReduction, estimateTokens } from "@/utils/tokens";
 import { endpointPricing } from "@/lib/pricing";
-import { createApiKeySchema, demoRunSchema, forgotPasswordSchema, loginSchema, playgroundRunSchema, resetPasswordSchema, signupSchema } from "@/types/api";
+import { createApiKeySchema, demoRunSchema, forgotPasswordSchema, loginSchema, playgroundRunSchema, resetPasswordSchema, signupSchema, verifyEmailSchema } from "@/types/api";
 import type { AppBindings } from "@/types/bindings";
 import type { ConversationMessage, ConversationRequest } from "@/types/api";
 
 export const dashboardSessionRoutes = new Hono<AppBindings>();
 
 dashboardSessionRoutes.post("/dashboard/signup", zValidator("json", signupSchema), async (c) => {
+  const limited = await authActionRateLimit(c, "signup", 8, 60 * 60);
+  if (limited) return limited;
+
   const accountService = new AccountService(c.env ?? {});
   const account = await accountService.signup(c.req.valid("json")).catch((error) => {
     if (error instanceof Error && error.message === "account_exists") return null;
@@ -27,37 +30,85 @@ dashboardSessionRoutes.post("/dashboard/signup", zValidator("json", signupSchema
     return c.json({ error: { code: "account_exists", message: "An account already exists for this email.", requestId: c.get("requestId") } }, 409);
   }
 
-  const firstKey = await new ApiKeyService(c.env ?? {}).create({
-    name: "Default live key",
-    environment: "live",
-    scopes: ["context:write", "analytics:read", "webhooks:write", "keys:read"]
-  }, account.id);
-  const sessionId = await accountService.createSession(account.id);
-  setSessionCookie(c, sessionId);
-  return c.json({ account, key: firstKey.key, apiKey: firstKey.record }, 201);
+  return c.json({
+    account,
+    emailVerificationRequired: true,
+    message: "Account created. Check your email to verify the account before logging in or creating API keys."
+  }, 201);
 });
 
 dashboardSessionRoutes.post("/dashboard/login", zValidator("json", loginSchema), async (c) => {
-  const account = await new AccountService(c.env ?? {}).login(c.req.valid("json").email, c.req.valid("json").password);
+  const email = c.req.valid("json").email.toLowerCase();
+  const limited = await authActionRateLimit(c, `login:${email}`, 10, 15 * 60);
+  if (limited) return limited;
+
+  const accountService = new AccountService(c.env ?? {});
+  const account = await accountService.login(c.req.valid("json").email, c.req.valid("json").password).catch((error) => {
+    if (error instanceof Error && error.message === "email_not_verified") return "email_not_verified" as const;
+    throw error;
+  });
+  if (account === "email_not_verified") {
+    return c.json({
+      error: {
+        code: "email_not_verified",
+        message: "Verify your email before logging in. You can request a new verification email.",
+        requestId: c.get("requestId")
+      }
+    }, 403);
+  }
   if (!account) {
     return c.json({ error: { code: "invalid_login", message: "Email or password is incorrect.", requestId: c.get("requestId") } }, 401);
   }
-  const sessionId = await new AccountService(c.env ?? {}).createSession(account.id);
+  const sessionId = await accountService.createSession(account.id);
   setSessionCookie(c, sessionId);
   return c.json({ ok: true, account });
 });
 
+dashboardSessionRoutes.post("/dashboard/resend-verification", zValidator("json", forgotPasswordSchema), async (c) => {
+  const email = c.req.valid("json").email.toLowerCase();
+  const limited = await authActionRateLimit(c, `verify:${email}`, 5, 60 * 60);
+  if (limited) return limited;
+
+  const result = await new AccountService(c.env ?? {}).resendVerification(email);
+  return c.json(result);
+});
+
+dashboardSessionRoutes.post("/dashboard/verify-email", zValidator("json", verifyEmailSchema), async (c) => {
+  const limited = await authActionRateLimit(c, "verify-email", 20, 15 * 60);
+  if (limited) return limited;
+
+  const account = await new AccountService(c.env ?? {}).verifyEmail(c.req.valid("json").token);
+  if (!account) {
+    return c.json({ error: { code: "invalid_verification_token", message: "Verification token is invalid or expired.", requestId: c.get("requestId") } }, 401);
+  }
+  return c.json({ ok: true, account });
+});
+
 dashboardSessionRoutes.post("/dashboard/forgot-password", zValidator("json", forgotPasswordSchema), async (c) => {
+  const email = c.req.valid("json").email.toLowerCase();
+  const limited = await authActionRateLimit(c, `forgot:${email}`, 5, 60 * 60);
+  if (limited) return limited;
+
   const result = await new AccountService(c.env ?? {}).createPasswordReset(c.req.valid("json").email);
   return c.json(result);
 });
 
 dashboardSessionRoutes.post("/dashboard/reset-password", zValidator("json", resetPasswordSchema), async (c) => {
+  const limited = await authActionRateLimit(c, "reset-password", 10, 15 * 60);
+  if (limited) return limited;
+
   const body = c.req.valid("json");
   const ok = await new AccountService(c.env ?? {}).resetPassword(body.token, body.password);
   if (!ok) {
     return c.json({ error: { code: "invalid_reset_token", message: "Reset token is invalid or expired.", requestId: c.get("requestId") } }, 401);
   }
+  return c.json({ ok: true });
+});
+
+dashboardSessionRoutes.post("/dashboard/logout", async (c) => {
+  const sessionId = readSessionId(c);
+  await new AccountService(c.env ?? {}).revokeSession(sessionId);
+  clearSessionCookie(c);
   return c.json({ ok: true });
 });
 
@@ -218,6 +269,9 @@ dashboardSessionRoutes.post("/demo/run", zValidator("json", demoRunSchema), asyn
 });
 
 dashboardSessionRoutes.post("/dashboard/session", async (c) => {
+  const limited = await authActionRateLimit(c, "api-key-session", 20, 15 * 60);
+  if (limited) return limited;
+
   const body = (await c.req.json().catch(() => ({}))) as { apiKey?: string };
   if (!body.apiKey) {
     return c.json({ error: { code: "missing_api_key", message: "API key is required.", requestId: c.get("requestId") } }, 400);
@@ -265,16 +319,40 @@ function nextUtcDayIso() {
 }
 
 async function readDashboardSession(c: Context<AppBindings>) {
+  return new AccountService(c.env ?? {}).getSession(readSessionId(c));
+}
+
+function readSessionId(c: Context<AppBindings>) {
   const cookie = c.req.header("cookie") ?? "";
-  const sessionId = cookie
+  return cookie
     .split(";")
     .map((part) => part.trim())
     .find((part) => part.startsWith("ck_session="))
     ?.slice("ck_session=".length);
-  return new AccountService(c.env ?? {}).getSession(sessionId);
 }
 
 function setSessionCookie(c: Context<AppBindings>, sessionId: string) {
   const secure = new URL(c.req.url).protocol === "https:" ? "; Secure" : "";
-  c.header("Set-Cookie", `ck_session=${sessionId}; HttpOnly${secure}; SameSite=Lax; Path=/; Max-Age=43200`);
+  c.header("Set-Cookie", `ck_session=${sessionId}; HttpOnly${secure}; SameSite=Strict; Path=/; Max-Age=43200`);
+}
+
+function clearSessionCookie(c: Context<AppBindings>) {
+  const secure = new URL(c.req.url).protocol === "https:" ? "; Secure" : "";
+  c.header("Set-Cookie", `ck_session=; HttpOnly${secure}; SameSite=Strict; Path=/; Max-Age=0`);
+}
+
+async function authActionRateLimit(c: Context<AppBindings>, action: string, limit: number, windowSeconds: number) {
+  const ip = c.req.header("cf-connecting-ip") ?? c.req.header("x-forwarded-for") ?? "local";
+  const windowId = Math.floor(Date.now() / (windowSeconds * 1000));
+  const key = `auth-rate:${action}:${ip}:${windowId}`;
+  const count = await new AppKV((c.env ?? {}).CONTEXTKIT_KV).increment(key, windowSeconds);
+
+  if (count <= limit) return null;
+  return c.json({
+    error: {
+      code: "auth_rate_limited",
+      message: "Too many authentication attempts. Try again later.",
+      requestId: c.get("requestId")
+    }
+  }, 429);
 }
