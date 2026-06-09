@@ -1,38 +1,52 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { Play, RotateCcw } from "lucide-react";
+import { Calculator, RotateCcw, Terminal } from "lucide-react";
+import { CodeBlock } from "@/components/code-block";
 import { endpoints } from "@/content/docs";
+import { bankrHostedUrl, bankrX402Command } from "@/lib/bankr-x402";
 
 const seed = `[
-  {"role":"user","content":"We are building ContextKit, an x402-powered API for Bankr agents."},
-  {"role":"assistant","content":"The product should summarize conversations, compress context, generate handoffs, and extract reusable user profiles."},
-  {"role":"user","content":"Make it production-grade, developer-first, and easy to demo."}
+  {"role":"system","content":"You are helping deploy a production AI infrastructure platform called ContextKit."},
+  {"role":"user","content":"ContextKit is deployed on Hetzner with Bankr-hosted x402. Summarize deployment state, fixes, and next steps for another AI agent."}
 ]`;
 
 export default function PlaygroundPage() {
   const [endpoint, setEndpoint] = useState("summarize");
   const [input, setInput] = useState(seed);
   const [apiKey, setApiKey] = useState("");
-  const [payment, setPayment] = useState("");
-  const [result, setResult] = useState<object | null>(null);
+  const [tokenResult, setTokenResult] = useState<object | null>(null);
+  const [error, setError] = useState("");
   const [isPending, startTransition] = useTransition();
 
   const active = useMemo(() => endpoints.find((item) => item.slug === endpoint) ?? endpoints[0], [endpoint]);
+  const payload = useMemo(() => {
+    try {
+      return { messages: JSON.parse(input) };
+    } catch {
+      return { messages: [] };
+    }
+  }, [input]);
+  const command = useMemo(() => bankrX402Command(active.slug, payload), [active.slug, payload]);
 
-  function run() {
+  function estimateTokens() {
+    setError("");
     startTransition(() => {
       void (async () => {
-        const response = await fetch(active.path, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${apiKey}`,
-            "X-Payment": payment
-          },
-          body: JSON.stringify({ messages: JSON.parse(input) })
-        });
-        setResult(await response.json());
+        try {
+          const messages = JSON.parse(input);
+          const response = await fetch("/api/tokens/estimate", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${apiKey}`
+            },
+            body: JSON.stringify({ modelFamily: "openai", input: messages })
+          });
+          setTokenResult(await response.json());
+        } catch (err) {
+          setError(err instanceof Error ? err.message : "Invalid JSON input.");
+        }
       })();
     });
   }
@@ -41,15 +55,13 @@ export default function PlaygroundPage() {
     <main className="px-5 py-16">
       <div className="mx-auto max-w-7xl">
         <p className="text-sm uppercase tracking-[0.22em] text-mint">Interactive Playground</p>
-        <h1 className="mt-4 text-4xl font-semibold text-white md:text-6xl">Call the live ContextKit API.</h1>
-        <p className="mt-4 max-w-2xl leading-7 text-white/65">Paste messages, provide a real API key and x402 payment payload, then inspect the JSON response.</p>
+        <h1 className="mt-4 text-4xl font-semibold text-white md:text-6xl">Build real Bankr x402 calls.</h1>
+        <p className="mt-4 max-w-3xl leading-7 text-white/65">
+          ContextKit does not ask for an x402 password. Paid calls are made by Bankr CLI, Bankr agents, or an x402-compatible wallet/client. This playground builds real commands and lets API-key users inspect token counts.
+        </p>
 
         <div className="mt-10 grid gap-5 lg:grid-cols-[1fr_0.85fr]">
           <section className="rounded-md border border-line bg-white/[0.035] p-5">
-            <div className="mb-4 grid gap-3">
-              <input value={apiKey} onChange={(event) => setApiKey(event.target.value)} placeholder="ck_live_..." className="h-11 rounded-md border border-line bg-ink/80 px-3 font-mono text-sm text-white outline-none focus:border-mint" />
-              <input value={payment} onChange={(event) => setPayment(event.target.value)} placeholder="X-Payment x402 payload" className="h-11 rounded-md border border-line bg-ink/80 px-3 font-mono text-sm text-white outline-none focus:border-mint" />
-            </div>
             <div className="mb-4 flex flex-wrap gap-2">
               {endpoints.map((item) => (
                 <button
@@ -67,26 +79,36 @@ export default function PlaygroundPage() {
               onChange={(event) => setInput(event.target.value)}
               className="min-h-[430px] w-full resize-y rounded-md border border-line bg-ink/70 p-4 font-mono text-sm leading-7 text-white outline-none focus:border-mint/60"
             />
-            <div className="mt-4 flex gap-3">
-              <button type="button" onClick={run} className="inline-flex h-11 items-center gap-2 rounded-md bg-mint px-5 text-sm font-medium text-ink">
-                <Play className="h-4 w-4" /> Run request
-              </button>
-              <button type="button" onClick={() => setInput(seed)} className="inline-flex h-11 items-center gap-2 rounded-md border border-line px-5 text-sm text-white/75">
-                <RotateCcw className="h-4 w-4" /> Reset
-              </button>
+            <div className="mt-4 grid gap-3 rounded-md border border-line bg-carbon/60 p-4">
+              <label htmlFor="api-key" className="text-sm text-white/55">
+                Optional API key for token estimation
+              </label>
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <input id="api-key" value={apiKey} onChange={(event) => setApiKey(event.target.value)} placeholder="ck_live_... or ck_test_..." className="h-11 flex-1 rounded-md border border-line bg-ink/80 px-3 font-mono text-sm text-white outline-none focus:border-mint" />
+                <button type="button" onClick={estimateTokens} disabled={isPending} className="inline-flex h-11 items-center justify-center gap-2 rounded-md bg-mint px-5 text-sm font-medium text-ink disabled:opacity-50">
+                  <Calculator className="h-4 w-4" /> Estimate tokens
+                </button>
+                <button type="button" onClick={() => setInput(seed)} className="inline-flex h-11 items-center justify-center gap-2 rounded-md border border-line px-5 text-sm text-white/75">
+                  <RotateCcw className="h-4 w-4" /> Reset
+                </button>
+              </div>
             </div>
           </section>
-          <section className="rounded-md border border-line bg-carbon/72 p-5">
-            <div className="mb-4 flex items-center justify-between">
-              <div>
-                <p className="font-mono text-sm text-mint">{active.path}</p>
-                <p className="mt-1 text-sm text-white/50">{active.price} via x402</p>
-              </div>
-              <span className="rounded bg-aqua/10 px-3 py-1 text-sm text-aqua">{Math.ceil(input.length / 4)} chars estimate</span>
+          <section className="space-y-5 rounded-md border border-line bg-carbon/72 p-5">
+            <div className="rounded-md border border-mint/25 bg-mint/10 p-4">
+              <p className="font-mono text-sm text-mint">{bankrHostedUrl(active.slug)}</p>
+              <p className="mt-2 text-sm text-white/60">{active.price} via Bankr-hosted x402. No ContextKit API key required for this hosted paid endpoint.</p>
             </div>
-            <pre className="min-h-[430px] overflow-auto rounded-md border border-line bg-ink/80 p-4 font-mono text-sm leading-7 text-mint">
-              {isPending ? "Requesting..." : JSON.stringify(result ?? { status: "Ready for live request." }, null, 2)}
-            </pre>
+            <div>
+              <div className="mb-3 flex items-center gap-2 text-sm uppercase tracking-[0.18em] text-white/45">
+                <Terminal className="h-4 w-4" /> Copyable paid request
+              </div>
+              <CodeBlock code={command} />
+            </div>
+            <div>
+              <p className="mb-3 text-sm uppercase tracking-[0.18em] text-white/45">API key token estimate</p>
+              <CodeBlock code={JSON.stringify(error ? { error } : tokenResult ?? { status: "Enter an API key to estimate tokens without paying x402." }, null, 2)} />
+            </div>
           </section>
         </div>
       </div>

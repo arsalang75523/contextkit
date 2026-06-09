@@ -1,6 +1,7 @@
 import { CodeBlock } from "@/components/code-block";
 import { Section } from "@/components/section";
 import { integrationGuides } from "@/content/docs";
+import { bankrX402Command } from "@/lib/bankr-x402";
 
 export default function IntegrationsPage() {
   return (
@@ -15,14 +16,15 @@ export default function IntegrationsPage() {
               </p>
               <div className="mt-5">
                 <CodeBlock
-                  code={`await fetch("https://contextkit.dev/api/handoff", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-    "X-Payment": await wallet.createX402Payment({ amount: "${guide === "Bankr Agents" ? "0.003" : "0.003"}" })
-  },
-  body: JSON.stringify({ messages, webhookUrl })
-});`}
+                  code={
+                    guide === "Bankr Agents"
+                      ? bankrX402Command("handoff", { messages: [{ role: "user", content: "Create an agent handoff for this workflow." }] })
+                      : `const contextkitTool = {
+  name: "contextkit_handoff",
+  description: "Buy a paid ContextKit handoff through Bankr-hosted x402.",
+  command: ${JSON.stringify(bankrX402Command("handoff", { messages: [{ role: "user", content: "Create an agent handoff for this workflow." }] }))}
+};`
+                  }
                 />
               </div>
             </article>

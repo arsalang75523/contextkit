@@ -64,7 +64,7 @@ export class AnalyticsService {
       totalInputTokens,
       totalOutputTokens,
       savedTokens: Math.max(0, totalInputTokens - totalOutputTokens),
-      averageTokenReduction: totalInputTokens === 0 ? 0 : Math.round(((totalInputTokens - totalOutputTokens) / totalInputTokens) * 100),
+      averageTokenReduction: totalInputTokens === 0 ? 0 : Math.max(0, Math.round(((totalInputTokens - totalOutputTokens) / totalInputTokens) * 100)),
       averageLatencyMs: totalRequests === 0 ? 0 : Math.round((latencyMs ?? 0) / totalRequests),
       webhookDeliveries: totalWebhookDeliveries,
       webhookDeliverySuccessRate:

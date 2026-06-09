@@ -7,11 +7,13 @@ import { estimateTokens } from "@/utils/tokens";
 import { ContextService } from "@/services/context-service";
 import { AnalyticsService } from "@/services/analytics-service";
 import { ApiKeyService } from "@/services/api-key-service";
+import { PaymentService } from "@/services/payment-service";
 import { x402PaymentRequired } from "@/middleware/x402";
 import { requireApiKey, requireInternalToken } from "@/middleware/auth";
 import { apiKeyRateLimit } from "@/middleware/rate-limit";
 import { dispatchWebhook } from "@/webhooks/dispatcher";
 import { createId } from "@/utils/id";
+import { endpointPricing } from "@/lib/pricing";
 import type { AppBindings } from "@/types/bindings";
 import type { ConversationMessage, ConversationRequest } from "@/types/api";
 
@@ -115,6 +117,7 @@ contextRoutes.post(
 
 contextRoutes.post("/internal/summarize", requireInternalToken(), zValidator("json", conversationRequestSchema), async (c) => {
   const request = { ...c.req.valid("json"), messages: sanitizeMessages(c.req.valid("json").messages) };
+  await markHostedPayment(c, "summarize", "/internal/summarize");
   const service = new ContextService({ env: c.env ?? {}, requestId: c.get("requestId") });
   const result = await service.summarize(request);
   await complete(c, "/internal/summarize", request, JSON.stringify(result));
@@ -124,6 +127,7 @@ contextRoutes.post("/internal/summarize", requireInternalToken(), zValidator("js
 
 contextRoutes.post("/internal/compress-context", requireInternalToken(), zValidator("json", conversationRequestSchema), async (c) => {
   const request = { ...c.req.valid("json"), messages: sanitizeMessages(c.req.valid("json").messages) };
+  await markHostedPayment(c, "compress-context", "/internal/compress-context");
   const service = new ContextService({ env: c.env ?? {}, requestId: c.get("requestId") });
   const result = await service.compress(request);
   await complete(c, "/internal/compress-context", request, JSON.stringify(result));
@@ -133,6 +137,7 @@ contextRoutes.post("/internal/compress-context", requireInternalToken(), zValida
 
 contextRoutes.post("/internal/handoff", requireInternalToken(), zValidator("json", conversationRequestSchema), async (c) => {
   const request = { ...c.req.valid("json"), messages: sanitizeMessages(c.req.valid("json").messages) };
+  await markHostedPayment(c, "handoff", "/internal/handoff");
   const service = new ContextService({ env: c.env ?? {}, requestId: c.get("requestId") });
   const result = await service.handoff(request);
   await complete(c, "/internal/handoff", request, JSON.stringify(result));
@@ -142,12 +147,37 @@ contextRoutes.post("/internal/handoff", requireInternalToken(), zValidator("json
 
 contextRoutes.post("/internal/extract-profile", requireInternalToken(), zValidator("json", conversationRequestSchema), async (c) => {
   const request = { ...c.req.valid("json"), messages: sanitizeMessages(c.req.valid("json").messages) };
+  await markHostedPayment(c, "extract-profile", "/internal/extract-profile");
   const service = new ContextService({ env: c.env ?? {}, requestId: c.get("requestId") });
   const result = await service.profile(request);
   await complete(c, "/internal/extract-profile", request, JSON.stringify(result));
   await service.emitCompleted(request, "profile.extracted", result);
   return c.json(result);
 });
+
+async function markHostedPayment(c: Context<AppBindings>, endpoint: keyof typeof endpointPricing, route: string) {
+  if (c.req.header("x-contextkit-x402-hosted") !== "bankr") return;
+
+  const amountUsd = endpointPricing[endpoint];
+  const paymentId = c.req.header("x-contextkit-x402-payment-id") ?? createId("hosted_pay");
+  const payment = {
+    route,
+    amountUsd,
+    paymentId,
+    payer: "bankr-hosted"
+  };
+
+  c.set("payment", payment);
+  await new PaymentService(c.env ?? {}).recordPayment({
+    ...payment,
+    requestId: c.get("requestId"),
+    facilitatorResponse: {
+      provider: "bankr-hosted",
+      service: c.req.header("x-contextkit-x402-service") ?? endpoint,
+      source: "x402.bankr.bot"
+    }
+  });
+}
 
 async function complete(
   c: Context<AppBindings>,

@@ -1,111 +1,78 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { CodeBlock } from "@/components/code-block";
+import { bankrX402Command } from "@/lib/bankr-x402";
 
-const starter = `user: We are building a Bankr-native AI agent that needs to preserve long conversations.
-assistant: The agent should summarize completed work, compress repeated context, and hand off tasks to specialized workers.
-user: It must use x402 payments, send webhooks, and track real token savings.
-assistant: We should extract user preferences and keep the next agent aligned on constraints.`;
+const starter = `user: We are building ContextKit, a Bankr-native context infrastructure API for autonomous AI agents.
+assistant: The backend runs on Hetzner with Docker Compose, Next.js, Hono, Postgres, and Drizzle migrations.
+user: Bankr-hosted x402 endpoints live at x402.bankr.bot and forward paid requests to internal ContextKit endpoints.
+assistant: Production fixes included Docker env forwarding, public HTTPS resource URLs, and robust JSON parsing for fenced LLM responses.
+user: Summarize this deployment state for a new AI agent and preserve next steps.`;
 
-type DemoResult = {
-  inputTokens: number;
-  compressedTokens: number;
-  reductionPercent: number;
-  latencyMs: number;
-  summarize: unknown;
-  compression: { compressedContext?: string; quality?: unknown };
-  handoff: unknown;
-  profile: unknown;
+type TokenResult = {
+  inputTokens?: number;
+  compressedTokens?: number;
+  reductionPercent?: number;
+  error?: unknown;
 };
 
 export default function DemoPage() {
   const [apiKey, setApiKey] = useState("");
-  const [payment, setPayment] = useState("");
   const [text, setText] = useState(starter);
-  const [result, setResult] = useState<DemoResult | null>(null);
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [compressed, setCompressed] = useState("ContextKit deployed on Hetzner; Bankr-hosted x402 forwards paid calls to internal endpoints; next: polish metrics, docs, and dashboard.");
+  const [tokens, setTokens] = useState<TokenResult | null>(null);
+  const [isPending, startTransition] = useTransition();
 
-  async function run() {
-    setLoading(true);
-    setError("");
-    const startedAt = performance.now();
-    const messages = text
-      .split("\n")
-      .map((line) => line.trim())
-      .filter(Boolean)
-      .map((line) => {
-        const [role, ...content] = line.split(":");
-        return { role: role === "assistant" ? "assistant" : "user", content: content.join(":").trim() || line };
-      });
+  const messages = useMemo(() => linesToMessages(text), [text]);
+  const summarizeCommand = useMemo(() => bankrX402Command("summarize", { messages }), [messages]);
+  const compressCommand = useMemo(() => bankrX402Command("compress-context", { messages }), [messages]);
 
-    try {
-      const headers = {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-        "X-Payment": payment
-      };
-      const [summaryRes, compressionRes, handoffRes, profileRes] = await Promise.all([
-        fetch("/api/summarize", { method: "POST", headers, body: JSON.stringify({ messages }) }),
-        fetch("/api/compress-context", { method: "POST", headers, body: JSON.stringify({ messages }) }),
-        fetch("/api/handoff", { method: "POST", headers, body: JSON.stringify({ messages }) }),
-        fetch("/api/extract-profile", { method: "POST", headers, body: JSON.stringify({ messages }) })
-      ]);
-
-      const payloads = await Promise.all([summaryRes, compressionRes, handoffRes, profileRes].map((response) => response.json()));
-      const failed = [summaryRes, compressionRes, handoffRes, profileRes].find((response) => !response.ok);
-      if (failed) {
-        setError(JSON.stringify(payloads, null, 2));
-        return;
-      }
-
-      const compression = payloads[1] as DemoResult["compression"] & { compressedContext: string };
-      const tokenRes = await fetch("/api/tokens/estimate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-        body: JSON.stringify({ input: messages, compressed: compression.compressedContext, modelFamily: "openai" })
-      });
-      const tokens = (await tokenRes.json()) as Pick<DemoResult, "inputTokens" | "compressedTokens" | "reductionPercent">;
-
-      setResult({
-        ...tokens,
-        latencyMs: Math.round(performance.now() - startedAt),
-        summarize: payloads[0],
-        compression,
-        handoff: payloads[2],
-        profile: payloads[3]
-      });
-    } finally {
-      setLoading(false);
-    }
+  function estimate() {
+    startTransition(() => {
+      void (async () => {
+        const response = await fetch("/api/tokens/estimate", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${apiKey}`
+          },
+          body: JSON.stringify({ modelFamily: "openai", input: messages, compressed })
+        });
+        setTokens(await response.json());
+      })();
+    });
   }
 
-  const reduction = result?.reductionPercent ?? 0;
+  const reduction = Math.max(0, tokens?.reductionPercent ?? 0);
 
   return (
     <main className="px-5 py-16">
       <div className="mx-auto max-w-7xl">
         <p className="text-sm uppercase tracking-[0.22em] text-mint">Killer Demo</p>
-        <h1 className="mt-4 text-4xl font-semibold text-white md:text-6xl">Measure context compression on a real request.</h1>
+        <h1 className="mt-4 text-4xl font-semibold text-white md:text-6xl">Show real value without fake payment fields.</h1>
+        <p className="mt-4 max-w-3xl leading-7 text-white/65">
+          Browser demos should not ask users to paste payment credentials. ContextKit exposes real Bankr-hosted paid endpoints, copyable agent commands, and measurable token savings for API-key users.
+        </p>
+
         <div className="mt-8 grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">
-          <section className="rounded-md border border-line bg-white/[0.035] p-5">
-            <div className="grid gap-3">
-              <input value={apiKey} onChange={(event) => setApiKey(event.target.value)} placeholder="ck_live_... or ck_test_..." className="h-11 rounded-md border border-line bg-ink/80 px-3 font-mono text-sm text-white outline-none focus:border-mint" />
-              <input value={payment} onChange={(event) => setPayment(event.target.value)} placeholder="X-Payment x402 payload" className="h-11 rounded-md border border-line bg-ink/80 px-3 font-mono text-sm text-white outline-none focus:border-mint" />
-              <textarea value={text} onChange={(event) => setText(event.target.value)} className="min-h-[360px] rounded-md border border-line bg-ink/80 p-4 font-mono text-sm leading-7 text-white outline-none focus:border-mint" />
-              <button type="button" onClick={run} disabled={loading} className="h-11 rounded-md bg-mint px-5 text-sm font-medium text-ink disabled:opacity-50">
-                {loading ? "Processing..." : "Run real ContextKit flow"}
+          <section className="space-y-4 rounded-md border border-line bg-white/[0.035] p-5">
+            <textarea value={text} onChange={(event) => setText(event.target.value)} className="min-h-[320px] w-full rounded-md border border-line bg-ink/80 p-4 font-mono text-sm leading-7 text-white outline-none focus:border-mint" />
+            <textarea value={compressed} onChange={(event) => setCompressed(event.target.value)} className="min-h-[120px] w-full rounded-md border border-line bg-ink/80 p-4 font-mono text-sm leading-7 text-white outline-none focus:border-mint" />
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <input value={apiKey} onChange={(event) => setApiKey(event.target.value)} placeholder="ck_live_... for token estimate" className="h-11 flex-1 rounded-md border border-line bg-ink/80 px-3 font-mono text-sm text-white outline-none focus:border-mint" />
+              <button type="button" onClick={estimate} disabled={isPending} className="h-11 rounded-md bg-mint px-5 text-sm font-medium text-ink disabled:opacity-50">
+                {isPending ? "Measuring..." : "Measure tokens"}
               </button>
             </div>
           </section>
           <section className="rounded-md border border-line bg-carbon/72 p-5">
             <div className="grid gap-3 md:grid-cols-4">
               {[
-                ["Original", result?.inputTokens ?? 0],
-                ["Compressed", result?.compressedTokens ?? 0],
+                ["Original", tokens?.inputTokens ?? 0],
+                ["Compressed", tokens?.compressedTokens ?? 0],
                 ["Reduction", `${reduction}%`],
-                ["Latency", `${result?.latencyMs ?? 0}ms`]
+                ["x402", "Bankr"]
               ].map(([label, value]) => (
                 <div key={label} className="rounded border border-line bg-ink/70 p-4">
                   <p className="text-xs uppercase tracking-[0.18em] text-white/40">{label}</p>
@@ -116,17 +83,28 @@ export default function DemoPage() {
             <div className="mt-5 h-4 rounded bg-white/10">
               <div className="h-4 rounded bg-mint transition-all" style={{ width: `${Math.min(100, reduction)}%` }} />
             </div>
-            <div className="mt-5 grid gap-4 lg:grid-cols-2">
-              <Panel title="Compressed Context" value={result?.compression?.compressedContext ?? error ?? "Run the demo to see live output."} />
-              <Panel title="Structured Handoff" value={JSON.stringify(result?.handoff ?? {}, null, 2)} />
-              <Panel title="Extracted Profile" value={JSON.stringify(result?.profile ?? {}, null, 2)} />
-              <Panel title="Quality + Summary" value={JSON.stringify({ summary: result?.summarize, quality: result?.compression?.quality }, null, 2)} />
+            <div className="mt-5 grid gap-4">
+              <Panel title="Paid summarize command" value={summarizeCommand} />
+              <Panel title="Paid compression command" value={compressCommand} />
+              <Panel title="Measured token result" value={JSON.stringify(tokens ?? { status: "Add an API key and measure tokens." }, null, 2)} />
             </div>
           </section>
         </div>
       </div>
     </main>
   );
+}
+
+function linesToMessages(text: string) {
+  return text
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const [role, ...content] = line.split(":");
+      const normalizedRole = role === "assistant" || role === "system" || role === "tool" ? role : "user";
+      return { role: normalizedRole, content: content.join(":").trim() || line };
+    });
 }
 
 function Panel({ title, value }: { title: string; value: string }) {

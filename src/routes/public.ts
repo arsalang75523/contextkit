@@ -10,6 +10,7 @@ publicRoutes.get("/public/metrics", async (c) => {
     totalRequests: overview.totalRequests,
     averageTokenReduction: overview.averageTokenReduction,
     webhookDeliveries: overview.webhookDeliveries,
-    compressionSavings: overview.savedTokens
+    compressionSavings: overview.savedTokens,
+    paymentTotal: overview.paymentTotal
   });
 });

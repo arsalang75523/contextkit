@@ -81,15 +81,9 @@ npm run dev
 Then call the demo API:
 
 ```bash
-curl -X POST http://localhost:3000/api/summarize \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer $CONTEXTKIT_API_KEY" \
-  -H "X-Payment: $X402_PAYMENT_PAYLOAD" \
-  -d '{
-    "messages": [
-      { "role": "user", "content": "Summarize this long agent conversation." }
-    ]
-  }'
+bankr x402 call https://x402.bankr.bot/<your-wallet>/contextkit-summarize \
+  -X POST \
+  -d '{"messages":[{"role":"user","content":"Summarize this long agent conversation."}]}'
 ```
 
 ## Environment
@@ -105,7 +99,7 @@ X402_PAY_TO=0x0000000000000000000000000000000000000000
 X402_NETWORK=base
 ```
 
-`BANKR_LLM_KEY`, a valid ContextKit API key, and a valid x402 payment payload are required for generation endpoints.
+`BANKR_LLM_KEY` is required for generation. For the recommended Bankr-hosted x402 flow, developers call the `x402.bankr.bot` endpoint and do not paste payment secrets into ContextKit. Direct self-hosted `/api/*` generation routes require a ContextKit API key plus an x402-compatible payment header.
 
 ## Analytics
 
@@ -138,11 +132,20 @@ OpenAI-compatible counting uses `gpt-tokenizer`; Claude and Gemini estimates app
 
 ## x402 Flow
 
-1. Agent calls a paid endpoint without `X-Payment`.
+Recommended Bankr-hosted flow:
+
+1. Agent calls the ContextKit service on `x402.bankr.bot`.
+2. Bankr handles the x402 payment requirement and settles USDC on Base.
+3. Bankr forwards the paid request to a private ContextKit internal endpoint.
+4. ContextKit calls Bankr LLM Gateway, records analytics/payment metadata, and emits signed webhooks.
+5. Agent receives typed JSON context output.
+
+Advanced self-hosted flow:
+
+1. Agent calls a direct `/api/*` paid endpoint without `X-Payment`.
 2. ContextKit returns HTTP 402 with accepted price, network, asset, resource, and payee metadata.
-3. Agent settles using x402.
+3. Agent settles using an x402-compatible client.
 4. Agent retries with `X-Payment` or `X402-Payment`.
-5. ContextKit verifies/logs payment, calls Bankr LLM Gateway, stores analytics, and emits signed webhooks.
 
 ## Webhooks
 

@@ -43,7 +43,7 @@ export class ContextService {
       compressedContext,
       estimatedSavings,
       quality: {
-        duplicateDensity: Number((1 - compressedTokens / Math.max(originalTokens, 1)).toFixed(2)),
+        duplicateDensity: Number(Math.max(0, Math.min(1, 1 - compressedTokens / Math.max(originalTokens, 1))).toFixed(2)),
         contextScore: quality.compressionScore,
         semanticSimilarity: quality.semanticSimilarity,
         retainedFactsCount: quality.retainedFactsCount

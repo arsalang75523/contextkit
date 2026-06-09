@@ -2,6 +2,7 @@ import { CodeBlock } from "@/components/code-block";
 import { GetStartedCard } from "@/components/get-started-card";
 import { Section } from "@/components/section";
 import { endpoints } from "@/content/docs";
+import { bankrHostedUrl, bankrX402Command } from "@/lib/bankr-x402";
 
 export default function ApiReferencePage() {
   return (
@@ -14,15 +15,12 @@ export default function ApiReferencePage() {
           {endpoints.map((endpoint) => {
             const request = JSON.stringify({ messages: [{ role: "user", content: "Long-running agent conversation..." }] }, null, 2);
             const response = JSON.stringify(endpoint.response, null, 2);
-            const curl = `curl -X POST https://contextkit.dev${endpoint.path.replace("/api", "/api")} \\
-  -H "Content-Type: application/json" \\
-  -H "X-Payment: <x402-payment-payload>" \\
-  -d '${request.replaceAll("\n", "")}'`;
+            const curl = bankrX402Command(endpoint.slug, JSON.parse(request));
             return (
               <article key={endpoint.slug} className="rounded-md border border-line bg-white/[0.035] p-6">
                 <div className="flex flex-wrap items-center justify-between gap-4">
                   <div>
-                    <p className="font-mono text-sm text-mint">{endpoint.method} {endpoint.path}</p>
+                    <p className="font-mono text-sm text-mint">{endpoint.method} {bankrHostedUrl(endpoint.slug)}</p>
                     <h2 className="mt-2 text-2xl font-semibold text-white">{endpoint.description}</h2>
                   </div>
                   <span className="rounded-md border border-aqua/25 bg-aqua/10 px-3 py-1 text-sm text-aqua">{endpoint.price}</span>

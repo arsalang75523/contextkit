@@ -1,12 +1,17 @@
 import { Architecture } from "@/components/architecture";
 import { CodeBlock } from "@/components/code-block";
 import { Section } from "@/components/section";
+import { bankrX402Command } from "@/lib/bankr-x402";
 
-const flow = `1. Agent requests /api/handoff without payment.
-2. ContextKit returns HTTP 402 with accepted price, asset, network, and payTo.
-3. Agent settles using x402.
-4. Agent retries with X-Payment header.
-5. ContextKit verifies payment, calls Bankr LLM Gateway, and emits signed webhooks.`;
+const flow = `1. Agent calls a Bankr-hosted ContextKit endpoint on x402.bankr.bot.
+2. Bankr presents the x402 payment requirement and settles USDC on Base.
+3. Bankr forwards the paid request to a private ContextKit internal endpoint.
+4. ContextKit calls the Bankr LLM Gateway, records analytics/payment metadata, and emits webhooks.
+5. The agent receives typed JSON context output.`;
+
+const command = bankrX402Command("handoff", {
+  messages: [{ role: "user", content: "Continue this deployment handoff for another AI agent." }]
+});
 
 export default function X402Page() {
   return (
@@ -16,9 +21,12 @@ export default function X402Page() {
           <div className="space-y-5 text-lg leading-8 text-white/65">
             <p>x402 lets AI agents pay for infrastructure at request time instead of relying on accounts, invoices, or monthly SaaS plans.</p>
             <p>For context infrastructure, that means a Bankr agent can buy summarization, compression, handoff, or profile extraction exactly when a workflow needs it.</p>
-            <p>ContextKit stores payment logs in appKV, links them to request analytics, and emits signed events so downstream agents can continue without polling.</p>
+            <p>ContextKit does not ask users to paste an x402 password. Bankr-hosted x402 handles payment, then forwards successful requests into ContextKit.</p>
           </div>
           <CodeBlock code={flow} />
+        </div>
+        <div className="mt-8">
+          <CodeBlock code={command} />
         </div>
         <div className="mt-12">
           <Architecture />

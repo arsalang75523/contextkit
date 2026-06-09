@@ -7,6 +7,7 @@ type Metrics = {
   averageTokenReduction: number;
   webhookDeliveries: number;
   compressionSavings: number;
+  paymentTotal: number;
 };
 
 export function LiveMetrics() {
@@ -22,8 +23,8 @@ export function LiveMetrics() {
   const items = [
     ["Requests processed", metrics?.totalRequests ?? 0],
     ["Avg token reduction", `${metrics?.averageTokenReduction ?? 0}%`],
-    ["Webhook deliveries", metrics?.webhookDeliveries ?? 0],
-    ["Saved tokens", metrics?.compressionSavings ?? 0]
+    ["Saved tokens", metrics?.compressionSavings ?? 0],
+    ["x402 revenue", `$${(metrics?.paymentTotal ?? 0).toFixed(3)}`]
   ];
 
   return (

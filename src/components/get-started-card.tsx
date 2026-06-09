@@ -1,5 +1,6 @@
 import { Package, Terminal } from "lucide-react";
 import { CodeBlock } from "@/components/code-block";
+import { bankrX402Command } from "@/lib/bankr-x402";
 
 const installSample = `npm install contextkit
 
@@ -12,6 +13,10 @@ curl -X POST http://localhost:3000/api/auth/create-key \\
     "scopes": ["context:write", "analytics:read", "webhooks:write"]
   }'`;
 
+const hostedSample = bankrX402Command("summarize", {
+  messages: [{ role: "user", content: "Summarize this deployment context for another agent." }]
+});
+
 export function GetStartedCard() {
   return (
     <div className="grid gap-5 lg:grid-cols-[0.85fr_1.15fr]">
@@ -21,7 +26,7 @@ export function GetStartedCard() {
         </div>
         <h3 className="mt-6 text-2xl font-semibold text-white">Developer onboarding in two commands.</h3>
         <p className="mt-4 leading-7 text-white/62">
-          Install the publish-ready TypeScript SDK, create a scoped API key, then connect an x402 payment handler when your agent calls paid context endpoints.
+          Install the publish-ready TypeScript SDK, create scoped API keys for dashboards and analytics, then let agents buy context through Bankr-hosted x402 endpoints.
         </p>
         <div className="mt-6 grid gap-3 text-sm text-white/65">
           <div className="rounded border border-line bg-ink/65 p-4">
@@ -31,7 +36,7 @@ export function GetStartedCard() {
             <span className="text-mint">2.</span> Use <code>ContextKit</code> SDK methods: summarize, compressContext, handoff, extractProfile.
           </div>
           <div className="rounded border border-line bg-ink/65 p-4">
-            <span className="text-mint">3.</span> Handle HTTP 402 by paying the returned x402 requirement.
+            <span className="text-mint">3.</span> Call Bankr-hosted x402 endpoints directly from Bankr agents or CLI. No payment password is pasted into ContextKit.
           </div>
         </div>
       </div>
@@ -40,7 +45,7 @@ export function GetStartedCard() {
           <Terminal className="h-4 w-4" />
           npm package + API key bootstrap
         </div>
-        <CodeBlock code={installSample} />
+        <CodeBlock code={`${installSample}\n\n${hostedSample}`} />
       </div>
     </div>
   );

@@ -9,6 +9,7 @@ import { CodeBlock } from "@/components/code-block";
 import { GetStartedCard } from "@/components/get-started-card";
 import { LiveMetrics } from "@/components/live-metrics";
 import { Section } from "@/components/section";
+import { bankrX402Command } from "@/lib/bankr-x402";
 
 const features = [
   ["Conversation Summarization", BrainCircuit, "/api/summarize", "{ summary, tokenReductionEstimate }"],
@@ -20,16 +21,9 @@ const features = [
   ["Bankr-native Integration", Cable, "LLM gateway", "claude-sonnet-4.5 via Bankr"]
 ] as const;
 
-const sample = `curl -X POST https://contextkit.dev/api/handoff \\
-  -H "Content-Type: application/json" \\
-  -H "X-Payment: <x402-payment-payload>" \\
-  -H "X-Agent-Id: bankr-agent-mainnet" \\
-  -d '{
-    "messages": [
-      {"role": "user", "content": "Build an x402-powered context API for AI agents."}
-    ],
-    "webhookUrl": "https://agent.example.com/contextkit/events"
-  }'`;
+const sample = bankrX402Command("handoff", {
+  messages: [{ role: "user", content: "Build an x402-powered context API for AI agents." }]
+});
 
 export default function HomePage() {
   return (
@@ -113,7 +107,7 @@ export default function HomePage() {
         <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-8 rounded-md border border-line bg-mint/10 p-8 md:flex-row md:items-center">
           <div>
             <h2 className="text-3xl font-semibold text-white">Launch agent memory with x402 pricing today.</h2>
-            <p className="mt-3 max-w-2xl text-white/65">Connect a ContextKit API key, Bankr LLM Gateway key, and x402 settlement to run real agent context infrastructure.</p>
+            <p className="mt-3 max-w-2xl text-white/65">Use Bankr-hosted x402 for paid agent calls, or issue scoped API keys for dashboards, token estimation, webhooks, and advanced self-hosted integrations.</p>
           </div>
           <Link href="/api-reference" className="inline-flex h-11 items-center gap-2 rounded-md bg-white px-5 text-sm font-medium text-ink">
             Explore API <ArrowRight className="h-4 w-4" />

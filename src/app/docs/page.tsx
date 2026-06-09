@@ -1,29 +1,22 @@
 import { CodeBlock } from "@/components/code-block";
 import { Section } from "@/components/section";
 import { endpoints } from "@/content/docs";
+import { bankrX402Command } from "@/lib/bankr-x402";
 
 const quickStart = `npm install contextkit
 
-curl -X POST http://localhost:3000/api/summarize \\
-  -H "Content-Type: application/json" \\
-  -H "Authorization: Bearer $CONTEXTKIT_API_KEY" \\
-  -H "X-Payment: $X402_PAYMENT_PAYLOAD" \\
-  -d '{"messages":[{"role":"user","content":"Summarize this long agent conversation."}]}'`;
+${bankrX402Command("summarize", {
+  messages: [{ role: "user", content: "Summarize this long agent conversation." }]
+})}`;
 
-const tsExample = `const response = await fetch("https://contextkit.dev/api/compress-context", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-    "X-Payment": x402PaymentPayload,
-    "X-Agent-Id": "bankr-agent-prod"
-  },
-  body: JSON.stringify({
-    messages,
-    webhookUrl: "https://agent.example.com/webhooks/contextkit"
-  })
+const tsExample = `import { ContextKit } from "contextkit";
+
+const client = new ContextKit({
+  apiKey: process.env.CONTEXTKIT_API_KEY!,
+  x402: async (challenge) => bankrWallet.pay(challenge)
 });
 
-const context = await response.json();`;
+const context = await client.compressContext({ messages });`;
 
 export default function DocsPage() {
   return (
@@ -45,10 +38,10 @@ export default function DocsPage() {
               <CodeBlock code={quickStart} />
             </DocSection>
             <DocSection id="authentication" title="Authentication">
-              Requests include <code>Authorization: Bearer &lt;api_key&gt;</code>, an x402 payment payload, and optional <code>X-Agent-Id</code>.
+              API-key routes use <code>Authorization: Bearer &lt;api_key&gt;</code>. Bankr-hosted x402 routes do not require a ContextKit API key; Bankr handles payment and forwards the paid request.
             </DocSection>
             <DocSection id="x402-payments" title="x402 Payments">
-              Each endpoint returns HTTP 402 with payment instructions when no valid payment is present. Once paid, ContextKit logs the payment and proceeds with Bankr LLM Gateway inference.
+              Recommended production flow is Bankr-hosted x402: agents call <code>x402.bankr.bot</code>, Bankr settles USDC on Base, then forwards to ContextKit internal endpoints. Advanced self-hosted clients can still use direct HTTP 402 challenge/retry flows.
             </DocSection>
             <DocSection id="api-reference" title="API Reference">
               <div className="grid gap-4">
