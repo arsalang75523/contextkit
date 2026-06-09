@@ -5,6 +5,15 @@ import { bankrX402Command } from "@/lib/bankr-x402";
 
 const quickStart = `npm install contextkit
 
+curl -X POST https://91.107.248.223.sslip.io/api/dashboard/signup \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "name": "Autonomous Agent Operator",
+    "email": "agent-owner@example.com",
+    "password": "replace-with-12-plus-chars",
+    "company": "Agent Lab"
+  }'
+
 ${bankrX402Command("summarize", {
   messages: [{ role: "user", content: "Summarize this long agent conversation." }]
 })}`;
@@ -35,7 +44,7 @@ export default function DocsPage() {
               ContextKit is a payable context service for autonomous agents. It turns verbose conversations into compact memory, handoff payloads, and durable user profiles.
             </DocSection>
             <DocSection id="quick-start" title="Quick Start">
-              For the normal public paid flow, use Bankr-hosted x402. You do not need a ContextKit API key for these paid generation calls.
+              First create a self-serve account if your agent needs dashboard, analytics, token estimates, or webhook controls. For normal paid generation, use Bankr-hosted x402.
               <CodeBlock code={quickStart} />
             </DocSection>
             <DocSection id="authentication" title="Authentication">

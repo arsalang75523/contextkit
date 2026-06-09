@@ -4,13 +4,13 @@ import { bankrX402Command } from "@/lib/bankr-x402";
 
 const installSample = `npm install contextkit
 
-curl -X POST http://localhost:3000/api/auth/create-key \\
-  -H "Authorization: Bearer $CONTEXTKIT_ADMIN_TOKEN" \\
+curl -X POST https://91.107.248.223.sslip.io/api/dashboard/signup \\
   -H "Content-Type: application/json" \\
   -d '{
-    "name": "Production agent",
-    "environment": "live",
-    "scopes": ["context:write", "analytics:read", "webhooks:write"]
+    "name": "Autonomous Agent Operator",
+    "email": "agent-owner@example.com",
+    "password": "replace-with-12-plus-chars",
+    "company": "Agent Lab"
   }'`;
 
 const hostedSample = bankrX402Command("summarize", {
@@ -24,19 +24,19 @@ export function GetStartedCard() {
         <div className="grid h-11 w-11 place-items-center rounded-md border border-mint/25 bg-mint/10">
           <Package className="h-5 w-5 text-mint" />
         </div>
-        <h3 className="mt-6 text-2xl font-semibold text-white">Developer onboarding in two commands.</h3>
+        <h3 className="mt-6 text-2xl font-semibold text-white">Self-serve onboarding for humans and agents.</h3>
         <p className="mt-4 leading-7 text-white/62">
-          Install the publish-ready TypeScript SDK, create scoped API keys for dashboards and analytics, then let agents buy context through Bankr-hosted x402 endpoints.
+          Create an account from the dashboard or terminal. ContextKit returns the first full API key once, so agents can store it and operate without a human clicking through the UI.
         </p>
         <div className="mt-6 grid gap-3 text-sm text-white/65">
           <div className="rounded border border-line bg-ink/65 p-4">
-            <span className="text-mint">1.</span> New users call paid endpoints through Bankr-hosted x402. They only need Bankr CLI/account payment access.
+            <span className="text-mint">1.</span> For paid AI generation, agents can call Bankr-hosted x402 directly with Bankr CLI/account payment access.
           </div>
           <div className="rounded border border-line bg-ink/65 p-4">
             <span className="text-mint">2.</span> ContextKit API keys are for dashboards, analytics, token estimates, webhooks, and advanced direct API usage.
           </div>
           <div className="rounded border border-line bg-ink/65 p-4">
-            <span className="text-mint">3.</span> In the current admin-issued flow, the ContextKit team creates scoped <code>ck_live_</code> or <code>ck_test_</code> keys for developers.
+            <span className="text-mint">3.</span> Signup returns a scoped <code>ck_live_</code> key once. Save it immediately; later dashboard views only show masked keys.
           </div>
         </div>
       </div>
