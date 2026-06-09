@@ -20,12 +20,13 @@ export class PaymentService {
 
   paymentRequirements(resource: string, amountUsd: number) {
     const env = readEnv({ env: this.env });
+    const payableResource = normalizeResource(resource, env.contextkitBaseUrl);
     return [
       {
         scheme: "exact",
         network: env.x402Network,
         maxAmountRequired: amountUsd.toFixed(6),
-        resource,
+        resource: payableResource,
         payTo: env.x402PayTo,
         asset: "USDC",
         mimeType: "application/json"
@@ -106,5 +107,16 @@ function decodePayment(header: string) {
     } catch {
       return header;
     }
+  }
+}
+
+function normalizeResource(resource: string, baseUrl: string) {
+  if (!baseUrl) return resource;
+  try {
+    const incoming = new URL(resource);
+    const base = new URL(baseUrl);
+    return `${base.origin}${incoming.pathname}${incoming.search}`;
+  } catch {
+    return resource;
   }
 }
