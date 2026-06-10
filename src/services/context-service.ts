@@ -27,28 +27,53 @@ export class ContextService {
     const output = await this.generate("summarize", request);
     const mode = request.mode ?? "micro";
     const inputTokens = estimateTokens(request.messages);
-    const stateValue = summarizeState(output.state);
+    const stateValue = dedupeSummaryState(summarizeState(output.state));
+    const microState = minimalSummaryState(stateValue);
     const keyDecisions = arrayOfStrings(output.keyDecisions);
     const actionItems = arrayOfStrings(output.actionItems);
     const openQuestions = arrayOfStrings(output.openQuestions);
     const risks = arrayOfStrings(output.risks);
-    const sourceFacts = [
+    const microFacts = [
       stateValue.goal,
       stateValue.status,
-      ...stateValue.decisions,
       ...stateValue.blockers.map((item) => `Blocker: ${item}`),
+      ...stateValue.nextSteps.map((item) => `Next: ${item}`)
+    ].filter((item) => item && item !== "unknown");
+    const compactFacts = [
+      ...microFacts,
+      ...stateValue.decisions.map((item) => `Decision: ${item}`),
       ...stateValue.priorities.map((item) => `Priority: ${item}`),
-      ...stateValue.nextSteps.map((item) => `Next: ${item}`),
       ...keyDecisions.map((item) => `Decision: ${item}`),
       ...actionItems.map((item) => `Next: ${item}`)
     ].filter((item) => item && item !== "unknown");
-    const micro = enforceBudget(String(output.micro ?? ""), sourceFacts, inputTokens, 0.2);
-    const compact = enforceBudget(String(output.compact ?? output.summary ?? ""), sourceFacts, inputTokens, 0.4);
-    const extended = enforceBudget(String(output.extended ?? output.summary ?? compact), sourceFacts, inputTokens, 0.6);
+    const extendedFacts = [
+      ...compactFacts,
+      ...openQuestions.map((item) => `Open: ${item}`),
+      ...risks.map((item) => `Risk: ${item}`)
+    ];
+    const micro = enforceBudget(String(output.micro ?? ""), microFacts, inputTokens, 0.2);
+    const compact = enforceBudget(String(output.compact ?? output.summary ?? ""), compactFacts, inputTokens, 0.4);
+    const extended = enforceBudget(String(output.extended ?? output.summary ?? compact), extendedFacts, inputTokens, 0.6);
     const summary = compact || micro || extended;
     const microTokens = estimateTokens(micro);
     const compactTokens = estimateTokens(compact);
     const extendedTokens = estimateTokens(extended);
+    const microStateTokens = estimateTokens(JSON.stringify(microState));
+    const compactStateTokens = estimateTokens(JSON.stringify(stateValue));
+    const extendedStateTokens = compactStateTokens;
+    const metrics = {
+      inputTokens,
+      microTokens,
+      compactTokens,
+      extendedTokens,
+      microStateTokens,
+      compactStateTokens,
+      extendedStateTokens,
+      totalOutputTokens: estimateTokens(JSON.stringify({ summary, micro, compact, extended, state: stateValue, keyDecisions, actionItems, openQuestions, risks })),
+      microReductionPercent: estimateReduction(inputTokens, microTokens + microStateTokens),
+      compactReductionPercent: estimateReduction(inputTokens, compactTokens + compactStateTokens),
+      extendedReductionPercent: estimateReduction(inputTokens, extendedTokens + extendedStateTokens)
+    };
     const debugResponse = {
       mode,
       summary,
@@ -61,26 +86,27 @@ export class ContextService {
       microTokens,
       compactTokens,
       extendedTokens,
-      microReductionPercent: estimateReduction(inputTokens, microTokens),
-      compactReductionPercent: estimateReduction(inputTokens, compactTokens),
-      extendedReductionPercent: estimateReduction(inputTokens, extendedTokens),
+      microReductionPercent: metrics.microReductionPercent,
+      compactReductionPercent: metrics.compactReductionPercent,
+      extendedReductionPercent: metrics.extendedReductionPercent,
       keyDecisions,
       actionItems,
       openQuestions,
       risks,
       tokenMetrics: {
         inputTokens,
-        outputTokens: estimateTokens(JSON.stringify({ summary, micro, compact, extended, state: stateValue, keyDecisions, actionItems, openQuestions, risks })),
+        outputTokens: metrics.totalOutputTokens,
         microTokens,
         compactTokens,
         extendedTokens
       },
+      metrics,
       confidence: confidence(output.confidence)
     };
     if (mode === "debug") return debugResponse;
     if (mode === "extended") return { mode, extended, state: stateValue };
     if (mode === "compact") return { mode, compact, state: stateValue };
-    return { mode: "micro", micro, state: stateValue };
+    return { mode: "micro", micro, state: microState };
   }
 
   async compress(request: ConversationRequest): Promise<CompressContextResponse> {
@@ -259,6 +285,31 @@ function summarizeState(value: unknown) {
   };
 }
 
+function minimalSummaryState(stateValue: ReturnType<typeof summarizeState>) {
+  return {
+    goal: stateValue.goal,
+    status: stateValue.status,
+    blockers: stateValue.blockers,
+    nextSteps: stateValue.nextSteps
+  };
+}
+
+function dedupeSummaryState(stateValue: ReturnType<typeof summarizeState>) {
+  const blockers = uniqueStrings(stateValue.blockers);
+  const decisions = uniqueStrings(stateValue.decisions);
+  const priorities = uniqueStrings(stateValue.priorities).filter((item) => !containsEquivalent(blockers, item));
+  const nextSteps = uniqueStrings(stateValue.nextSteps).filter((item) => !containsEquivalent(priorities, item) && !containsEquivalent(decisions, item));
+
+  return {
+    goal: stateValue.goal,
+    status: stateValue.status,
+    blockers,
+    decisions,
+    priorities,
+    nextSteps
+  };
+}
+
 function enforceBudget(candidate: string, facts: string[], inputTokens: number, ratio: number) {
   const maxTokens = Math.max(8, Math.floor(inputTokens * ratio));
   const cleaned = normalizeSummary(candidate);
@@ -277,6 +328,30 @@ function enforceBudget(candidate: string, facts: string[], inputTokens: number, 
 
   if (selected.length > 0) return selected.join("; ");
   return truncateToTokenBudget(cleaned, Math.min(maxTokens, Math.max(0, inputTokens - 1)));
+}
+
+function uniqueStrings(items: string[]) {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const item of items) {
+    const normalized = normalizeComparable(item);
+    if (!normalized || seen.has(normalized)) continue;
+    seen.add(normalized);
+    result.push(item);
+  }
+  return result;
+}
+
+function containsEquivalent(items: string[], candidate: string) {
+  const normalizedCandidate = normalizeComparable(candidate);
+  return items.some((item) => {
+    const normalizedItem = normalizeComparable(item);
+    return normalizedItem === normalizedCandidate || normalizedItem.includes(normalizedCandidate) || normalizedCandidate.includes(normalizedItem);
+  });
+}
+
+function normalizeComparable(value: string) {
+  return normalizeSummary(value).toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 }
 
 function normalizeSummary(value: string) {

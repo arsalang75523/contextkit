@@ -109,8 +109,8 @@ export type SummarizeResponse = {
     goal: string;
     status: string;
     blockers: string[];
-    decisions: string[];
-    priorities: string[];
+    decisions?: string[];
+    priorities?: string[];
     nextSteps: string[];
   };
   inputTokens?: number;
@@ -130,6 +130,19 @@ export type SummarizeResponse = {
     microTokens: number;
     compactTokens: number;
     extendedTokens: number;
+  };
+  metrics?: {
+    inputTokens: number;
+    microTokens: number;
+    compactTokens: number;
+    extendedTokens: number;
+    microStateTokens: number;
+    compactStateTokens: number;
+    extendedStateTokens: number;
+    totalOutputTokens: number;
+    microReductionPercent: number;
+    compactReductionPercent: number;
+    extendedReductionPercent: number;
   };
   confidence?: number;
 };

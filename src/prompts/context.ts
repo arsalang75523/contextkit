@@ -21,7 +21,7 @@ const schemas: Record<ContextEndpoint, string> = {
 
 const taskInstructions: Record<ContextEndpoint, string> = {
   summarize:
-    "Create a state-first true summary, not a report. Extract state first, then produce micro (10-20% of input), compact (20-40%), and extended (40-60%) summaries. Prioritize goals, decisions, blockers, priorities, and next steps. Remove examples, repetition, and narrative. Do not invent openQuestions or risks; return empty arrays unless evidence exists.",
+    "Create a state-first context reduction, not a report. Extract canonical state first, then render micro, compact, and extended from that state. micro must include only goal/status/blockers/next steps and exclude decisions, priorities, risks, questions, history, rationale, and explanations. compact may include major decisions/priorities/blockers/next steps without narrative. extended may preserve valuable reasoning but must remain shorter than input. Remove duplication across state fields. Do not invent openQuestions or risks; return empty arrays unless explicit evidence exists.",
   "compress-context":
     "Compress this conversation into a continuation-ready state representation, not a narrative summary. Preserve goals, active problems, current status, constraints, decisions, priorities, next steps, commitments, and superseded facts. The agentContinuationPacket must be 50-120 tokens and sufficient for a new agent to continue immediately. Make compact the preferred short memory and keep it substantially shorter than input.",
   handoff:
