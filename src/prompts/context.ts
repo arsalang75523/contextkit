@@ -12,21 +12,24 @@ Detect contradictions and superseded facts when the conversation provides orderi
 `;
 
 const schemas: Record<ContextEndpoint, string> = {
-  summarize: `{"summary":"string","tokenReductionEstimate":72,"keyDecisions":["string"],"actionItems":["string"],"openQuestions":["string"],"risks":["string"],"confidence":0.0}`,
-  "compress-context": `{"compressedContext":"string","estimatedSavings":"45%","micro":"string","compact":"string","extended":"string","prioritizedFacts":[{"fact":"string","importance":10}],"entities":{"project":"string","people":["string"],"stack":["string"],"deadlines":["string"],"constraints":["string"]},"conflicts":[{"current":"string","superseded":["string"]}],"metrics":{"factRetentionScore":0}}`,
-  handoff: `{"goal":"string","importantFacts":["string"],"constraints":["string"],"recommendedNextActions":["string"],"tone":"string","userIntent":"string","projectSummary":"string","currentState":"string","completedWork":["string"],"inProgress":["string"],"pendingTasks":["string"],"knownIssues":["string"],"failedApproaches":[{"attempt":"string","result":"string","decision":"string"}],"importantDecisions":[{"decision":"string","reason":"string"}],"blockers":["string"],"agentNotes":["string"],"confidence":0.0}`,
-  "extract-profile": `{"interests":["string"],"riskTolerance":"string","communicationStyle":"string","preferences":["string"],"importantContext":["string"],"identity":{"profession":"string","location":"string","age":null},"skills":["string"],"goals":["string"],"futurePlans":["string"],"behaviorPatterns":["string"],"dislikes":["string"],"careerStage":"string","managementIntent":false,"entrepreneurial":false,"confidence":0.0}`
+  summarize: `{"summary":"string","keyDecisions":["string"],"actionItems":["string"],"openQuestions":["string"],"risks":["string"],"confidence":0.0}`,
+  "compress-context": `{"compressedContext":"string","micro":"string","compact":"string","extended":"string","prioritizedFacts":[{"fact":"string","importance":10}],"entities":{"projects":["string"],"people":["string"],"organizations":["string"],"technologies":["string"],"services":["string"],"constraints":["string"],"deadlines":["string"]},"supersededFacts":[{"current":"string","superseded":["string"]}],"factRetentionScore":0.0,"criticalFactsRetained":0}`,
+  handoff: `{"goal":"string","importantFacts":["string"],"constraints":["string"],"recommendedNextActions":["string"],"tone":"string","userIntent":"string","projectSummary":"string","currentState":"string","completedWork":["string"],"inProgress":["string"],"pendingTasks":["string"],"knownIssues":["string"],"failedApproaches":[{"attempt":"string","result":"string","decision":"string"}],"importantDecisions":[{"decision":"string","reason":"string"}],"blockers":["string"],"agentNotes":["string"],"priorityOrder":["string"],"recommendedStartingPoint":"string","highestRiskArea":"string","repositories":["string"],"artifacts":["string"],"links":["string"],"owners":["string"],"confidence":0.0}`,
+  "extract-profile": `{"interests":["string"],"riskTolerance":"string","communicationStyle":"string","preferences":["string"],"importantContext":["string"],"identity":{"profession":"string","location":"string","age":null},"skills":["string"],"goals":["string"],"futurePlans":["string"],"behaviorPatterns":["string"],"dislikes":["string"],"careerStage":"string","managementIntent":false,"entrepreneurial":false,"inferredTraits":["string"],"memoryImportance":1,"confidence":0.0}`,
+  "memory-enrichment": `{"stablePreferences":["string"],"evolvingPreferences":["string"],"longTermGoals":["string"],"supersededMemories":["string"],"memoryConflicts":[{"current":"string","superseded":["string"]}],"confidence":0.0}`
 };
 
 const taskInstructions: Record<ContextEndpoint, string> = {
   summarize:
     "Summarize this conversation into decision-aware reusable context. Capture decisions with rationale, pending actions, unresolved questions, risks, and confidence. Keep summary concise but useful for human and AI continuation.",
   "compress-context":
-    "Compress this conversation into true compact memory. Return micro, compact, and extended levels. Prioritize facts by importance. Extract entities. Detect superseded facts. The compact field should be substantially shorter than the input and preserve only high-value context. Avoid verbose JSON in compressedContext; make it a compact memory string.",
+    "Compress this conversation into true compact memory. Return micro, compact, and extended levels. Prioritize facts by importance. Extract entity arrays using projects, people, organizations, technologies, services, constraints, deadlines. Detect superseded facts. Make compact the preferred agent memory and keep it substantially shorter than input. Avoid verbose prose.",
   handoff:
     "Create a true agent-to-agent project handoff. Preserve project state, completed work, in-progress work, pending tasks, known issues, failed approaches, decisions with reasons, blockers, and high-signal notes so the next agent can continue immediately.",
   "extract-profile":
-    "Extract durable user profile memory. Preserve explicit facts and carefully inferred traits with confidence. Capture identity, skills, goals, future plans, behavior patterns, dislikes, career stage, management intent, and entrepreneurial signals. Do not infer sensitive traits without evidence."
+    "Extract durable user profile memory. Preserve explicit facts and carefully inferred traits with confidence. Capture identity, skills, goals, future plans, behavior patterns, dislikes, career stage, management intent, entrepreneurial signals, inferredTraits, and memoryImportance from 1-10. Do not infer sensitive traits without evidence.",
+  "memory-enrichment":
+    "Enrich long-term memory by separating stable preferences, evolving preferences, long-term goals, superseded memories, and memory conflicts. Avoid duplication and preserve only memory useful for future conversations."
 };
 
 export function buildContextPrompt(endpoint: ContextEndpoint, messages: ConversationMessage[]) {

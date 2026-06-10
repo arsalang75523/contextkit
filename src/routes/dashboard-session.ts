@@ -310,6 +310,7 @@ async function runPlaygroundEndpoint(service: ContextService, endpoint: string, 
   if (endpoint === "compress-context") return service.compress(request);
   if (endpoint === "handoff") return service.handoff(request);
   if (endpoint === "extract-profile") return service.profile(request);
+  if (endpoint === "memory-enrichment") return service.memoryEnrichment(request);
   return service.summarize(request);
 }
 

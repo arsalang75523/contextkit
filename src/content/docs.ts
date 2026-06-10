@@ -15,7 +15,7 @@ export const endpoints = [
     price: "$0.003",
     event: "context.compressed",
     description: "Compress context into compact structured memory.",
-    response: { compressedContext: "goal=ship ContextKit; constraints=Bankr-native,x402; next=deploy", estimatedSavings: "78%", micro: "Ship ContextKit with Bankr x402.", compact: "ContextKit: Bankr-native x402 context API; next=deploy.", extended: "ContextKit is a Bankr-native x402 context API with dashboard, analytics, and webhook flows.", prioritizedFacts: [{ fact: "Bankr-hosted x402 is required", importance: 10 }], entities: { project: "ContextKit", people: [], stack: ["Bankr", "x402"], deadlines: [], constraints: ["Bankr-native"] }, conflicts: [], metrics: { originalTokens: 120, compressedTokens: 26, actualReductionPercent: 78, factRetentionScore: 0.9 } }
+    response: { compressedContext: "goal=ship ContextKit; constraints=Bankr-native,x402; next=deploy", estimatedSavings: "78%", micro: "Ship ContextKit with Bankr x402.", compact: "ContextKit: Bankr-native x402 context API; next=deploy.", extended: "ContextKit is a Bankr-native x402 context API with dashboard, analytics, and webhook flows.", prioritizedFacts: [{ fact: "Bankr-hosted x402 is required", importance: 10 }], entities: { project: "ContextKit", projects: ["ContextKit"], people: [], organizations: ["Bankr"], stack: ["Bankr", "x402"], technologies: ["x402"], services: ["Bankr LLM"], deadlines: [], constraints: ["Bankr-native"] }, conflicts: [], supersededFacts: [], inputTokens: 120, outputTokens: 26, actualReductionPercent: 78, factRetentionScore: 0.9, criticalFactsRetained: 1, metrics: { originalTokens: 120, compressedTokens: 26, actualReductionPercent: 78, factRetentionScore: 0.9 } }
   },
   {
     slug: "handoff",
@@ -24,7 +24,7 @@ export const endpoints = [
     price: "$0.003",
     event: "handoff.generated",
     description: "Generate a structured agent-to-agent continuation payload.",
-    response: { goal: "Ship ContextKit", importantFacts: ["Uses Bankr LLM Gateway"], constraints: ["x402 required"], recommendedNextActions: ["Deploy"], tone: "senior and direct", userIntent: "launch product", projectSummary: "ContextKit is context infrastructure for AI agents.", currentState: "Production hardening underway.", completedWork: ["x402 works"], inProgress: ["Auth hardening"], pendingTasks: ["Verify email domain"], knownIssues: [], failedApproaches: [], importantDecisions: [{ decision: "Use Bankr-hosted x402", reason: "Best agent payment UX" }], blockers: [], agentNotes: ["Keep endpoint names stable"], confidence: 0.88 }
+    response: { goal: "Ship ContextKit", importantFacts: ["Uses Bankr LLM Gateway"], constraints: ["x402 required"], recommendedNextActions: ["Deploy"], tone: "senior and direct", userIntent: "launch product", projectSummary: "ContextKit is context infrastructure for AI agents.", currentState: "Production hardening underway.", completedWork: ["x402 works"], inProgress: ["Auth hardening"], pendingTasks: ["Verify email domain"], knownIssues: [], failedApproaches: [], importantDecisions: [{ decision: "Use Bankr-hosted x402", reason: "Best agent payment UX" }], blockers: [], agentNotes: ["Keep endpoint names stable"], priorityOrder: ["Verify email", "Deploy"], recommendedStartingPoint: "Check production logs", highestRiskArea: "email deliverability", repositories: [], artifacts: [], links: [], owners: [], confidence: 0.88 }
   },
   {
     slug: "extract-profile",
@@ -33,7 +33,16 @@ export const endpoints = [
     price: "$0.004",
     event: "profile.extracted",
     description: "Extract durable user preferences for reusable agent memory.",
-    response: { interests: ["AI agents"], riskTolerance: "unknown", communicationStyle: "concise", preferences: ["production APIs"], importantContext: ["Bankr ecosystem"], identity: { profession: "founder/operator", location: "unknown", age: null }, skills: ["deployment debugging"], goals: ["launch ContextKit"], futurePlans: ["public launch"], behaviorPatterns: ["moves quickly"], dislikes: ["confusing UX"], careerStage: "startup builder", managementIntent: true, entrepreneurial: true, confidence: 0.82 }
+    response: { interests: ["AI agents"], riskTolerance: "unknown", communicationStyle: "concise", preferences: ["production APIs"], importantContext: ["Bankr ecosystem"], identity: { profession: "founder/operator", location: "unknown", age: null }, skills: ["deployment debugging"], goals: ["launch ContextKit"], futurePlans: ["public launch"], behaviorPatterns: ["moves quickly"], dislikes: ["confusing UX"], careerStage: "startup builder", managementIntent: true, entrepreneurial: true, inferredTraits: ["entrepreneurial"], memoryImportance: 8, confidence: 0.82 }
+  },
+  {
+    slug: "memory-enrichment",
+    method: "POST",
+    path: "/api/memory-enrichment",
+    price: "$0.003",
+    event: "request.completed",
+    description: "Evolve long-term memory without duplicating stale preferences.",
+    response: { stablePreferences: ["concise explanations"], evolvingPreferences: [], longTermGoals: ["launch ContextKit"], supersededMemories: [], memoryConflicts: [], confidence: 0.84 }
   }
 ];
 

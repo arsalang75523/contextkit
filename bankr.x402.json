@@ -144,6 +144,44 @@
           }
         }
       }
+    },
+    "contextkit-memory": {
+      "description": "Enrich and evolve long-term agent memory without duplicating stale preferences.",
+      "price": "0.003",
+      "methods": ["POST"],
+      "category": "ai-infrastructure",
+      "tags": ["memory", "long-term-memory", "ai-agents", "bankr"],
+      "schema": {
+        "input": {
+          "type": "object",
+          "properties": {
+            "messages": {
+              "type": "array",
+              "description": "Conversation messages to enrich into long-term memory.",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "role": { "type": "string" },
+                  "content": { "type": "string" }
+                },
+                "required": ["role", "content"]
+              }
+            }
+          },
+          "required": ["messages"]
+        },
+        "output": {
+          "type": "object",
+          "properties": {
+            "stablePreferences": { "type": "array", "items": { "type": "string" } },
+            "evolvingPreferences": { "type": "array", "items": { "type": "string" } },
+            "longTermGoals": { "type": "array", "items": { "type": "string" } },
+            "supersededMemories": { "type": "array", "items": { "type": "string" } },
+            "memoryConflicts": { "type": "array", "items": { "type": "object" } },
+            "confidence": { "type": "number" }
+          }
+        }
+      }
     }
   }
 }

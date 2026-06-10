@@ -60,9 +60,19 @@ const compressResponse = z.object({
     people: z.array(z.string()),
     stack: z.array(z.string()),
     deadlines: z.array(z.string()),
-    constraints: z.array(z.string())
+    constraints: z.array(z.string()),
+    projects: z.array(z.string()),
+    organizations: z.array(z.string()),
+    technologies: z.array(z.string()),
+    services: z.array(z.string())
   }),
   conflicts: z.array(z.object({ current: z.string(), superseded: z.array(z.string()) })),
+  supersededFacts: z.array(z.object({ current: z.string(), superseded: z.array(z.string()) })),
+  inputTokens: z.number(),
+  outputTokens: z.number(),
+  actualReductionPercent: z.number(),
+  factRetentionScore: z.number(),
+  criticalFactsRetained: z.number(),
   metrics: z.object({
     originalTokens: z.number(),
     compressedTokens: z.number(),
@@ -94,6 +104,13 @@ const handoffResponse = z.object({
   importantDecisions: z.array(z.object({ decision: z.string(), reason: z.string() })),
   blockers: z.array(z.string()),
   agentNotes: z.array(z.string()),
+  priorityOrder: z.array(z.string()),
+  recommendedStartingPoint: z.string(),
+  highestRiskArea: z.string(),
+  repositories: z.array(z.string()),
+  artifacts: z.array(z.string()),
+  links: z.array(z.string()),
+  owners: z.array(z.string()),
   confidence: z.number()
 });
 
@@ -116,6 +133,17 @@ const profileResponse = z.object({
   careerStage: z.string(),
   managementIntent: z.boolean(),
   entrepreneurial: z.boolean(),
+  inferredTraits: z.array(z.string()),
+  memoryImportance: z.number(),
+  confidence: z.number()
+});
+
+const memoryEnrichmentResponse = z.object({
+  stablePreferences: z.array(z.string()),
+  evolvingPreferences: z.array(z.string()),
+  longTermGoals: z.array(z.string()),
+  supersededMemories: z.array(z.string()),
+  memoryConflicts: z.array(z.object({ current: z.string(), superseded: z.array(z.string()) })),
   confidence: z.number()
 });
 
@@ -123,7 +151,8 @@ const routes = [
   ["/api/summarize", "Summarize context", summarizeResponse, endpointPricing.summarize],
   ["/api/compress-context", "Compress context", compressResponse, endpointPricing["compress-context"]],
   ["/api/handoff", "Create agent handoff", handoffResponse, endpointPricing.handoff],
-  ["/api/extract-profile", "Extract user profile", profileResponse, endpointPricing["extract-profile"]]
+  ["/api/extract-profile", "Extract user profile", profileResponse, endpointPricing["extract-profile"]],
+  ["/api/memory-enrichment", "Enrich long-term memory", memoryEnrichmentResponse, endpointPricing["memory-enrichment"]]
 ] as const;
 
 routes.forEach(([path, summary, responseSchema, price]) => {

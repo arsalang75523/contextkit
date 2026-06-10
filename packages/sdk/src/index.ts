@@ -6,6 +6,7 @@ export type {
   ContextRequest,
   ConversationMessage,
   HandoffResponse,
+  MemoryEnrichmentResponse,
   ProfileResponse,
   SummarizeResponse,
   X402PaymentHandler

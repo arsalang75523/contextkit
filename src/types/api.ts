@@ -63,7 +63,7 @@ export const tokenEstimateSchema = z.object({
 });
 
 export const playgroundRunSchema = z.object({
-  endpoint: z.enum(["summarize", "compress-context", "handoff", "extract-profile"]).default("summarize"),
+  endpoint: z.enum(["summarize", "compress-context", "handoff", "extract-profile", "memory-enrichment"]).default("summarize"),
   messages: z.array(messageSchema).min(1).max(50)
 });
 
@@ -85,7 +85,7 @@ export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 export type VerifyEmailInput = z.infer<typeof verifyEmailSchema>;
 export type PlaygroundRunInput = z.infer<typeof playgroundRunSchema>;
 
-export type ContextEndpoint = "summarize" | "compress-context" | "handoff" | "extract-profile";
+export type ContextEndpoint = "summarize" | "compress-context" | "handoff" | "extract-profile" | "memory-enrichment";
 
 export type ApiError = {
   error: {
@@ -122,11 +122,24 @@ export type CompressContextResponse = {
     stack: string[];
     deadlines: string[];
     constraints: string[];
+    projects: string[];
+    organizations: string[];
+    technologies: string[];
+    services: string[];
   };
   conflicts: Array<{
     current: string;
     superseded: string[];
   }>;
+  supersededFacts: Array<{
+    current: string;
+    superseded: string[];
+  }>;
+  inputTokens: number;
+  outputTokens: number;
+  actualReductionPercent: number;
+  factRetentionScore: number;
+  criticalFactsRetained: number;
   metrics: {
     originalTokens: number;
     compressedTokens: number;
@@ -165,6 +178,13 @@ export type HandoffResponse = {
   }>;
   blockers: string[];
   agentNotes: string[];
+  priorityOrder: string[];
+  recommendedStartingPoint: string;
+  highestRiskArea: string;
+  repositories: string[];
+  artifacts: string[];
+  links: string[];
+  owners: string[];
   confidence: number;
 };
 
@@ -187,6 +207,20 @@ export type ProfileResponse = {
   careerStage: string;
   managementIntent: boolean;
   entrepreneurial: boolean;
+  inferredTraits: string[];
+  memoryImportance: number;
+  confidence: number;
+};
+
+export type MemoryEnrichmentResponse = {
+  stablePreferences: string[];
+  evolvingPreferences: string[];
+  longTermGoals: string[];
+  supersededMemories: string[];
+  memoryConflicts: Array<{
+    current: string;
+    superseded: string[];
+  }>;
   confidence: number;
 };
 

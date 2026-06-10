@@ -8,6 +8,7 @@ import type {
   ContextEndpoint,
   ConversationRequest,
   HandoffResponse,
+  MemoryEnrichmentResponse,
   ProfileResponse,
   SummarizeResponse,
   WebhookEventName
@@ -25,9 +26,11 @@ export class ContextService {
   async summarize(request: ConversationRequest): Promise<SummarizeResponse> {
     const output = await this.generate("summarize", request);
     const summary = String(output.summary ?? "");
+    const inputTokens = estimateTokens(request.messages);
+    const summaryTokens = estimateTokens(summary);
     return {
       summary,
-      tokenReductionEstimate: Number(output.tokenReductionEstimate ?? estimateReduction(estimateTokens(request.messages), estimateTokens(summary))),
+      tokenReductionEstimate: estimateReduction(inputTokens, summaryTokens),
       keyDecisions: arrayOfStrings(output.keyDecisions),
       actionItems: arrayOfStrings(output.actionItems),
       openQuestions: arrayOfStrings(output.openQuestions),
@@ -48,7 +51,9 @@ export class ContextService {
     const estimatedSavings = String(output.estimatedSavings ?? `${actualReductionPercent}%`);
     const quality = new CompressionQualityService().score(request.messages, compressedContext);
     const prioritizedFacts = facts(output.prioritizedFacts);
-    const factRetentionScore = Number(output.metrics && typeof output.metrics === "object" && "factRetentionScore" in output.metrics ? output.metrics.factRetentionScore : quality.retainedFactsCount > 0 ? Math.min(1, quality.retainedFactsCount / Math.max(prioritizedFacts.length, 1)) : 0);
+    const criticalFactsRetained = prioritizedFacts.filter((fact) => fact.importance >= 8 && retainedIn(compact || compressedContext, fact.fact)).length;
+    const factRetentionScore = Number(output.factRetentionScore ?? (output.metrics && typeof output.metrics === "object" && "factRetentionScore" in output.metrics ? output.metrics.factRetentionScore : prioritizedFacts.length > 0 ? criticalFactsRetained / Math.max(prioritizedFacts.filter((fact) => fact.importance >= 8).length, 1) : 0));
+    const supersededFacts = conflicts(output.supersededFacts ?? output.conflicts);
 
     return {
       compressedContext,
@@ -58,7 +63,13 @@ export class ContextService {
       extended,
       prioritizedFacts,
       entities: entities(output.entities),
-      conflicts: conflicts(output.conflicts),
+      conflicts: supersededFacts,
+      supersededFacts,
+      inputTokens: originalTokens,
+      outputTokens: compressedTokens,
+      actualReductionPercent,
+      factRetentionScore: confidence(factRetentionScore),
+      criticalFactsRetained,
       metrics: {
         originalTokens,
         compressedTokens,
@@ -93,6 +104,13 @@ export class ContextService {
       importantDecisions: decisions(output.importantDecisions),
       blockers: arrayOfStrings(output.blockers),
       agentNotes: arrayOfStrings(output.agentNotes),
+      priorityOrder: arrayOfStrings(output.priorityOrder),
+      recommendedStartingPoint: String(output.recommendedStartingPoint ?? "unknown"),
+      highestRiskArea: String(output.highestRiskArea ?? "unknown"),
+      repositories: arrayOfStrings(output.repositories),
+      artifacts: arrayOfStrings(output.artifacts),
+      links: arrayOfStrings(output.links),
+      owners: arrayOfStrings(output.owners),
       confidence: confidence(output.confidence)
     };
   }
@@ -114,6 +132,20 @@ export class ContextService {
       careerStage: String(output.careerStage ?? "unknown"),
       managementIntent: Boolean(output.managementIntent),
       entrepreneurial: Boolean(output.entrepreneurial),
+      inferredTraits: arrayOfStrings(output.inferredTraits),
+      memoryImportance: Math.max(1, Math.min(10, Math.round(Number(output.memoryImportance ?? 1)))),
+      confidence: confidence(output.confidence)
+    };
+  }
+
+  async memoryEnrichment(request: ConversationRequest): Promise<MemoryEnrichmentResponse> {
+    const output = await this.generate("memory-enrichment", request);
+    return {
+      stablePreferences: arrayOfStrings(output.stablePreferences),
+      evolvingPreferences: arrayOfStrings(output.evolvingPreferences),
+      longTermGoals: arrayOfStrings(output.longTermGoals),
+      supersededMemories: arrayOfStrings(output.supersededMemories),
+      memoryConflicts: conflicts(output.memoryConflicts),
       confidence: confidence(output.confidence)
     };
   }
@@ -163,12 +195,17 @@ function facts(value: unknown) {
 
 function entities(value: unknown) {
   const record = value && typeof value === "object" ? value as Record<string, unknown> : {};
+  const legacyProject = typeof record.project === "string" && record.project !== "unknown" ? [record.project] : [];
   return {
     project: String(record.project ?? "unknown"),
     people: arrayOfStrings(record.people),
     stack: arrayOfStrings(record.stack),
     deadlines: arrayOfStrings(record.deadlines),
-    constraints: arrayOfStrings(record.constraints)
+    constraints: arrayOfStrings(record.constraints),
+    projects: arrayOfStrings(record.projects ?? legacyProject),
+    organizations: arrayOfStrings(record.organizations),
+    technologies: arrayOfStrings(record.technologies ?? record.stack),
+    services: arrayOfStrings(record.services)
   };
 }
 
@@ -184,6 +221,14 @@ function conflicts(value: unknown) {
       };
     })
     .filter((item): item is { current: string; superseded: string[] } => Boolean(item?.current));
+}
+
+function retainedIn(output: string, fact: string) {
+  const terms = fact.toLowerCase().split(/\W+/).filter((term) => term.length > 3);
+  if (terms.length === 0) return false;
+  const haystack = output.toLowerCase();
+  const hits = terms.filter((term) => haystack.includes(term)).length;
+  return hits / terms.length >= 0.35;
 }
 
 function failedApproaches(value: unknown) {

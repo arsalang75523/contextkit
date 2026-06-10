@@ -8,7 +8,8 @@ const hostedSlugs: Record<string, string> = {
   summarize: "contextkit-summarize",
   "compress-context": "contextkit-compress",
   handoff: "contextkit-handoff",
-  "extract-profile": "contextkit-profile"
+  "extract-profile": "contextkit-profile",
+  "memory-enrichment": "contextkit-memory"
 };
 
 export function bankrHostedUrl(slug: string) {

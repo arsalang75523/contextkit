@@ -69,6 +69,22 @@ contextRoutes.post(
   }
 );
 
+contextRoutes.post("/memory-enrichment", requireApiKey("context:write"), apiKeyRateLimit(), zValidator("json", conversationRequestSchema), async (c) => {
+  const request = { ...c.req.valid("json"), messages: sanitizeMessages(c.req.valid("json").messages) };
+  const service = new ContextService({ env: c.env ?? {}, requestId: c.get("requestId") });
+  const result = await service.memoryEnrichment(request);
+  await complete(c, "/memory-enrichment", request, JSON.stringify(result));
+  return c.json(result);
+});
+
+contextRoutes.post("/x402/memory-enrichment", x402PaymentRequired("memory-enrichment"), zValidator("json", conversationRequestSchema), async (c) => {
+  const request = { ...c.req.valid("json"), messages: sanitizeMessages(c.req.valid("json").messages) };
+  const service = new ContextService({ env: c.env ?? {}, requestId: c.get("requestId") });
+  const result = await service.memoryEnrichment(request);
+  await complete(c, "/x402/memory-enrichment", request, JSON.stringify(result), c.get("payment")?.paymentId);
+  return c.json(result);
+});
+
 contextRoutes.post("/x402/summarize", x402PaymentRequired("summarize"), zValidator("json", conversationRequestSchema), async (c) => {
   const request = { ...c.req.valid("json"), messages: sanitizeMessages(c.req.valid("json").messages) };
   const service = new ContextService({ env: c.env ?? {}, requestId: c.get("requestId") });
@@ -152,6 +168,15 @@ contextRoutes.post("/internal/extract-profile", requireInternalToken(), zValidat
   const result = await service.profile(request);
   await complete(c, "/internal/extract-profile", request, JSON.stringify(result));
   await service.emitCompleted(request, "profile.extracted", result);
+  return c.json(result);
+});
+
+contextRoutes.post("/internal/memory-enrichment", requireInternalToken(), zValidator("json", conversationRequestSchema), async (c) => {
+  const request = { ...c.req.valid("json"), messages: sanitizeMessages(c.req.valid("json").messages) };
+  await markHostedPayment(c, "memory-enrichment", "/internal/memory-enrichment");
+  const service = new ContextService({ env: c.env ?? {}, requestId: c.get("requestId") });
+  const result = await service.memoryEnrichment(request);
+  await complete(c, "/internal/memory-enrichment", request, JSON.stringify(result));
   return c.json(result);
 });
 

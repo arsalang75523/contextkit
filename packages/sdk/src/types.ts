@@ -34,8 +34,18 @@ export type CompressContextResponse = {
     stack: string[];
     deadlines: string[];
     constraints: string[];
+    projects: string[];
+    organizations: string[];
+    technologies: string[];
+    services: string[];
   };
   conflicts: Array<{ current: string; superseded: string[] }>;
+  supersededFacts: Array<{ current: string; superseded: string[] }>;
+  inputTokens: number;
+  outputTokens: number;
+  actualReductionPercent: number;
+  factRetentionScore: number;
+  criticalFactsRetained: number;
   metrics: {
     originalTokens: number;
     compressedTokens: number;
@@ -67,6 +77,13 @@ export type HandoffResponse = {
   importantDecisions: Array<{ decision: string; reason: string }>;
   blockers: string[];
   agentNotes: string[];
+  priorityOrder: string[];
+  recommendedStartingPoint: string;
+  highestRiskArea: string;
+  repositories: string[];
+  artifacts: string[];
+  links: string[];
+  owners: string[];
   confidence: number;
 };
 
@@ -89,6 +106,17 @@ export type ProfileResponse = {
   careerStage: string;
   managementIntent: boolean;
   entrepreneurial: boolean;
+  inferredTraits: string[];
+  memoryImportance: number;
+  confidence: number;
+};
+
+export type MemoryEnrichmentResponse = {
+  stablePreferences: string[];
+  evolvingPreferences: string[];
+  longTermGoals: string[];
+  supersededMemories: string[];
+  memoryConflicts: Array<{ current: string; superseded: string[] }>;
   confidence: number;
 };
 

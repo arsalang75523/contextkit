@@ -2,6 +2,7 @@ import type {
   CompressContextResponse,
   ContextRequest,
   HandoffResponse,
+  MemoryEnrichmentResponse,
   ProfileResponse,
   SummarizeResponse,
   X402PaymentHandler
@@ -42,6 +43,10 @@ export class ContextKit {
 
   extractProfile(request: ContextRequest) {
     return this.post<ProfileResponse>("/api/extract-profile", request);
+  }
+
+  memoryEnrichment(request: ContextRequest) {
+    return this.post<MemoryEnrichmentResponse>("/api/memory-enrichment", request);
   }
 
   async estimateTokens(input: unknown) {
