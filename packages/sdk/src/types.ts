@@ -14,6 +14,24 @@ export type ContextRequest = {
 export type SummarizeResponse = {
   summary: string;
   tokenReductionEstimate: number;
+  micro: string;
+  compact: string;
+  extended: string;
+  state: {
+    goal: string;
+    status: string;
+    blockers: string[];
+    decisions: string[];
+    priorities: string[];
+    nextSteps: string[];
+  };
+  inputTokens: number;
+  microTokens: number;
+  compactTokens: number;
+  extendedTokens: number;
+  microReductionPercent: number;
+  compactReductionPercent: number;
+  extendedReductionPercent: number;
   keyDecisions: string[];
   actionItems: string[];
   openQuestions: string[];

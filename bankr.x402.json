@@ -31,7 +31,18 @@
           "type": "object",
           "properties": {
             "summary": { "type": "string", "description": "Optimized context summary." },
-            "tokenReductionEstimate": { "type": "number", "description": "Estimated token reduction percentage." }
+            "tokenReductionEstimate": { "type": "number", "description": "Actual compact-summary token reduction percentage." },
+            "micro": { "type": "string", "description": "Maximum-compression summary." },
+            "compact": { "type": "string", "description": "Default continuation summary." },
+            "extended": { "type": "string", "description": "Human-readable compressed summary." },
+            "state": { "type": "object", "description": "Goal, status, blockers, decisions, priorities, and next steps." },
+            "inputTokens": { "type": "number" },
+            "microTokens": { "type": "number" },
+            "compactTokens": { "type": "number" },
+            "extendedTokens": { "type": "number" },
+            "microReductionPercent": { "type": "number" },
+            "compactReductionPercent": { "type": "number" },
+            "extendedReductionPercent": { "type": "number" }
           }
         }
       }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useState } from "react";
 import { Calculator, Play, RotateCcw, Terminal } from "lucide-react";
 import { CodeBlock } from "@/components/code-block";
 import { endpoints } from "@/content/docs";
@@ -18,7 +18,8 @@ export default function PlaygroundPage() {
   const [tokenResult, setTokenResult] = useState<object | null>(null);
   const [runResult, setRunResult] = useState<object | null>(null);
   const [error, setError] = useState("");
-  const [isPending, startTransition] = useTransition();
+  const [isRunning, setIsRunning] = useState(false);
+  const [isEstimating, setIsEstimating] = useState(false);
 
   const active = useMemo(() => endpoints.find((item) => item.slug === endpoint) ?? endpoints[0], [endpoint]);
   const payload = useMemo(() => {
@@ -33,47 +34,49 @@ export default function PlaygroundPage() {
   function runLivePlayground() {
     setError("");
     setRunResult(null);
-    startTransition(() => {
-      void (async () => {
-        try {
-          const messages = JSON.parse(input);
-          const response = await fetch("/api/playground/run", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ endpoint: active.slug, messages })
-          });
-          const result = (await response.json()) as Record<string, unknown>;
-          setRunResult(result);
-          if (!response.ok) {
-            setError(JSON.stringify(result, null, 2));
-          }
-        } catch (err) {
-          setError(err instanceof Error ? err.message : "Invalid JSON input.");
+    setIsRunning(true);
+    void (async () => {
+      try {
+        const messages = JSON.parse(input);
+        const response = await fetch("/api/playground/run", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ endpoint: active.slug, messages })
+        });
+        const result = (await response.json()) as Record<string, unknown>;
+        setRunResult(result);
+        if (!response.ok) {
+          setError(JSON.stringify(result, null, 2));
         }
-      })();
-    });
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Invalid JSON input.");
+      } finally {
+        setIsRunning(false);
+      }
+    })();
   }
 
   function estimateTokens() {
     setError("");
-    startTransition(() => {
-      void (async () => {
-        try {
-          const messages = JSON.parse(input);
-          const response = await fetch("/api/tokens/estimate", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${apiKey}`
-            },
-            body: JSON.stringify({ modelFamily: "openai", input: messages })
-          });
-          setTokenResult(await response.json());
-        } catch (err) {
-          setError(err instanceof Error ? err.message : "Invalid JSON input.");
-        }
-      })();
-    });
+    setIsEstimating(true);
+    void (async () => {
+      try {
+        const messages = JSON.parse(input);
+        const response = await fetch("/api/tokens/estimate", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${apiKey}`
+          },
+          body: JSON.stringify({ modelFamily: "openai", input: messages })
+        });
+        setTokenResult(await response.json());
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Invalid JSON input.");
+      } finally {
+        setIsEstimating(false);
+      }
+    })();
   }
 
   return (
@@ -103,15 +106,15 @@ export default function PlaygroundPage() {
             <div className="mb-4 rounded-md border border-aqua/20 bg-aqua/10 p-4 text-sm leading-6 text-white/65">
               Pick one service below. <span className="text-aqua">Summarize</span> is selected by default because it is the easiest first test. The other services are here too; clicking them changes the paid endpoint and command.
             </div>
-            <div className="mb-4 flex flex-wrap gap-2">
+            <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
               {endpoints.map((item) => (
                 <button
                   key={item.slug}
                   type="button"
                   onClick={() => setEndpoint(item.slug)}
-                  className={`rounded-md border px-3 py-2 text-sm transition ${endpoint === item.slug ? "border-mint bg-mint/10 text-mint" : "border-line text-white/65 hover:text-white"}`}
+                  className={`min-w-0 rounded-md border px-2 py-2 text-xs transition xl:text-sm ${endpoint === item.slug ? "border-mint bg-mint/10 text-mint" : "border-line text-white/65 hover:text-white"}`}
                 >
-                  {item.slug}
+                  <span className="block truncate">{item.slug}</span>
                 </button>
               ))}
             </div>
@@ -129,11 +132,11 @@ export default function PlaygroundPage() {
               </p>
               <div className="flex flex-col gap-3 sm:flex-row">
                 <input id="api-key" value={apiKey} onChange={(event) => setApiKey(event.target.value)} placeholder="ck_live_... or ck_test_..." className="h-11 flex-1 rounded-md border border-line bg-ink/80 px-3 font-mono text-sm text-white outline-none focus:border-mint" />
-                <button type="button" onClick={runLivePlayground} disabled={isPending} className="inline-flex h-11 items-center justify-center gap-2 rounded-md bg-aqua px-5 text-sm font-medium text-ink disabled:opacity-50">
-                  <Play className="h-4 w-4" /> Run full process
+                <button type="button" onClick={runLivePlayground} disabled={isRunning || isEstimating} className="inline-flex h-11 items-center justify-center gap-2 rounded-md bg-aqua px-5 text-sm font-medium text-ink disabled:cursor-not-allowed disabled:opacity-60">
+                  {isRunning ? <Spinner /> : <Play className="h-4 w-4" />} {isRunning ? "Running..." : "Run full process"}
                 </button>
-                <button type="button" onClick={estimateTokens} disabled={isPending} className="inline-flex h-11 items-center justify-center gap-2 rounded-md bg-mint px-5 text-sm font-medium text-ink disabled:opacity-50">
-                  <Calculator className="h-4 w-4" /> Estimate tokens
+                <button type="button" onClick={estimateTokens} disabled={isRunning || isEstimating} className="inline-flex h-11 items-center justify-center gap-2 rounded-md bg-mint px-5 text-sm font-medium text-ink disabled:cursor-not-allowed disabled:opacity-60">
+                  {isEstimating ? <Spinner /> : <Calculator className="h-4 w-4" />} {isEstimating ? "Estimating..." : "Estimate tokens"}
                 </button>
                 <button type="button" onClick={() => setInput(seed)} className="inline-flex h-11 items-center justify-center gap-2 rounded-md border border-line px-5 text-sm text-white/75">
                   <RotateCcw className="h-4 w-4" /> Reset
@@ -178,4 +181,8 @@ export default function PlaygroundPage() {
       </div>
     </main>
   );
+}
+
+function Spinner() {
+  return <span className="h-4 w-4 animate-spin rounded-full border-2 border-ink/30 border-t-ink" aria-hidden="true" />;
 }

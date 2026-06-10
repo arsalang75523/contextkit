@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useState } from "react";
 import { Activity, Clock, Coins, Gauge, Play, RotateCcw } from "lucide-react";
 import { CodeBlock } from "@/components/code-block";
 import { bankrX402Command } from "@/lib/bankr-x402";
@@ -24,6 +24,7 @@ type DemoResult = {
     compression?: { compressedContext?: string; [key: string]: unknown };
     handoff?: unknown;
     profile?: unknown;
+    memory?: unknown;
   };
   metrics?: {
     inputTokens?: number;
@@ -42,10 +43,20 @@ export default function DemoPage() {
   const [text, setText] = useState(starter);
   const [result, setResult] = useState<DemoResult | null>(null);
   const [error, setError] = useState("");
-  const [isPending, startTransition] = useTransition();
+  const [isRunning, setIsRunning] = useState(false);
 
   const messages = useMemo(() => linesToMessages(text), [text]);
-  const summarizeCommand = useMemo(() => bankrX402Command("summarize", { messages }), [messages]);
+  const paidCommands = useMemo(() => [
+    ["Summarize", bankrX402Command("summarize", { messages })],
+    ["Compress context", bankrX402Command("compress-context", { messages })],
+    ["Agent handoff", bankrX402Command("handoff", { messages })],
+    ["Profile + hosted memory", bankrX402Command("extract-profile", { messages })],
+    ["Direct memory enrichment", `curl -X POST https://YOUR_CONTEXTKIT_URL/api/memory-enrichment \\
+  -H "Authorization: Bearer ck_live_..." \\
+  -H "Content-Type: application/json" \\
+  -d '${JSON.stringify({ messages }).replaceAll("'", "'\\''")}'`]
+  ], [messages]);
+  const allEndpointsCommand = useMemo(() => paidCommands.map(([label, command]) => `# ${label}\n${command}`).join("\n\n"), [paidCommands]);
   const inputTokens = result?.metrics?.inputTokens ?? 0;
   const compressedTokens = result?.metrics?.compressedTokens ?? 0;
   const reduction = result?.metrics?.compressionReductionPercent ?? 0;
@@ -53,22 +64,23 @@ export default function DemoPage() {
   function runDemo() {
     setError("");
     setResult(null);
-    startTransition(() => {
-      void (async () => {
-        try {
-          const response = await fetch("/api/demo/run", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ messages })
-          });
-          const payload = (await response.json()) as DemoResult;
-          setResult(payload);
-          if (!response.ok) setError(JSON.stringify(payload, null, 2));
-        } catch (err) {
-          setError(err instanceof Error ? err.message : "Demo request failed.");
-        }
-      })();
-    });
+    setIsRunning(true);
+    void (async () => {
+      try {
+        const response = await fetch("/api/demo/run", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ messages })
+        });
+        const payload = (await response.json()) as DemoResult;
+        setResult(payload);
+        if (!response.ok) setError(JSON.stringify(payload, null, 2));
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Demo request failed.");
+      } finally {
+        setIsRunning(false);
+      }
+    })();
   }
 
   return (
@@ -82,7 +94,7 @@ export default function DemoPage() {
 
         <div className="mt-8 grid gap-4 md:grid-cols-3">
           <Info title="Real processing" text="The demo calls Bankr LLM through ContextKit. Outputs are not hardcoded." />
-          <Info title="Daily guardrail" text="Each logged-in account gets 3 full demo runs per day, because one demo runs all four AI services." />
+          <Info title="Daily guardrail" text="Each logged-in account gets 3 full demo runs per day, because one demo runs all ContextKit AI services." />
           <Info title="Production path" text="For paid agent traffic, use Bankr-hosted x402 commands shown below." />
         </div>
 
@@ -95,8 +107,8 @@ export default function DemoPage() {
               </button>
             </div>
             <textarea value={text} onChange={(event) => setText(event.target.value)} className="min-h-[520px] w-full rounded-md border border-line bg-ink/80 p-4 font-mono text-sm leading-7 text-white outline-none focus:border-mint" />
-            <button type="button" onClick={runDemo} disabled={isPending} className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-md bg-mint px-5 text-sm font-medium text-ink disabled:opacity-50">
-              <Play className="h-4 w-4" /> {isPending ? "Running full pipeline..." : "Run full ContextKit demo"}
+            <button type="button" onClick={runDemo} disabled={isRunning} className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-md bg-mint px-5 text-sm font-medium text-ink disabled:cursor-not-allowed disabled:opacity-60">
+              {isRunning ? <Spinner /> : <Play className="h-4 w-4" />} {isRunning ? "Running full pipeline..." : "Run full ContextKit demo"}
             </button>
             {error ? <pre className="whitespace-pre-wrap rounded border border-coral/40 bg-coral/10 p-3 text-xs text-coral">{error}</pre> : null}
           </section>
@@ -106,7 +118,7 @@ export default function DemoPage() {
               <Metric icon={<Activity className="h-4 w-4" />} label="Original" value={inputTokens} />
               <Metric icon={<Gauge className="h-4 w-4" />} label="Compressed" value={compressedTokens} />
               <Metric icon={<Clock className="h-4 w-4" />} label="Latency" value={`${result?.metrics?.latencyMs ?? 0}ms`} />
-              <Metric icon={<Coins className="h-4 w-4" />} label="x402 cost" value={`$${result?.metrics?.totalX402CostUsd ?? "0.000"}`} />
+              <Metric icon={<Coins className="h-4 w-4" />} label="API value" value={`$${result?.metrics?.totalX402CostUsd ?? "0.000"}`} />
             </div>
 
             <div className="mt-5 rounded-md border border-line bg-ink/70 p-4">
@@ -127,7 +139,19 @@ export default function DemoPage() {
               <Panel title="Compressed context" value={result?.outputs?.compression?.compressedContext ?? "Run the demo to generate compressed context."} />
               <Panel title="Agent handoff payload" value={JSON.stringify(result?.outputs?.handoff ?? { status: "Run the demo to generate handoff JSON." }, null, 2)} />
               <Panel title="Extracted profile" value={JSON.stringify(result?.outputs?.profile ?? { status: "Run the demo to generate profile JSON." }, null, 2)} />
-              <Panel title="Paid summarize command" value={summarizeCommand} />
+              <Panel title="Memory enrichment" value={JSON.stringify(result?.outputs?.memory ?? { status: "Run the demo to generate memory enrichment JSON." }, null, 2)} />
+              <div>
+                <h2 className="mb-3 text-sm uppercase tracking-[0.18em] text-white/45">Run every endpoint</h2>
+                <p className="mb-3 text-sm leading-6 text-white/55">
+                  Bankr-hosted x402 commands are paid one endpoint at a time. Memory enrichment remains available through the direct API-key route; hosted memory extraction is included in profile output.
+                </p>
+                <Panel title="Full pipeline command" value={allEndpointsCommand} />
+                <div className="grid gap-4">
+                  {paidCommands.map(([label, command]) => (
+                    <Panel key={label} title={label} value={command} />
+                  ))}
+                </div>
+              </div>
             </div>
           </section>
         </div>
@@ -155,6 +179,10 @@ function Info({ title, text }: { title: string; text: string }) {
       <p className="mt-2 text-sm leading-6 text-white/60">{text}</p>
     </div>
   );
+}
+
+function Spinner() {
+  return <span className="h-4 w-4 animate-spin rounded-full border-2 border-ink/30 border-t-ink" aria-hidden="true" />;
 }
 
 function Metric({ icon, label, value }: { icon: React.ReactNode; label: string; value: React.ReactNode }) {

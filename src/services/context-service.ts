@@ -25,16 +25,47 @@ export class ContextService {
 
   async summarize(request: ConversationRequest): Promise<SummarizeResponse> {
     const output = await this.generate("summarize", request);
-    const summary = String(output.summary ?? "");
     const inputTokens = estimateTokens(request.messages);
-    const summaryTokens = estimateTokens(summary);
+    const stateValue = summarizeState(output.state);
+    const keyDecisions = arrayOfStrings(output.keyDecisions);
+    const actionItems = arrayOfStrings(output.actionItems);
+    const openQuestions = arrayOfStrings(output.openQuestions);
+    const risks = arrayOfStrings(output.risks);
+    const sourceFacts = [
+      stateValue.goal,
+      stateValue.status,
+      ...stateValue.decisions,
+      ...stateValue.blockers.map((item) => `Blocker: ${item}`),
+      ...stateValue.priorities.map((item) => `Priority: ${item}`),
+      ...stateValue.nextSteps.map((item) => `Next: ${item}`),
+      ...keyDecisions.map((item) => `Decision: ${item}`),
+      ...actionItems.map((item) => `Next: ${item}`)
+    ].filter((item) => item && item !== "unknown");
+    const micro = enforceBudget(String(output.micro ?? ""), sourceFacts, inputTokens, 0.2);
+    const compact = enforceBudget(String(output.compact ?? output.summary ?? ""), sourceFacts, inputTokens, 0.4);
+    const extended = enforceBudget(String(output.extended ?? output.summary ?? compact), sourceFacts, inputTokens, 0.6);
+    const summary = compact || micro || extended;
+    const microTokens = estimateTokens(micro);
+    const compactTokens = estimateTokens(compact);
+    const extendedTokens = estimateTokens(extended);
     return {
       summary,
-      tokenReductionEstimate: estimateReduction(inputTokens, summaryTokens),
-      keyDecisions: arrayOfStrings(output.keyDecisions),
-      actionItems: arrayOfStrings(output.actionItems),
-      openQuestions: arrayOfStrings(output.openQuestions),
-      risks: arrayOfStrings(output.risks),
+      tokenReductionEstimate: estimateReduction(inputTokens, compactTokens || estimateTokens(summary)),
+      micro,
+      compact,
+      extended,
+      state: stateValue,
+      inputTokens,
+      microTokens,
+      compactTokens,
+      extendedTokens,
+      microReductionPercent: estimateReduction(inputTokens, microTokens),
+      compactReductionPercent: estimateReduction(inputTokens, compactTokens),
+      extendedReductionPercent: estimateReduction(inputTokens, extendedTokens),
+      keyDecisions,
+      actionItems,
+      openQuestions,
+      risks,
       confidence: confidence(output.confidence)
     };
   }
@@ -201,6 +232,57 @@ function arrayOfStrings(value: unknown): string[] {
 function confidence(value: unknown) {
   const number = Number(value);
   return Number.isFinite(number) ? Number(Math.max(0, Math.min(1, number)).toFixed(2)) : 0;
+}
+
+function summarizeState(value: unknown) {
+  const record = value && typeof value === "object" ? value as Record<string, unknown> : {};
+  return {
+    goal: String(record.goal ?? "unknown"),
+    status: String(record.status ?? "unknown"),
+    blockers: arrayOfStrings(record.blockers),
+    decisions: arrayOfStrings(record.decisions),
+    priorities: arrayOfStrings(record.priorities),
+    nextSteps: arrayOfStrings(record.nextSteps)
+  };
+}
+
+function enforceBudget(candidate: string, facts: string[], inputTokens: number, ratio: number) {
+  const maxTokens = Math.max(8, Math.floor(inputTokens * ratio));
+  const cleaned = normalizeSummary(candidate);
+  if (cleaned && estimateTokens(cleaned) <= maxTokens && estimateTokens(cleaned) < inputTokens) {
+    return cleaned;
+  }
+
+  const selected: string[] = [];
+  for (const fact of facts) {
+    const normalized = normalizeSummary(fact);
+    if (!normalized || selected.includes(normalized)) continue;
+    const next = [...selected, normalized].join("; ");
+    if (estimateTokens(next) > maxTokens || estimateTokens(next) >= inputTokens) break;
+    selected.push(normalized);
+  }
+
+  if (selected.length > 0) return selected.join("; ");
+  return truncateToTokenBudget(cleaned, Math.min(maxTokens, Math.max(0, inputTokens - 1)));
+}
+
+function normalizeSummary(value: string) {
+  return value
+    .replace(/\s+/g, " ")
+    .replace(/\s*[\r\n]+\s*/g, " ")
+    .trim();
+}
+
+function truncateToTokenBudget(value: string, maxTokens: number) {
+  if (maxTokens <= 0) return "";
+  const words = normalizeSummary(value).split(/\s+/).filter(Boolean);
+  const selected: string[] = [];
+  for (const word of words) {
+    const next = [...selected, word].join(" ");
+    if (estimateTokens(next) > maxTokens) break;
+    selected.push(word);
+  }
+  return selected.join(" ");
 }
 
 function facts(value: unknown) {

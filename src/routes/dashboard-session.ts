@@ -224,18 +224,19 @@ dashboardSessionRoutes.post("/demo/run", zValidator("json", demoRunSchema), asyn
   const request: ConversationRequest = { messages: sanitizeMessages(c.req.valid("json").messages) };
   const startedAt = Date.now();
   const service = new ContextService({ env: c.env ?? {}, requestId: c.get("requestId") });
-  const [summary, compression, handoff, profile] = await Promise.all([
+  const [summary, compression, handoff, profile, memory] = await Promise.all([
     service.summarize(request),
     service.compress(request),
     service.handoff(request),
-    service.profile(request)
+    service.profile(request),
+    service.memoryEnrichment(request)
   ]);
 
   const inputTokens = estimateTokens(request.messages as ConversationMessage[]);
   const compressedTokens = estimateTokens(compression.compressedContext);
-  const outputTokens = estimateTokens(JSON.stringify({ summary, compression, handoff, profile }));
+  const outputTokens = estimateTokens(JSON.stringify({ summary, compression, handoff, profile, memory }));
   const latencyMs = Date.now() - startedAt;
-  const totalX402CostUsd = Number((endpointPricing.summarize + endpointPricing["compress-context"] + endpointPricing.handoff + endpointPricing["extract-profile"]).toFixed(3));
+  const totalX402CostUsd = Number((endpointPricing.summarize + endpointPricing["compress-context"] + endpointPricing.handoff + endpointPricing["extract-profile"] + endpointPricing["memory-enrichment"]).toFixed(3));
 
   await new AnalyticsService(c.env ?? {}).recordRequest({
     requestId: c.get("requestId"),
@@ -253,7 +254,8 @@ dashboardSessionRoutes.post("/demo/run", zValidator("json", demoRunSchema), asyn
       summary,
       compression,
       handoff,
-      profile
+      profile,
+      memory
     },
     metrics: {
       inputTokens,

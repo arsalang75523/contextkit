@@ -6,7 +6,26 @@ export const endpoints = [
     price: "$0.002",
     event: "summarization.completed",
     description: "Summarize long conversations into concise optimized context.",
-    response: { summary: "User is building an x402 context API...", tokenReductionEstimate: 72, keyDecisions: ["Use Bankr-hosted x402"], actionItems: ["Deploy updated service"], openQuestions: [], risks: ["Email delivery requires verified domain"], confidence: 0.86 }
+    response: {
+      summary: "ContextKit: Bankr x402 context API. Decision: use Bankr-hosted x402. Next: deploy updated service.",
+      tokenReductionEstimate: 64,
+      micro: "ContextKit: Bankr x402 context API. Next: deploy.",
+      compact: "ContextKit: Bankr x402 context API. Decision: use Bankr-hosted x402. Next: deploy updated service.",
+      extended: "ContextKit is building a Bankr-powered x402 context API. The active decision is to use Bankr-hosted x402 for paid agent calls. The next action is to deploy the updated service and verify metrics.",
+      state: { goal: "Launch ContextKit", status: "deployment update ready", blockers: [], decisions: ["Use Bankr-hosted x402"], priorities: ["Deploy", "Verify metrics"], nextSteps: ["Deploy updated service"] },
+      inputTokens: 120,
+      microTokens: 12,
+      compactTokens: 28,
+      extendedTokens: 54,
+      microReductionPercent: 90,
+      compactReductionPercent: 77,
+      extendedReductionPercent: 55,
+      keyDecisions: ["Use Bankr-hosted x402"],
+      actionItems: ["Deploy updated service"],
+      openQuestions: [],
+      risks: [],
+      confidence: 0.86
+    }
   },
   {
     slug: "compress-context",
