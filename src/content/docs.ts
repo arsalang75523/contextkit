@@ -81,9 +81,9 @@ export const endpoints = [
     slug: "memory-enrichment",
     method: "POST",
     path: "/api/memory-enrichment",
-    price: "$0.003",
+    price: "$0.003 API key / $0.004 hosted profile",
     event: "request.completed",
-    description: "Evolve long-term memory without duplicating stale preferences.",
+    description: "Evolve long-term memory without duplicating stale preferences. Bankr-hosted paid memory extraction is served through contextkit-profile while the direct API-key endpoint remains /api/memory-enrichment.",
     response: { stablePreferences: ["concise explanations"], evolvingPreferences: [], longTermGoals: ["launch ContextKit"], supersededMemories: [], memoryConflicts: [], stableMemories: ["prefers concise explanations"], evolvingMemories: ["launching ContextKit"], deprecatedMemories: [], confidence: 0.84 }
   }
 ];

@@ -147,6 +147,11 @@ export default function PlaygroundPage() {
               <p className="mt-2 text-sm text-white/60">
                 {active.price} via Bankr-hosted x402. This is the real paid endpoint for <span className="text-mint">{active.slug}</span>. No ContextKit API key is required for this hosted paid endpoint.
               </p>
+              {active.slug === "memory-enrichment" ? (
+                <p className="mt-3 rounded border border-aqua/25 bg-aqua/10 p-3 text-sm leading-6 text-aqua">
+                  Hosted x402 note: memory enrichment is currently paid through <code>contextkit-profile</code>. Direct API-key usage still calls <code>/api/memory-enrichment</code>.
+                </p>
+              ) : null}
             </div>
             <div>
               <p className="mb-3 text-sm uppercase tracking-[0.18em] text-white/45">Live ContextKit response</p>

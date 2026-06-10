@@ -42,6 +42,11 @@ export default function ApiReferencePage() {
                   <div>
                     <p className="break-all font-mono text-sm text-mint">{endpoint.method} {bankrHostedUrl(endpoint.slug)}</p>
                     <h2 className="mt-2 text-2xl font-semibold text-white">{endpoint.description}</h2>
+                    {endpoint.slug === "memory-enrichment" ? (
+                      <p className="mt-3 max-w-3xl rounded border border-aqua/25 bg-aqua/10 p-3 text-sm leading-6 text-aqua">
+                        Bankr-hosted x402 maps this paid memory flow to <code>contextkit-profile</code> for now. The direct API-key endpoint remains <code>/api/memory-enrichment</code>.
+                      </p>
+                    ) : null}
                   </div>
                   <span className="rounded-md border border-aqua/25 bg-aqua/10 px-3 py-1 text-sm text-aqua">{endpoint.price}</span>
                 </div>
