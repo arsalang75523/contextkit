@@ -33,7 +33,7 @@ dashboardSessionRoutes.post("/dashboard/signup", zValidator("json", signupSchema
   return c.json({
     account,
     emailVerificationRequired: true,
-    message: "Account created. Check your email to verify the account before logging in or creating API keys."
+    message: "Account created. Check your email for a 6-digit verification code before logging in or creating API keys."
   }, 201);
 });
 
@@ -77,7 +77,7 @@ dashboardSessionRoutes.post("/dashboard/verify-email", zValidator("json", verify
   const limited = await authActionRateLimit(c, "verify-email", 20, 15 * 60);
   if (limited) return limited;
 
-  const account = await new AccountService(c.env ?? {}).verifyEmail(c.req.valid("json").token);
+  const account = await new AccountService(c.env ?? {}).verifyEmail(c.req.valid("json"));
   if (!account) {
     return c.json({ error: { code: "invalid_verification_token", message: "Verification token is invalid or expired.", requestId: c.get("requestId") } }, 401);
   }

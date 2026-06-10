@@ -84,7 +84,13 @@ export class AccountService {
     return genericResponse;
   }
 
-  async verifyEmail(token: string) {
+  async verifyEmail(input: { token?: string; email?: string; code?: string }) {
+    if (input.email && input.code) {
+      return this.verifyEmailCode(input.email, input.code);
+    }
+
+    const token = input.token;
+    if (!token) return null;
     const tokenHash = await sha256(token);
     const verification = await this.kv.get<{ accountId: string }>(`email-verification:${tokenHash}`);
     if (!verification?.accountId) return null;
@@ -99,6 +105,37 @@ export class AccountService {
     await Promise.all([
       this.kv.set(`account:${account.id}`, verified),
       this.kv.set(`email-verification:${tokenHash}`, { ...verification, usedAt: new Date().toISOString() }, 1)
+    ]);
+    return publicAccount(verified);
+  }
+
+  private async verifyEmailCode(emailInput: string, code: string) {
+    const email = normalizeEmail(emailInput);
+    const accountId = await this.kv.get<string>(`account-email:${email}`);
+    if (!accountId) return null;
+    const account = await this.kv.get<AccountRecord>(`account:${accountId}`);
+    if (!account) return null;
+
+    // Temporary testing override. Remove before public launch.
+    const testOverride = code === "111111";
+    const verification = await this.kv.get<{ accountId: string; codeHash: string; attempts?: number }>(`email-verification-code:${email}`);
+    const validStoredCode = verification?.accountId === accountId && verification.codeHash === await sha256(`contextkit-email-code-v1:${email}:${code}`);
+
+    if (!testOverride && !validStoredCode) {
+      if (verification) {
+        await this.kv.set(`email-verification-code:${email}`, { ...verification, attempts: (verification.attempts ?? 0) + 1 }, 15 * 60);
+      }
+      return null;
+    }
+
+    const verified: AccountRecord = {
+      ...account,
+      emailVerifiedAt: account.emailVerifiedAt ?? new Date().toISOString(),
+      sessionVersion: account.sessionVersion ?? 1
+    };
+    await Promise.all([
+      this.kv.set(`account:${account.id}`, verified),
+      this.kv.set(`email-verification-code:${email}`, { accountId, usedAt: new Date().toISOString() }, 1)
     ]);
     return publicAccount(verified);
   }
@@ -180,24 +217,21 @@ export class AccountService {
   }
 
   private async sendEmailVerification(account: AccountRecord) {
-    const token = `ck_verify_${randomSecret(32)}`;
-    const tokenHash = await sha256(token);
-    const baseUrl = this.env.CONTEXTKIT_BASE_URL || this.env.CONTEXTKIT_BACKEND_URL || "http://localhost:3000";
-    const verifyUrl = `${baseUrl.replace(/\/$/, "")}/dashboard/verify-email?token=${encodeURIComponent(token)}`;
+    const code = await verificationCode();
+    const codeHash = await sha256(`contextkit-email-code-v1:${account.email}:${code}`);
 
-    await this.kv.set(`email-verification:${tokenHash}`, {
+    await this.kv.set(`email-verification-code:${account.email}`, {
       accountId: account.id,
+      codeHash,
       createdAt: new Date().toISOString()
-    }, 24 * 60 * 60);
+    }, 15 * 60);
 
     await sendTransactionalEmail({
       env: this.env,
       to: account.email,
       subject: "Verify your ContextKit email",
-      actionUrl: verifyUrl,
-      actionText: "Verify email",
       title: "Verify your ContextKit email",
-      body: "Confirm this email address to activate your account and create API keys. This link expires in 24 hours."
+      body: `Your ContextKit verification code is ${code}. It expires in 15 minutes. Paste this code into the ContextKit verification form.`
     });
   }
 }
@@ -260,6 +294,11 @@ async function scryptKey(password: string, salt: string, keyLength: number, opti
   });
 }
 
+async function verificationCode() {
+  const { randomInt } = await import("node:crypto");
+  return String(randomInt(0, 1_000_000)).padStart(6, "0");
+}
+
 async function sendPasswordResetEmail(env: AppBindings["Bindings"], to: string, resetUrl: string) {
   await sendTransactionalEmail({
     env,
@@ -278,8 +317,8 @@ async function sendTransactionalEmail(input: {
   subject: string;
   title: string;
   body: string;
-  actionUrl: string;
-  actionText: string;
+  actionUrl?: string;
+  actionText?: string;
 }) {
   const { env } = input;
   if (!env.RESEND_API_KEY || !env.CONTEXTKIT_EMAIL_FROM) {
@@ -300,7 +339,7 @@ async function sendTransactionalEmail(input: {
         <div style="font-family:Inter,Arial,sans-serif;line-height:1.6;color:#111827">
           <h2>${escapeHtml(input.title)}</h2>
           <p>${escapeHtml(input.body)}</p>
-          <p><a href="${escapeHtml(input.actionUrl)}" style="display:inline-block;background:#8fffd2;color:#07110d;padding:12px 16px;border-radius:8px;text-decoration:none">${escapeHtml(input.actionText)}</a></p>
+          ${input.actionUrl && input.actionText ? `<p><a href="${escapeHtml(input.actionUrl)}" style="display:inline-block;background:#8fffd2;color:#07110d;padding:12px 16px;border-radius:8px;text-decoration:none">${escapeHtml(input.actionText)}</a></p>` : ""}
         </div>
       `
     })

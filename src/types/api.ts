@@ -45,7 +45,11 @@ export const resetPasswordSchema = z.object({
 });
 
 export const verifyEmailSchema = z.object({
-  token: z.string().min(24)
+  token: z.string().min(24).optional(),
+  email: z.string().email().optional(),
+  code: z.string().regex(/^\d{6}$/).optional()
+}).refine((value) => Boolean(value.token) || Boolean(value.email && value.code), {
+  message: "Provide either token or email + 6-digit code."
 });
 
 export const revokeApiKeySchema = z.object({

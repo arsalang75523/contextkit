@@ -17,6 +17,7 @@ export default function DashboardLoginPage() {
   const [resultMode, setResultMode] = useState<Mode | null>(null);
   const [error, setError] = useState("");
   const [unverifiedEmail, setUnverifiedEmail] = useState("");
+  const [verificationCode, setVerificationCode] = useState("");
 
   function switchMode(nextMode: Mode) {
     setMode(nextMode);
@@ -24,6 +25,7 @@ export default function DashboardLoginPage() {
     setResultMode(null);
     setError("");
     setUnverifiedEmail("");
+    setVerificationCode("");
     setPassword("");
     setShowPassword(false);
   }
@@ -56,6 +58,7 @@ export default function DashboardLoginPage() {
       window.localStorage.setItem("contextkit_api_key", apiKey);
     }
     if (mode === "signup") {
+      setUnverifiedEmail(email);
       setResult(payload);
       setResultMode(mode);
       return;
@@ -78,6 +81,26 @@ export default function DashboardLoginPage() {
     }
     setResult(payload);
     setResultMode("forgot");
+  }
+
+  async function verifyCode() {
+    setError("");
+    const response = await fetch("/api/dashboard/verify-email", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: unverifiedEmail || email, code: verificationCode })
+    });
+    const payload = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+    if (!response.ok) {
+      setError(JSON.stringify(payload, null, 2));
+      return;
+    }
+    setResult({ ...payload, message: "Email verified. You can login now." });
+    setResultMode("login");
+    setMode("login");
+    setPassword("");
+    setVerificationCode("");
+    setUnverifiedEmail("");
   }
 
   return (
@@ -140,16 +163,23 @@ export default function DashboardLoginPage() {
         ) : null}
         {unverifiedEmail ? (
           <div className="mt-4 rounded border border-aqua/30 bg-aqua/10 p-4">
-            <p className="text-sm text-aqua">This account is not verified yet.</p>
-            <button type="button" onClick={resendVerification} className="mt-3 h-10 rounded-md border border-aqua/40 px-4 text-sm text-aqua">
-              Resend verification email
-            </button>
+            <p className="text-sm text-aqua">Paste the 6-digit verification code sent to {unverifiedEmail}.</p>
+            <div className="mt-3 flex flex-col gap-3 sm:flex-row">
+              <input value={verificationCode} onChange={(event) => setVerificationCode(event.target.value.replace(/\D/g, "").slice(0, 6))} placeholder="111111" className="h-10 flex-1 rounded-md border border-line bg-ink/80 px-3 font-mono text-sm tracking-[0.35em] text-white outline-none focus:border-aqua" />
+              <button type="button" onClick={verifyCode} className="h-10 rounded-md bg-aqua px-4 text-sm font-medium text-ink">
+                Verify code
+              </button>
+              <button type="button" onClick={resendVerification} className="h-10 rounded-md border border-aqua/40 px-4 text-sm text-aqua">
+                Resend
+              </button>
+            </div>
+            <p className="mt-3 text-xs text-white/45">Temporary test code: 111111. Remove before launch.</p>
           </div>
         ) : null}
         {result ? (
           <div className="mt-5">
             <p className="mb-3 text-sm text-mint">
-              {resultMode === "signup" ? "Account created. Check your email to verify it before login." : "Check your email"}
+              {resultMode === "signup" ? "Account created. Enter the 6-digit code from your email." : resultMode === "login" ? "Email verified" : "Check your email"}
             </p>
             <CodeBlock code={JSON.stringify(result, null, 2)} />
           </div>
