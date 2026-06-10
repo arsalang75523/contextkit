@@ -29,6 +29,8 @@ export class ContextService {
     const inputTokens = estimateTokens(request.messages);
     const stateValue = dedupeSummaryState(summarizeState(output.state));
     const microState = minimalSummaryState(stateValue);
+    const compactState = compactSummaryState(stateValue);
+    const extendedState = extendedSummaryState(stateValue);
     const keyDecisions = arrayOfStrings(output.keyDecisions);
     const actionItems = arrayOfStrings(output.actionItems);
     const openQuestions = arrayOfStrings(output.openQuestions);
@@ -36,31 +38,29 @@ export class ContextService {
     const microFacts = [
       stateValue.goal,
       stateValue.status,
-      ...stateValue.blockers.map((item) => `Blocker: ${item}`),
-      ...stateValue.nextSteps.map((item) => `Next: ${item}`)
+      ...stateValue.blockers.map((item) => `Blocker: ${item}`)
     ].filter((item) => item && item !== "unknown");
     const compactFacts = [
       ...microFacts,
-      ...stateValue.decisions.map((item) => `Decision: ${item}`),
-      ...stateValue.priorities.map((item) => `Priority: ${item}`),
-      ...keyDecisions.map((item) => `Decision: ${item}`),
-      ...actionItems.map((item) => `Next: ${item}`)
+      ...stateValue.decisions.slice(0, 4).map((item) => `Decision: ${shortStateValue(item, 6)}`),
+      ...keyDecisions.slice(0, 4).map((item) => `Decision: ${shortStateValue(item, 6)}`),
+      ...actionItems.slice(0, 6).map((item) => `Next: ${shortStateValue(item, 4)}`)
     ].filter((item) => item && item !== "unknown");
     const extendedFacts = [
       ...compactFacts,
       ...openQuestions.map((item) => `Open: ${item}`),
       ...risks.map((item) => `Risk: ${item}`)
     ];
-    const micro = enforceBudget(String(output.micro ?? ""), microFacts, inputTokens, 0.2);
-    const compact = enforceBudget(String(output.compact ?? output.summary ?? ""), compactFacts, inputTokens, 0.4);
-    const extended = enforceBudget(String(output.extended ?? output.summary ?? compact), extendedFacts, inputTokens, 0.6);
+    const micro = compactSentence(enforceBudget(String(output.micro ?? ""), microFacts, inputTokens, 0.2, 40));
+    const compact = compactParagraph(enforceBudget(String(output.compact ?? output.summary ?? ""), compactFacts, inputTokens, 0.4, 120));
+    const extended = extendedParagraph(enforceBudget(String(output.extended ?? output.summary ?? compact), extendedFacts, inputTokens, 0.6, 180));
     const summary = compact || micro || extended;
     const microTokens = estimateTokens(micro);
     const compactTokens = estimateTokens(compact);
     const extendedTokens = estimateTokens(extended);
     const microStateTokens = estimateTokens(JSON.stringify(microState));
-    const compactStateTokens = estimateTokens(JSON.stringify(stateValue));
-    const extendedStateTokens = compactStateTokens;
+    const compactStateTokens = estimateTokens(JSON.stringify(compactState));
+    const extendedStateTokens = estimateTokens(JSON.stringify(extendedState));
     const metrics = {
       inputTokens,
       microTokens,
@@ -73,6 +73,27 @@ export class ContextService {
       microReductionPercent: estimateReduction(inputTokens, microTokens + microStateTokens),
       compactReductionPercent: estimateReduction(inputTokens, compactTokens + compactStateTokens),
       extendedReductionPercent: estimateReduction(inputTokens, extendedTokens + extendedStateTokens)
+    };
+    const microMetrics = {
+      inputTokens,
+      microTokens,
+      stateTokens: microStateTokens,
+      totalOutputTokens: estimateTokens(JSON.stringify({ mode: "micro", micro, state: microState })),
+      reductionPercent: estimateReduction(inputTokens, microTokens + microStateTokens)
+    };
+    const compactMetrics = {
+      inputTokens,
+      compactTokens,
+      stateTokens: compactStateTokens,
+      totalOutputTokens: estimateTokens(JSON.stringify({ mode: "compact", compact, state: compactState })),
+      reductionPercent: estimateReduction(inputTokens, compactTokens + compactStateTokens)
+    };
+    const extendedMetrics = {
+      inputTokens,
+      extendedTokens,
+      stateTokens: extendedStateTokens,
+      totalOutputTokens: estimateTokens(JSON.stringify({ mode: "extended", extended, state: extendedState })),
+      reductionPercent: estimateReduction(inputTokens, extendedTokens + extendedStateTokens)
     };
     const debugResponse = {
       mode,
@@ -104,9 +125,9 @@ export class ContextService {
       confidence: confidence(output.confidence)
     };
     if (mode === "debug") return debugResponse;
-    if (mode === "extended") return { mode, extended, state: stateValue };
-    if (mode === "compact") return { mode, compact, state: stateValue };
-    return { mode: "micro", micro, state: microState };
+    if (mode === "extended") return { mode, extended, state: extendedState, metrics: extendedMetrics };
+    if (mode === "compact") return { mode, compact, state: compactState, metrics: compactMetrics };
+    return { mode: "micro", micro, state: microState, metrics: microMetrics };
   }
 
   async compress(request: ConversationRequest): Promise<CompressContextResponse> {
@@ -287,10 +308,28 @@ function summarizeState(value: unknown) {
 
 function minimalSummaryState(stateValue: ReturnType<typeof summarizeState>) {
   return {
-    goal: stateValue.goal,
-    status: stateValue.status,
-    blockers: stateValue.blockers,
-    nextSteps: stateValue.nextSteps
+    goal: shortStateValue(stateValue.goal, 8),
+    status: shortStateValue(stateValue.status, 12),
+    blockers: stateValue.blockers.slice(0, 5).map((item) => shortStateValue(item, 6)).filter((item) => item !== "unknown"),
+    next: stateValue.nextSteps.slice(0, 5).map((item) => shortStateValue(item, 4)).filter((item) => item !== "unknown")
+  };
+}
+
+function compactSummaryState(stateValue: ReturnType<typeof summarizeState>) {
+  return {
+    goal: shortStateValue(stateValue.goal, 10),
+    status: shortStateValue(stateValue.status, 16),
+    blockers: stateValue.blockers.slice(0, 5).map((item) => shortStateValue(item, 7)).filter((item) => item !== "unknown"),
+    next: stateValue.nextSteps.slice(0, 6).map((item) => shortStateValue(item, 4)).filter((item) => item !== "unknown")
+  };
+}
+
+function extendedSummaryState(stateValue: ReturnType<typeof summarizeState>) {
+  return {
+    goal: shortStateValue(stateValue.goal, 12),
+    status: shortStateValue(stateValue.status, 20),
+    blockers: stateValue.blockers.slice(0, 5).map((item) => shortStateValue(item, 8)).filter((item) => item !== "unknown"),
+    next: stateValue.nextSteps.slice(0, 6).map((item) => shortStateValue(item, 4)).filter((item) => item !== "unknown")
   };
 }
 
@@ -310,8 +349,8 @@ function dedupeSummaryState(stateValue: ReturnType<typeof summarizeState>) {
   };
 }
 
-function enforceBudget(candidate: string, facts: string[], inputTokens: number, ratio: number) {
-  const maxTokens = Math.max(8, Math.floor(inputTokens * ratio));
+function enforceBudget(candidate: string, facts: string[], inputTokens: number, ratio: number, hardMaxTokens?: number) {
+  const maxTokens = Math.min(hardMaxTokens ?? Number.POSITIVE_INFINITY, Math.max(8, Math.floor(inputTokens * ratio)));
   const cleaned = normalizeSummary(candidate);
   if (cleaned && estimateTokens(cleaned) <= maxTokens && estimateTokens(cleaned) < inputTokens) {
     return cleaned;
@@ -352,6 +391,37 @@ function containsEquivalent(items: string[], candidate: string) {
 
 function normalizeComparable(value: string) {
   return normalizeSummary(value).toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+function shortStateValue(value: string, maxTokens: number) {
+  const normalized = normalizeSummary(value);
+  if (!normalized || normalized === "unknown") return "unknown";
+  return truncateToTokenBudget(normalized, maxTokens) || normalized;
+}
+
+function compactSentence(value: string) {
+  const trimmed = truncateToTokenBudget(normalizeSummary(value).replace(/[;|]+/g, ". "), 60);
+  if (!trimmed) return "";
+  return /[.!?]$/.test(trimmed) ? trimmed : `${trimmed}.`;
+}
+
+function compactParagraph(value: string) {
+  const withoutRationale = normalizeSummary(value)
+    .replace(/\b(because|since|therefore|so that|in order to)\b.*?(?=\.|;|$)/gi, "")
+    .replace(/[;|]+/g, ". ");
+  const trimmed = truncateToTokenBudget(withoutRationale, 150);
+  if (!trimmed) return "";
+  return /[.!?]$/.test(trimmed) ? trimmed : `${trimmed}.`;
+}
+
+function extendedParagraph(value: string) {
+  const withoutReplay = normalizeSummary(value)
+    .replace(/\b(first|then|after that|previously|earlier|later|finally)\b[:,]?\s*/gi, "")
+    .replace(/\b(because|since|therefore|so that|in order to)\b.*?(?=\.|;|$)/gi, "")
+    .replace(/[;|]+/g, ". ");
+  const trimmed = truncateToTokenBudget(withoutReplay, 200);
+  if (!trimmed) return "";
+  return /[.!?]$/.test(trimmed) ? trimmed : `${trimmed}.`;
 }
 
 function normalizeSummary(value: string) {
