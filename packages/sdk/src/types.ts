@@ -7,16 +7,18 @@ export type ConversationMessage = {
 
 export type ContextRequest = {
   messages: ConversationMessage[];
+  mode?: "micro" | "compact" | "extended" | "debug";
   metadata?: Record<string, unknown>;
   webhookUrl?: string;
 };
 
 export type SummarizeResponse = {
-  summary: string;
-  tokenReductionEstimate: number;
-  micro: string;
-  compact: string;
-  extended: string;
+  mode: "micro" | "compact" | "extended" | "debug";
+  summary?: string;
+  tokenReductionEstimate?: number;
+  micro?: string;
+  compact?: string;
+  extended?: string;
   state: {
     goal: string;
     status: string;
@@ -25,18 +27,25 @@ export type SummarizeResponse = {
     priorities: string[];
     nextSteps: string[];
   };
-  inputTokens: number;
-  microTokens: number;
-  compactTokens: number;
-  extendedTokens: number;
-  microReductionPercent: number;
-  compactReductionPercent: number;
-  extendedReductionPercent: number;
-  keyDecisions: string[];
-  actionItems: string[];
-  openQuestions: string[];
-  risks: string[];
-  confidence: number;
+  inputTokens?: number;
+  microTokens?: number;
+  compactTokens?: number;
+  extendedTokens?: number;
+  microReductionPercent?: number;
+  compactReductionPercent?: number;
+  extendedReductionPercent?: number;
+  keyDecisions?: string[];
+  actionItems?: string[];
+  openQuestions?: string[];
+  risks?: string[];
+  tokenMetrics?: {
+    inputTokens: number;
+    outputTokens: number;
+    microTokens: number;
+    compactTokens: number;
+    extendedTokens: number;
+  };
+  confidence?: number;
 };
 
 export type CompressContextResponse = {

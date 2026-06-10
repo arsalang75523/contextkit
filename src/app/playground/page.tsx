@@ -13,6 +13,7 @@ const seed = `[
 
 export default function PlaygroundPage() {
   const [endpoint, setEndpoint] = useState("summarize");
+  const [summaryMode, setSummaryMode] = useState<"micro" | "compact" | "extended" | "debug">("micro");
   const [input, setInput] = useState(seed);
   const [apiKey, setApiKey] = useState("");
   const [tokenResult, setTokenResult] = useState<object | null>(null);
@@ -24,11 +25,12 @@ export default function PlaygroundPage() {
   const active = useMemo(() => endpoints.find((item) => item.slug === endpoint) ?? endpoints[0], [endpoint]);
   const payload = useMemo(() => {
     try {
-      return { messages: JSON.parse(input) };
+      const messages = JSON.parse(input);
+      return endpoint === "summarize" ? { messages, mode: summaryMode } : { messages };
     } catch {
       return { messages: [] };
     }
-  }, [input]);
+  }, [endpoint, input, summaryMode]);
   const command = useMemo(() => bankrX402Command(active.slug, payload), [active.slug, payload]);
 
   function runLivePlayground() {
@@ -41,7 +43,7 @@ export default function PlaygroundPage() {
         const response = await fetch("/api/playground/run", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ endpoint: active.slug, messages })
+          body: JSON.stringify({ endpoint: active.slug, messages, mode: active.slug === "summarize" ? summaryMode : undefined })
         });
         const result = (await response.json()) as Record<string, unknown>;
         setRunResult(result);
@@ -118,6 +120,30 @@ export default function PlaygroundPage() {
                 </button>
               ))}
             </div>
+            {endpoint === "summarize" ? (
+              <div className="mb-4 rounded-md border border-mint/20 bg-mint/10 p-4">
+                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                  <div>
+                    <h2 className="font-semibold text-white">Summarize modes</h2>
+                    <p className="mt-1 text-sm leading-6 text-white/60">
+                      Micro is the default for agents. Compact balances context and size. Extended is human-readable. Debug returns the full diagnostic payload.
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-4 gap-2">
+                    {(["micro", "compact", "extended", "debug"] as const).map((mode) => (
+                      <button
+                        key={mode}
+                        type="button"
+                        onClick={() => setSummaryMode(mode)}
+                        className={`rounded-md border px-3 py-2 text-xs transition ${summaryMode === mode ? "border-mint bg-mint/20 text-mint" : "border-line text-white/60 hover:text-white"}`}
+                      >
+                        {mode}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ) : null}
             <textarea
               value={input}
               onChange={(event) => setInput(event.target.value)}

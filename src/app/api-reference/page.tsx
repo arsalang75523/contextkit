@@ -33,7 +33,10 @@ export default function ApiReferencePage() {
         </div>
         <div className="space-y-8">
           {endpoints.map((endpoint) => {
-            const request = JSON.stringify({ messages: [{ role: "user", content: "Long-running agent conversation..." }] }, null, 2);
+            const request = JSON.stringify({
+              messages: [{ role: "user", content: "Long-running agent conversation..." }],
+              ...(endpoint.slug === "summarize" ? { mode: "micro" } : {})
+            }, null, 2);
             const response = JSON.stringify(endpoint.response, null, 2);
             const curl = bankrX402Command(endpoint.slug, JSON.parse(request));
             return (
@@ -42,6 +45,14 @@ export default function ApiReferencePage() {
                   <div>
                     <p className="break-all font-mono text-sm text-mint">{endpoint.method} {bankrHostedUrl(endpoint.slug)}</p>
                     <h2 className="mt-2 text-2xl font-semibold text-white">{endpoint.description}</h2>
+                    {endpoint.slug === "summarize" ? (
+                      <div className="mt-3 grid gap-2 rounded border border-mint/25 bg-mint/10 p-3 text-sm leading-6 text-white/65 md:grid-cols-4">
+                        <p><span className="font-semibold text-mint">micro</span>: default agent memory, smallest output.</p>
+                        <p><span className="font-semibold text-mint">compact</span>: balanced production summary.</p>
+                        <p><span className="font-semibold text-mint">extended</span>: human-readable compressed summary.</p>
+                        <p><span className="font-semibold text-mint">debug</span>: full backward-compatible diagnostics.</p>
+                      </div>
+                    ) : null}
                     {endpoint.slug === "memory-enrichment" ? (
                       <p className="mt-3 max-w-3xl rounded border border-aqua/25 bg-aqua/10 p-3 text-sm leading-6 text-aqua">
                         Bankr-hosted x402 maps this paid memory flow to <code>contextkit-profile</code> for now. The direct API-key endpoint remains <code>/api/memory-enrichment</code>.

@@ -7,6 +7,7 @@ export const messageSchema = z.object({
 
 export const conversationRequestSchema = z.object({
   messages: z.array(messageSchema).min(1).max(200),
+  mode: z.enum(["micro", "compact", "extended", "debug"]).optional(),
   metadata: z.record(z.string(), z.unknown()).optional(),
   webhookUrl: z.string().url().optional()
 });
@@ -64,6 +65,7 @@ export const tokenEstimateSchema = z.object({
 
 export const playgroundRunSchema = z.object({
   endpoint: z.enum(["summarize", "compress-context", "handoff", "extract-profile", "memory-enrichment"]).default("summarize"),
+  mode: z.enum(["micro", "compact", "extended", "debug"]).optional(),
   messages: z.array(messageSchema).min(1).max(50)
 });
 
@@ -97,11 +99,12 @@ export type ApiError = {
 };
 
 export type SummarizeResponse = {
-  summary: string;
-  tokenReductionEstimate: number;
-  micro: string;
-  compact: string;
-  extended: string;
+  mode: "micro" | "compact" | "extended" | "debug";
+  summary?: string;
+  tokenReductionEstimate?: number;
+  micro?: string;
+  compact?: string;
+  extended?: string;
   state: {
     goal: string;
     status: string;
@@ -110,18 +113,25 @@ export type SummarizeResponse = {
     priorities: string[];
     nextSteps: string[];
   };
-  inputTokens: number;
-  microTokens: number;
-  compactTokens: number;
-  extendedTokens: number;
-  microReductionPercent: number;
-  compactReductionPercent: number;
-  extendedReductionPercent: number;
-  keyDecisions: string[];
-  actionItems: string[];
-  openQuestions: string[];
-  risks: string[];
-  confidence: number;
+  inputTokens?: number;
+  microTokens?: number;
+  compactTokens?: number;
+  extendedTokens?: number;
+  microReductionPercent?: number;
+  compactReductionPercent?: number;
+  extendedReductionPercent?: number;
+  keyDecisions?: string[];
+  actionItems?: string[];
+  openQuestions?: string[];
+  risks?: string[];
+  tokenMetrics?: {
+    inputTokens: number;
+    outputTokens: number;
+    microTokens: number;
+    compactTokens: number;
+    extendedTokens: number;
+  };
+  confidence?: number;
 };
 
 export type CompressContextResponse = {

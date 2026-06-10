@@ -39,11 +39,12 @@ const errorSchema = z.object({
 });
 
 const summarizeResponse = z.object({
-  summary: z.string(),
-  tokenReductionEstimate: z.number(),
-  micro: z.string(),
-  compact: z.string(),
-  extended: z.string(),
+  mode: z.enum(["micro", "compact", "extended", "debug"]),
+  summary: z.string().optional(),
+  tokenReductionEstimate: z.number().optional(),
+  micro: z.string().optional(),
+  compact: z.string().optional(),
+  extended: z.string().optional(),
   state: z.object({
     goal: z.string(),
     status: z.string(),
@@ -52,18 +53,25 @@ const summarizeResponse = z.object({
     priorities: z.array(z.string()),
     nextSteps: z.array(z.string())
   }),
-  inputTokens: z.number(),
-  microTokens: z.number(),
-  compactTokens: z.number(),
-  extendedTokens: z.number(),
-  microReductionPercent: z.number(),
-  compactReductionPercent: z.number(),
-  extendedReductionPercent: z.number(),
-  keyDecisions: z.array(z.string()),
-  actionItems: z.array(z.string()),
-  openQuestions: z.array(z.string()),
-  risks: z.array(z.string()),
-  confidence: z.number()
+  inputTokens: z.number().optional(),
+  microTokens: z.number().optional(),
+  compactTokens: z.number().optional(),
+  extendedTokens: z.number().optional(),
+  microReductionPercent: z.number().optional(),
+  compactReductionPercent: z.number().optional(),
+  extendedReductionPercent: z.number().optional(),
+  keyDecisions: z.array(z.string()).optional(),
+  actionItems: z.array(z.string()).optional(),
+  openQuestions: z.array(z.string()).optional(),
+  risks: z.array(z.string()).optional(),
+  tokenMetrics: z.object({
+    inputTokens: z.number(),
+    outputTokens: z.number(),
+    microTokens: z.number(),
+    compactTokens: z.number(),
+    extendedTokens: z.number()
+  }).optional(),
+  confidence: z.number().optional()
 });
 
 const compressResponse = z.object({

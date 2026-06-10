@@ -25,6 +25,7 @@ export class ContextService {
 
   async summarize(request: ConversationRequest): Promise<SummarizeResponse> {
     const output = await this.generate("summarize", request);
+    const mode = request.mode ?? "micro";
     const inputTokens = estimateTokens(request.messages);
     const stateValue = summarizeState(output.state);
     const keyDecisions = arrayOfStrings(output.keyDecisions);
@@ -48,7 +49,8 @@ export class ContextService {
     const microTokens = estimateTokens(micro);
     const compactTokens = estimateTokens(compact);
     const extendedTokens = estimateTokens(extended);
-    return {
+    const debugResponse = {
+      mode,
       summary,
       tokenReductionEstimate: estimateReduction(inputTokens, compactTokens || estimateTokens(summary)),
       micro,
@@ -66,8 +68,19 @@ export class ContextService {
       actionItems,
       openQuestions,
       risks,
+      tokenMetrics: {
+        inputTokens,
+        outputTokens: estimateTokens(JSON.stringify({ summary, micro, compact, extended, state: stateValue, keyDecisions, actionItems, openQuestions, risks })),
+        microTokens,
+        compactTokens,
+        extendedTokens
+      },
       confidence: confidence(output.confidence)
     };
+    if (mode === "debug") return debugResponse;
+    if (mode === "extended") return { mode, extended, state: stateValue };
+    if (mode === "compact") return { mode, compact, state: stateValue };
+    return { mode: "micro", micro, state: stateValue };
   }
 
   async compress(request: ConversationRequest): Promise<CompressContextResponse> {

@@ -169,7 +169,7 @@ dashboardSessionRoutes.post("/playground/run", zValidator("json", playgroundRunS
   }
 
   const body = c.req.valid("json");
-  const request: ConversationRequest = { messages: sanitizeMessages(body.messages) };
+  const request: ConversationRequest = { messages: sanitizeMessages(body.messages), mode: body.endpoint === "summarize" ? body.mode : undefined };
   const startedAt = Date.now();
   const service = new ContextService({ env: c.env ?? {}, requestId: c.get("requestId") });
   const result = await runPlaygroundEndpoint(service, body.endpoint, request);
@@ -225,7 +225,7 @@ dashboardSessionRoutes.post("/demo/run", zValidator("json", demoRunSchema), asyn
   const startedAt = Date.now();
   const service = new ContextService({ env: c.env ?? {}, requestId: c.get("requestId") });
   const [summary, compression, handoff, profile, memory] = await Promise.all([
-    service.summarize(request),
+    service.summarize({ ...request, mode: "debug" }),
     service.compress(request),
     service.handoff(request),
     service.profile(request),

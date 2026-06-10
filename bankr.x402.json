@@ -23,6 +23,11 @@
                 },
                 "required": ["role", "content"]
               }
+            },
+            "mode": {
+              "type": "string",
+              "description": "Summary mode: micro, compact, extended, or debug. Defaults to micro.",
+              "enum": ["micro", "compact", "extended", "debug"]
             }
           },
           "required": ["messages"]
@@ -30,6 +35,7 @@
         "output": {
           "type": "object",
           "properties": {
+            "mode": { "type": "string", "description": "Selected summary mode." },
             "summary": { "type": "string", "description": "Optimized context summary." },
             "tokenReductionEstimate": { "type": "number", "description": "Actual compact-summary token reduction percentage." },
             "micro": { "type": "string", "description": "Maximum-compression summary." },
