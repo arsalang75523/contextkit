@@ -106,7 +106,7 @@ export default function DemoPage() {
               <Metric icon={<Activity className="h-4 w-4" />} label="Original" value={inputTokens} />
               <Metric icon={<Gauge className="h-4 w-4" />} label="Compressed" value={compressedTokens} />
               <Metric icon={<Clock className="h-4 w-4" />} label="Latency" value={`${result?.metrics?.latencyMs ?? 0}ms`} />
-              <Metric icon={<Coins className="h-4 w-4" />} label="x402 cost" value={`$${result?.metrics?.totalX402CostUsd ?? "0.012"}`} />
+              <Metric icon={<Coins className="h-4 w-4" />} label="x402 cost" value={`$${result?.metrics?.totalX402CostUsd ?? "0.000"}`} />
             </div>
 
             <div className="mt-5 rounded-md border border-line bg-ink/70 p-4">

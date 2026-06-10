@@ -1,5 +1,6 @@
 import { Section } from "@/components/section";
 import { endpoints } from "@/content/docs";
+import { PricingLive } from "@/components/pricing-live";
 
 export default function PricingPage() {
   return (
@@ -14,19 +15,7 @@ export default function PricingPage() {
             </article>
           ))}
         </div>
-        <div className="mt-10 grid gap-5 lg:grid-cols-3">
-          {[
-            ["10M tokens/month", "Reduce by 45%", "$42k model spend can drop near $23k"],
-            ["Agent handoffs", "72% shorter continuation prompts", "Fewer stuck workflows and fewer repeated plans"],
-            ["Profile memory", "Durable extraction", "Less prompt stuffing across user sessions"]
-          ].map(([title, metric, text]) => (
-            <div key={title} className="rounded-md border border-line bg-mint/10 p-6">
-              <h2 className="text-xl font-semibold text-white">{title}</h2>
-              <p className="mt-4 text-3xl font-semibold text-mint">{metric}</p>
-              <p className="mt-3 leading-7 text-white/62">{text}</p>
-            </div>
-          ))}
-        </div>
+        <PricingLive />
       </Section>
     </main>
   );

@@ -140,7 +140,12 @@
             "riskTolerance": { "type": "string" },
             "communicationStyle": { "type": "string" },
             "preferences": { "type": "array", "items": { "type": "string" } },
-            "importantContext": { "type": "array", "items": { "type": "string" } }
+            "importantContext": { "type": "array", "items": { "type": "string" } },
+            "stableMemories": { "type": "array", "items": { "type": "string" } },
+            "evolvingMemories": { "type": "array", "items": { "type": "string" } },
+            "deprecatedMemories": { "type": "array", "items": { "type": "string" } },
+            "memoryImportance": { "type": "number" },
+            "confidence": { "type": "number" }
           }
         }
       }
@@ -178,6 +183,9 @@
             "longTermGoals": { "type": "array", "items": { "type": "string" } },
             "supersededMemories": { "type": "array", "items": { "type": "string" } },
             "memoryConflicts": { "type": "array", "items": { "type": "object" } },
+            "stableMemories": { "type": "array", "items": { "type": "string" } },
+            "evolvingMemories": { "type": "array", "items": { "type": "string" } },
+            "deprecatedMemories": { "type": "array", "items": { "type": "string" } },
             "confidence": { "type": "number" }
           }
         }

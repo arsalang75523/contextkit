@@ -235,7 +235,7 @@ dashboardSessionRoutes.post("/demo/run", zValidator("json", demoRunSchema), asyn
   const compressedTokens = estimateTokens(compression.compressedContext);
   const outputTokens = estimateTokens(JSON.stringify({ summary, compression, handoff, profile }));
   const latencyMs = Date.now() - startedAt;
-  const totalX402CostUsd = Number(Object.values(endpointPricing).reduce((sum, price) => sum + price, 0).toFixed(3));
+  const totalX402CostUsd = Number((endpointPricing.summarize + endpointPricing["compress-context"] + endpointPricing.handoff + endpointPricing["extract-profile"]).toFixed(3));
 
   await new AnalyticsService(c.env ?? {}).recordRequest({
     requestId: c.get("requestId"),

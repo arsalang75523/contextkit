@@ -60,7 +60,7 @@ export default function HomePage() {
             className="rounded-md border border-line bg-carbon/72 p-4 shadow-glow"
           >
             <div className="mb-4 grid grid-cols-3 gap-2 text-xs text-white/60">
-              <span className="rounded bg-mint/10 px-3 py-2 text-mint">72% token cut</span>
+              <span className="rounded bg-mint/10 px-3 py-2 text-mint">live metrics below</span>
               <span className="rounded bg-aqua/10 px-3 py-2 text-aqua">$0.003 handoff</span>
               <span className="rounded bg-coral/10 px-3 py-2 text-coral">signed webhooks</span>
             </div>
