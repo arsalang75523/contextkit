@@ -103,8 +103,8 @@ export default function PlaygroundPage() {
           ))}
         </div>
 
-        <div className="mt-10 grid gap-5 lg:grid-cols-[1fr_0.85fr]">
-          <section className="rounded-md border border-line bg-white/[0.035] p-5">
+        <div className="mt-10 grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.85fr)]">
+          <section className="min-w-0 rounded-md border border-line bg-white/[0.035] p-5">
             <div className="mb-4 rounded-md border border-aqua/20 bg-aqua/10 p-4 text-sm leading-6 text-white/65">
               Pick one service below. <span className="text-aqua">Summarize</span> is selected by default because it is the easiest first test. The other services are here too; clicking them changes the paid endpoint and command.
             </div>
@@ -122,25 +122,21 @@ export default function PlaygroundPage() {
             </div>
             {endpoint === "summarize" ? (
               <div className="mb-4 rounded-md border border-mint/20 bg-mint/10 p-4">
-                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                  <div>
-                    <h2 className="font-semibold text-white">Summarize modes</h2>
-                    <p className="mt-1 text-sm leading-6 text-white/60">
-                      Micro is the default for agents. Compact balances context and size. Extended is human-readable. Debug returns the full diagnostic payload.
-                    </p>
-                  </div>
-                  <div className="grid grid-cols-4 gap-2">
-                    {(["micro", "compact", "extended", "debug"] as const).map((mode) => (
-                      <button
-                        key={mode}
-                        type="button"
-                        onClick={() => setSummaryMode(mode)}
-                        className={`rounded-md border px-3 py-2 text-xs transition ${summaryMode === mode ? "border-mint bg-mint/20 text-mint" : "border-line text-white/60 hover:text-white"}`}
-                      >
-                        {mode}
-                      </button>
-                    ))}
-                  </div>
+                <h2 className="font-semibold text-white">Summarize modes</h2>
+                <p className="mt-1 text-sm leading-6 text-white/60">
+                  Micro is the default for agents. Compact balances context and size. Extended is human-readable. Debug returns the full diagnostic payload.
+                </p>
+                <div className="mt-4 grid w-full grid-cols-2 gap-2 sm:grid-cols-4">
+                  {(["micro", "compact", "extended", "debug"] as const).map((mode) => (
+                    <button
+                      key={mode}
+                      type="button"
+                      onClick={() => setSummaryMode(mode)}
+                      className={`min-w-0 rounded-md border px-3 py-2 text-xs transition sm:text-sm ${summaryMode === mode ? "border-mint bg-mint/20 text-mint" : "border-line text-white/60 hover:text-white"}`}
+                    >
+                      {mode}
+                    </button>
+                  ))}
                 </div>
               </div>
             ) : null}
@@ -170,9 +166,9 @@ export default function PlaygroundPage() {
               </div>
             </div>
           </section>
-          <section className="space-y-5 rounded-md border border-line bg-carbon/72 p-5">
-            <div className="rounded-md border border-mint/25 bg-mint/10 p-4">
-              <p className="font-mono text-sm text-mint">{bankrHostedUrl(active.slug)}</p>
+          <section className="min-w-0 space-y-5 rounded-md border border-line bg-carbon/72 p-5">
+            <div className="min-w-0 overflow-hidden rounded-md border border-mint/25 bg-mint/10 p-4">
+              <p className="break-all font-mono text-sm leading-6 text-mint">{bankrHostedUrl(active.slug)}</p>
               <p className="mt-2 text-sm text-white/60">
                 {active.price} via Bankr-hosted x402. This is the real paid endpoint for <span className="text-mint">{active.slug}</span>. No ContextKit API key is required for this hosted paid endpoint.
               </p>

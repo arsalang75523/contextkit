@@ -7,7 +7,7 @@ export function CodeBlock({ code }: { code: string }) {
   const [copied, setCopied] = useState(false);
 
   return (
-    <div className="relative">
+    <div className="relative min-w-0 max-w-full overflow-hidden">
       <button
         type="button"
         aria-label="Copy code"

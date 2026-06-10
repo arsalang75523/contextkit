@@ -14,3 +14,8 @@ publicRoutes.get("/public/metrics", async (c) => {
     paymentTotal: overview.paymentTotal
   });
 });
+
+publicRoutes.get("/public/endpoint-metrics", async (c) => {
+  const endpoints = await new AnalyticsService(c.env ?? {}).endpointStats();
+  return c.json({ endpoints });
+});

@@ -146,11 +146,9 @@ export default function DemoPage() {
                   Bankr-hosted x402 commands are paid one endpoint at a time. Memory enrichment remains available through the direct API-key route; hosted memory extraction is included in profile output.
                 </p>
                 <Panel title="Full pipeline command" value={allEndpointsCommand} />
-                <div className="grid gap-4">
-                  {paidCommands.map(([label, command]) => (
-                    <Panel key={label} title={label} value={command} />
-                  ))}
-                </div>
+                <p className="mt-3 text-xs leading-5 text-white/40">
+                  For single-endpoint commands, use the Playground or API reference. This demo keeps one copy of the full pipeline command to avoid repeated endpoint blocks.
+                </p>
               </div>
             </div>
           </section>

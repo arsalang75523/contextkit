@@ -135,6 +135,54 @@ export class AnalyticsService {
       .map(([endpoint, requests]) => ({ endpoint, requests }))
       .sort((a, b) => b.requests - a.requests);
   }
+
+  async endpointStats() {
+    const requests = await this.requests() as Array<RequestLogInput & { completedAt?: string; reductionPercent?: number }>;
+    const stats = new Map<string, {
+      endpoint: string;
+      requests: number;
+      inputTokens: number;
+      outputTokens: number;
+      savedTokens: number;
+      latencyMs: number;
+      paymentTotal: number;
+      lastRequestAt?: string;
+    }>();
+
+    for (const request of requests) {
+      const endpoint = normalizeEndpointSlug(request.route);
+      const current = stats.get(endpoint) ?? {
+        endpoint,
+        requests: 0,
+        inputTokens: 0,
+        outputTokens: 0,
+        savedTokens: 0,
+        latencyMs: 0,
+        paymentTotal: 0
+      };
+
+      current.requests += 1;
+      current.inputTokens += request.inputTokens ?? 0;
+      current.outputTokens += request.outputTokens ?? 0;
+      current.savedTokens += Math.max(0, (request.inputTokens ?? 0) - (request.outputTokens ?? 0));
+      current.latencyMs += request.latencyMs ?? 0;
+      current.paymentTotal = Number((current.paymentTotal + (request.amountUsd ?? 0)).toFixed(6));
+      current.lastRequestAt = latestIso(current.lastRequestAt, request.completedAt);
+      stats.set(endpoint, current);
+    }
+
+    return Array.from(stats.values()).map((entry) => ({
+      endpoint: entry.endpoint,
+      requests: entry.requests,
+      inputTokens: entry.inputTokens,
+      outputTokens: entry.outputTokens,
+      savedTokens: entry.savedTokens,
+      averageReductionPercent: entry.inputTokens === 0 ? 0 : Math.max(0, Math.round(((entry.inputTokens - entry.outputTokens) / entry.inputTokens) * 100)),
+      averageLatencyMs: entry.requests === 0 ? 0 : Math.round(entry.latencyMs / entry.requests),
+      paymentTotal: entry.paymentTotal,
+      lastRequestAt: entry.lastRequestAt
+    }));
+  }
 }
 
 type OverviewInput = {
@@ -172,4 +220,17 @@ function emptyOverview() {
 
 function sum(items: Array<Record<string, unknown>>, key: string) {
   return items.reduce((total, item) => total + (typeof item[key] === "number" ? item[key] as number : 0), 0);
+}
+
+function normalizeEndpointSlug(route: string) {
+  const clean = route.replace(/^\/api/, "").replace(/^\/x402/, "").replace(/^\/internal/, "").replace(/^\//, "");
+  if (clean === "compress") return "compress-context";
+  if (clean === "profile") return "extract-profile";
+  return clean || route;
+}
+
+function latestIso(current?: string, next?: string) {
+  if (!next) return current;
+  if (!current) return next;
+  return new Date(next).getTime() > new Date(current).getTime() ? next : current;
 }
