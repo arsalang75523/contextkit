@@ -55,6 +55,7 @@ const compressResponse = z.object({
   compact: z.string(),
   extended: z.string(),
   prioritizedFacts: z.array(z.object({ fact: z.string(), importance: z.number() })),
+  importantFactsRanked: z.array(z.object({ fact: z.string(), importance: z.number() })),
   entities: z.object({
     project: z.string(),
     people: z.array(z.string()),
@@ -66,8 +67,52 @@ const compressResponse = z.object({
     technologies: z.array(z.string()),
     services: z.array(z.string())
   }),
-  conflicts: z.array(z.object({ current: z.string(), superseded: z.array(z.string()) })),
-  supersededFacts: z.array(z.object({ current: z.string(), superseded: z.array(z.string()) })),
+  conflicts: z.array(z.object({
+    current: z.string(),
+    superseded: z.array(z.string()),
+    old: z.string(),
+    new: z.string(),
+    reason: z.string()
+  })),
+  supersededFacts: z.array(z.object({
+    current: z.string(),
+    superseded: z.array(z.string()),
+    old: z.string(),
+    new: z.string(),
+    reason: z.string()
+  })),
+  state: z.object({
+    currentGoals: z.array(z.string()),
+    activeProblems: z.array(z.string()),
+    currentStatus: z.array(z.string()),
+    constraints: z.array(z.string()),
+    decisions: z.array(z.string()),
+    priorities: z.array(z.string()),
+    nextSteps: z.array(z.string())
+  }),
+  commitments: z.object({
+    goals: z.array(z.string()),
+    constraints: z.array(z.string()),
+    decisions: z.array(z.string()),
+    promises: z.array(z.string()),
+    requirements: z.array(z.string())
+  }),
+  agentContinuationPacket: z.object({
+    project: z.string(),
+    currentObjective: z.string(),
+    highestPriorityIssue: z.string(),
+    activeDecisionSet: z.array(z.string()),
+    nextAction: z.string(),
+    criticalConstraints: z.array(z.string())
+  }),
+  compressionMetrics: z.object({
+    inputTokens: z.number(),
+    outputTokens: z.number(),
+    actualReductionPercent: z.number(),
+    criticalFactRecall: z.number(),
+    decisionRecall: z.number(),
+    constraintRecall: z.number()
+  }),
   inputTokens: z.number(),
   outputTokens: z.number(),
   actualReductionPercent: z.number(),
@@ -134,6 +179,9 @@ const profileResponse = z.object({
   managementIntent: z.boolean(),
   entrepreneurial: z.boolean(),
   inferredTraits: z.array(z.string()),
+  stableMemories: z.array(z.string()),
+  evolvingMemories: z.array(z.string()),
+  deprecatedMemories: z.array(z.string()),
   memoryImportance: z.number(),
   confidence: z.number()
 });
@@ -144,6 +192,9 @@ const memoryEnrichmentResponse = z.object({
   longTermGoals: z.array(z.string()),
   supersededMemories: z.array(z.string()),
   memoryConflicts: z.array(z.object({ current: z.string(), superseded: z.array(z.string()) })),
+  stableMemories: z.array(z.string()),
+  evolvingMemories: z.array(z.string()),
+  deprecatedMemories: z.array(z.string()),
   confidence: z.number()
 });
 

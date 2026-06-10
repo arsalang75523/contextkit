@@ -15,7 +15,49 @@ export const endpoints = [
     price: "$0.003",
     event: "context.compressed",
     description: "Compress context into compact structured memory.",
-    response: { compressedContext: "goal=ship ContextKit; constraints=Bankr-native,x402; next=deploy", estimatedSavings: "78%", micro: "Ship ContextKit with Bankr x402.", compact: "ContextKit: Bankr-native x402 context API; next=deploy.", extended: "ContextKit is a Bankr-native x402 context API with dashboard, analytics, and webhook flows.", prioritizedFacts: [{ fact: "Bankr-hosted x402 is required", importance: 10 }], entities: { project: "ContextKit", projects: ["ContextKit"], people: [], organizations: ["Bankr"], stack: ["Bankr", "x402"], technologies: ["x402"], services: ["Bankr LLM"], deadlines: [], constraints: ["Bankr-native"] }, conflicts: [], supersededFacts: [], inputTokens: 120, outputTokens: 26, actualReductionPercent: 78, factRetentionScore: 0.9, criticalFactsRetained: 1, metrics: { originalTokens: 120, compressedTokens: 26, actualReductionPercent: 78, factRetentionScore: 0.9 } }
+    response: {
+      compressedContext: "project=ContextKit; objective=ship Bankr x402 context API; decisions=Bankr-hosted x402,Postgres; next=verify dashboard metrics",
+      estimatedSavings: "78%",
+      micro: "ContextKit ships Bankr-hosted x402 context APIs; next: verify dashboard metrics.",
+      compact: "ContextKit: Bankr-native x402 context API on Postgres. Preserve routes, keep Bankr-hosted x402, verify metrics/dashboard before launch.",
+      extended: "ContextKit is a Bankr-native x402 context API with dashboard, analytics, webhook, and agent continuation flows. Current priorities: verify dashboard metrics, document paid requests, preserve backward compatibility.",
+      prioritizedFacts: [{ fact: "Bankr-hosted x402 is required", importance: 10 }],
+      importantFactsRanked: [{ fact: "Endpoint names and response fields must remain backward-compatible", importance: 10 }],
+      state: {
+        currentGoals: ["Launch ContextKit as production AI context infrastructure"],
+        activeProblems: ["Dashboard metrics must stay scoped per account/API key"],
+        currentStatus: ["Bankr-hosted x402 services are live"],
+        constraints: ["Do not rename routes", "Do not remove response fields"],
+        decisions: ["Use Bankr-hosted x402", "Use Postgres for persistence"],
+        priorities: ["Verify metrics", "Improve docs", "Ship demo"],
+        nextSteps: ["Run paid x402 smoke tests", "Review dashboard data"]
+      },
+      commitments: {
+        goals: ["Public launch readiness"],
+        constraints: ["Backward compatibility"],
+        decisions: ["Bankr-hosted x402"],
+        promises: ["Do not introduce breaking changes"],
+        requirements: ["Production-capable API responses"]
+      },
+      agentContinuationPacket: {
+        project: "ContextKit",
+        currentObjective: "Ship production-ready Bankr x402 context APIs",
+        highestPriorityIssue: "Verify scoped dashboard metrics",
+        activeDecisionSet: ["Bankr-hosted x402", "Postgres", "Stable routes"],
+        nextAction: "Run x402 smoke tests and compare dashboard analytics",
+        criticalConstraints: ["No breaking API changes"]
+      },
+      entities: { project: "ContextKit", projects: ["ContextKit"], people: [], organizations: ["Bankr"], stack: ["Bankr", "x402"], technologies: ["x402"], services: ["Bankr LLM"], deadlines: [], constraints: ["Bankr-native"] },
+      conflicts: [{ old: "SQLite", new: "PostgreSQL", reason: "Production persistence decision changed", current: "PostgreSQL", superseded: ["SQLite"] }],
+      supersededFacts: [{ old: "SQLite", new: "PostgreSQL", reason: "Production persistence decision changed", current: "PostgreSQL", superseded: ["SQLite"] }],
+      compressionMetrics: { inputTokens: 120, outputTokens: 26, actualReductionPercent: 78, criticalFactRecall: 1, decisionRecall: 1, constraintRecall: 1 },
+      inputTokens: 120,
+      outputTokens: 26,
+      actualReductionPercent: 78,
+      factRetentionScore: 0.9,
+      criticalFactsRetained: 1,
+      metrics: { originalTokens: 120, compressedTokens: 26, actualReductionPercent: 78, factRetentionScore: 0.9 }
+    }
   },
   {
     slug: "handoff",
@@ -33,7 +75,7 @@ export const endpoints = [
     price: "$0.004",
     event: "profile.extracted",
     description: "Extract durable user preferences for reusable agent memory.",
-    response: { interests: ["AI agents"], riskTolerance: "unknown", communicationStyle: "concise", preferences: ["production APIs"], importantContext: ["Bankr ecosystem"], identity: { profession: "founder/operator", location: "unknown", age: null }, skills: ["deployment debugging"], goals: ["launch ContextKit"], futurePlans: ["public launch"], behaviorPatterns: ["moves quickly"], dislikes: ["confusing UX"], careerStage: "startup builder", managementIntent: true, entrepreneurial: true, inferredTraits: ["entrepreneurial"], memoryImportance: 8, confidence: 0.82 }
+    response: { interests: ["AI agents"], riskTolerance: "unknown", communicationStyle: "concise", preferences: ["production APIs"], importantContext: ["Bankr ecosystem"], identity: { profession: "founder/operator", location: "unknown", age: null }, skills: ["deployment debugging"], goals: ["launch ContextKit"], futurePlans: ["public launch"], behaviorPatterns: ["moves quickly"], dislikes: ["confusing UX"], careerStage: "startup builder", managementIntent: true, entrepreneurial: true, inferredTraits: ["entrepreneurial"], stableMemories: ["prefers concise technical guidance"], evolvingMemories: ["launching ContextKit"], deprecatedMemories: [], memoryImportance: 8, confidence: 0.82 }
   },
   {
     slug: "memory-enrichment",
@@ -42,7 +84,7 @@ export const endpoints = [
     price: "$0.003",
     event: "request.completed",
     description: "Evolve long-term memory without duplicating stale preferences.",
-    response: { stablePreferences: ["concise explanations"], evolvingPreferences: [], longTermGoals: ["launch ContextKit"], supersededMemories: [], memoryConflicts: [], confidence: 0.84 }
+    response: { stablePreferences: ["concise explanations"], evolvingPreferences: [], longTermGoals: ["launch ContextKit"], supersededMemories: [], memoryConflicts: [], stableMemories: ["prefers concise explanations"], evolvingMemories: ["launching ContextKit"], deprecatedMemories: [], confidence: 0.84 }
   }
 ];
 

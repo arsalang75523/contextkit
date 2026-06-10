@@ -50,10 +50,17 @@ export class ContextService {
     const actualReductionPercent = estimateReduction(originalTokens, compressedTokens);
     const estimatedSavings = String(output.estimatedSavings ?? `${actualReductionPercent}%`);
     const quality = new CompressionQualityService().score(request.messages, compressedContext);
-    const prioritizedFacts = facts(output.prioritizedFacts);
+    const prioritizedFacts = facts(output.prioritizedFacts ?? output.importantFactsRanked);
+    const importantFactsRanked = facts(output.importantFactsRanked ?? output.prioritizedFacts);
     const criticalFactsRetained = prioritizedFacts.filter((fact) => fact.importance >= 8 && retainedIn(compact || compressedContext, fact.fact)).length;
     const factRetentionScore = Number(output.factRetentionScore ?? (output.metrics && typeof output.metrics === "object" && "factRetentionScore" in output.metrics ? output.metrics.factRetentionScore : prioritizedFacts.length > 0 ? criticalFactsRetained / Math.max(prioritizedFacts.filter((fact) => fact.importance >= 8).length, 1) : 0));
     const supersededFacts = conflicts(output.supersededFacts ?? output.conflicts);
+    const stateValue = state(output.state);
+    const commitmentsValue = commitments(output.commitments);
+    const packet = agentContinuationPacket(output.agentContinuationPacket, stateValue, entities(output.entities));
+    const decisionRecall = recall(stateValue.decisions, compact || compressedContext);
+    const constraintRecall = recall([...stateValue.constraints, ...commitmentsValue.constraints], compact || compressedContext);
+    const criticalFactRecall = prioritizedFacts.filter((fact) => fact.importance >= 8).length === 0 ? 0 : criticalFactsRetained / prioritizedFacts.filter((fact) => fact.importance >= 8).length;
 
     return {
       compressedContext,
@@ -62,9 +69,21 @@ export class ContextService {
       compact,
       extended,
       prioritizedFacts,
+      importantFactsRanked,
       entities: entities(output.entities),
       conflicts: supersededFacts,
       supersededFacts,
+      state: stateValue,
+      commitments: commitmentsValue,
+      agentContinuationPacket: packet,
+      compressionMetrics: {
+        inputTokens: originalTokens,
+        outputTokens: compressedTokens,
+        actualReductionPercent,
+        criticalFactRecall: confidence(criticalFactRecall),
+        decisionRecall: confidence(decisionRecall),
+        constraintRecall: confidence(constraintRecall)
+      },
       inputTokens: originalTokens,
       outputTokens: compressedTokens,
       actualReductionPercent,
@@ -134,6 +153,9 @@ export class ContextService {
       entrepreneurial: Boolean(output.entrepreneurial),
       inferredTraits: arrayOfStrings(output.inferredTraits),
       memoryImportance: Math.max(1, Math.min(10, Math.round(Number(output.memoryImportance ?? 1)))),
+      stableMemories: arrayOfStrings(output.stableMemories),
+      evolvingMemories: arrayOfStrings(output.evolvingMemories),
+      deprecatedMemories: arrayOfStrings(output.deprecatedMemories),
       confidence: confidence(output.confidence)
     };
   }
@@ -146,6 +168,9 @@ export class ContextService {
       longTermGoals: arrayOfStrings(output.longTermGoals),
       supersededMemories: arrayOfStrings(output.supersededMemories),
       memoryConflicts: conflicts(output.memoryConflicts),
+      stableMemories: arrayOfStrings(output.stableMemories),
+      evolvingMemories: arrayOfStrings(output.evolvingMemories),
+      deprecatedMemories: arrayOfStrings(output.deprecatedMemories),
       confidence: confidence(output.confidence)
     };
   }
@@ -215,12 +240,59 @@ function conflicts(value: unknown) {
     .map((item) => {
       if (!item || typeof item !== "object") return null;
       const record = item as Record<string, unknown>;
+      const oldValue = String(record.old ?? arrayOfStrings(record.superseded)[0] ?? "").trim();
+      const newValue = String(record.new ?? record.current ?? "").trim();
       return {
-        current: String(record.current ?? "").trim(),
-        superseded: arrayOfStrings(record.superseded)
+        old: oldValue,
+        new: newValue,
+        reason: String(record.reason ?? "superseded by newer context"),
+        current: newValue,
+        superseded: arrayOfStrings(record.superseded ?? (oldValue ? [oldValue] : []))
       };
     })
-    .filter((item): item is { current: string; superseded: string[] } => Boolean(item?.current));
+    .filter((item): item is { old: string; new: string; reason: string; current: string; superseded: string[] } => Boolean(item?.current || item?.new));
+}
+
+function state(value: unknown) {
+  const record = value && typeof value === "object" ? value as Record<string, unknown> : {};
+  return {
+    currentGoals: arrayOfStrings(record.currentGoals),
+    activeProblems: arrayOfStrings(record.activeProblems),
+    currentStatus: arrayOfStrings(record.currentStatus),
+    constraints: arrayOfStrings(record.constraints),
+    decisions: arrayOfStrings(record.decisions),
+    priorities: arrayOfStrings(record.priorities),
+    nextSteps: arrayOfStrings(record.nextSteps)
+  };
+}
+
+function commitments(value: unknown) {
+  const record = value && typeof value === "object" ? value as Record<string, unknown> : {};
+  return {
+    goals: arrayOfStrings(record.goals),
+    constraints: arrayOfStrings(record.constraints),
+    decisions: arrayOfStrings(record.decisions),
+    promises: arrayOfStrings(record.promises),
+    requirements: arrayOfStrings(record.requirements)
+  };
+}
+
+function agentContinuationPacket(value: unknown, stateValue: ReturnType<typeof state>, entityValue: ReturnType<typeof entities>) {
+  const record = value && typeof value === "object" ? value as Record<string, unknown> : {};
+  return {
+    project: String(record.project ?? entityValue.projects[0] ?? entityValue.project ?? "unknown"),
+    currentObjective: String(record.currentObjective ?? stateValue.currentGoals[0] ?? "unknown"),
+    highestPriorityIssue: String(record.highestPriorityIssue ?? stateValue.activeProblems[0] ?? stateValue.priorities[0] ?? "unknown"),
+    activeDecisionSet: arrayOfStrings(record.activeDecisionSet).length > 0 ? arrayOfStrings(record.activeDecisionSet) : stateValue.decisions.slice(0, 5),
+    nextAction: String(record.nextAction ?? stateValue.nextSteps[0] ?? "unknown"),
+    criticalConstraints: arrayOfStrings(record.criticalConstraints).length > 0 ? arrayOfStrings(record.criticalConstraints) : stateValue.constraints.slice(0, 5)
+  };
+}
+
+function recall(items: string[], output: string) {
+  if (items.length === 0) return 0;
+  const retained = items.filter((item) => retainedIn(output, item)).length;
+  return retained / items.length;
 }
 
 function retainedIn(output: string, fact: string) {

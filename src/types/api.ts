@@ -132,9 +132,48 @@ export type CompressContextResponse = {
     superseded: string[];
   }>;
   supersededFacts: Array<{
+    old: string;
+    new: string;
+    reason: string;
     current: string;
     superseded: string[];
   }>;
+  state: {
+    currentGoals: string[];
+    activeProblems: string[];
+    currentStatus: string[];
+    constraints: string[];
+    decisions: string[];
+    priorities: string[];
+    nextSteps: string[];
+  };
+  importantFactsRanked: Array<{
+    fact: string;
+    importance: number;
+  }>;
+  commitments: {
+    goals: string[];
+    constraints: string[];
+    decisions: string[];
+    promises: string[];
+    requirements: string[];
+  };
+  agentContinuationPacket: {
+    project: string;
+    currentObjective: string;
+    highestPriorityIssue: string;
+    activeDecisionSet: string[];
+    nextAction: string;
+    criticalConstraints: string[];
+  };
+  compressionMetrics: {
+    inputTokens: number;
+    outputTokens: number;
+    actualReductionPercent: number;
+    criticalFactRecall: number;
+    decisionRecall: number;
+    constraintRecall: number;
+  };
   inputTokens: number;
   outputTokens: number;
   actualReductionPercent: number;
@@ -209,6 +248,9 @@ export type ProfileResponse = {
   entrepreneurial: boolean;
   inferredTraits: string[];
   memoryImportance: number;
+  stableMemories: string[];
+  evolvingMemories: string[];
+  deprecatedMemories: string[];
   confidence: number;
 };
 
@@ -221,6 +263,9 @@ export type MemoryEnrichmentResponse = {
     current: string;
     superseded: string[];
   }>;
+  stableMemories: string[];
+  evolvingMemories: string[];
+  deprecatedMemories: string[];
   confidence: number;
 };
 
