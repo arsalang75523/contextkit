@@ -152,126 +152,106 @@ export type SummarizeResponse = {
 
 export type CompressContextResponse = {
   compressedContext: string;
-  estimatedSavings: string;
-  micro: string;
-  compact: string;
-  extended: string;
-  prioritizedFacts: Array<{
-    fact: string;
-    importance: number;
-  }>;
-  entities: {
-    project: string;
-    people: string[];
-    stack: string[];
-    deadlines: string[];
-    constraints: string[];
-    projects: string[];
-    organizations: string[];
-    technologies: string[];
-    services: string[];
-  };
-  conflicts: Array<{
-    current: string;
-    superseded: string[];
-  }>;
-  supersededFacts: Array<{
-    old: string;
-    new: string;
-    reason: string;
-    current: string;
-    superseded: string[];
-  }>;
   state: {
-    currentGoals: string[];
+    goals: string[];
+    status: string[];
     activeProblems: string[];
-    currentStatus: string[];
     constraints: string[];
     decisions: string[];
-    priorities: string[];
     nextSteps: string[];
   };
-  importantFactsRanked: Array<{
-    fact: string;
-    importance: number;
+  entities: {
+    people: string[];
+    projects: string[];
+    technologies: string[];
+    organizations: string[];
+    deadlines: string[];
+  };
+  conflicts?: Array<{
+    old: string;
+    new: string;
   }>;
-  commitments: {
-    goals: string[];
-    constraints: string[];
-    decisions: string[];
-    promises: string[];
-    requirements: string[];
-  };
-  agentContinuationPacket: {
-    project: string;
-    currentObjective: string;
-    highestPriorityIssue: string;
-    activeDecisionSet: string[];
-    nextAction: string;
-    criticalConstraints: string[];
-  };
-  compressionMetrics: {
-    inputTokens: number;
-    outputTokens: number;
-    actualReductionPercent: number;
-    criticalFactRecall: number;
-    decisionRecall: number;
-    constraintRecall: number;
-  };
-  inputTokens: number;
-  outputTokens: number;
-  actualReductionPercent: number;
-  factRetentionScore: number;
-  criticalFactsRetained: number;
   metrics: {
-    originalTokens: number;
+    inputTokens: number;
     compressedTokens: number;
-    actualReductionPercent: number;
-    factRetentionScore: number;
-  };
-  quality: {
-    duplicateDensity: number;
-    contextScore: number;
-    semanticSimilarity: number;
-    retainedFactsCount: number;
+    reductionPercent: number;
   };
 };
 
 export type HandoffResponse = {
-  goal: string;
-  importantFacts: string[];
-  constraints: string[];
-  recommendedNextActions: string[];
-  tone: string;
-  userIntent: string;
-  projectSummary: string;
-  currentState: string;
-  completedWork: string[];
+  project: {
+    name: string;
+    goal: string;
+    currentState: string;
+  };
+  completed: string[];
   inProgress: string[];
-  pendingTasks: string[];
-  knownIssues: string[];
+  pending: string[];
+  blockers: string[];
   failedApproaches: Array<{
     attempt: string;
     result: string;
-    decision: string;
+    lesson: string;
   }>;
-  importantDecisions: Array<{
+  decisions: Array<{
     decision: string;
     reason: string;
   }>;
-  blockers: string[];
+  priorities: string[];
+  criticalContext: {
+    mustKnow: string[];
+    mustNotDo: string[];
+    biggestRisk: string;
+    successMetric: string;
+  };
+  startHere: string;
   agentNotes: string[];
-  priorityOrder: string[];
-  recommendedStartingPoint: string;
-  highestRiskArea: string;
-  repositories: string[];
-  artifacts: string[];
-  links: string[];
-  owners: string[];
-  confidence: number;
 };
 
 export type ProfileResponse = {
+  mode: "micro" | "compact" | "full";
+  micro: {
+    identity: {
+      profession?: string;
+      location?: string;
+      age?: number | null;
+    };
+    preferences: string[];
+    goals: string[];
+  };
+  compact: {
+    identity: {
+      profession?: string;
+      location?: string;
+      age?: number | null;
+    };
+    skills: string[];
+    interests: string[];
+    preferences: string[];
+    goals: string[];
+    traits: string[];
+  };
+  full: {
+    identity: {
+      profession?: string;
+      location?: string;
+      age?: number | null;
+    };
+    skills: string[];
+    interests: string[];
+    stablePreferences: string[];
+    currentGoals: string[];
+    futurePlans: string[];
+    inferredTraits: string[];
+    stableMemories: string[];
+    evolvingMemories: string[];
+  };
+  memoryFacts: Array<{
+    fact: string;
+    category: string;
+    stability: "stable" | "evolving";
+    confidence: number;
+  }>;
   interests: string[];
   riskTolerance: string;
   communicationStyle: string;
@@ -299,6 +279,23 @@ export type ProfileResponse = {
 };
 
 export type MemoryEnrichmentResponse = {
+  activeMemories: Array<{
+    fact: string;
+    category: string;
+    stability: "stable";
+    confidence: number;
+  }>;
+  evolvingMemories: Array<{
+    fact: string;
+    category: string;
+    stability: "evolving";
+    confidence: number;
+  }>;
+  conflicts: Array<{
+    old: string;
+    new: string;
+    reason: string;
+  }>;
   stablePreferences: string[];
   evolvingPreferences: string[];
   longTermGoals: string[];
@@ -308,7 +305,7 @@ export type MemoryEnrichmentResponse = {
     superseded: string[];
   }>;
   stableMemories: string[];
-  evolvingMemories: string[];
+  legacyEvolvingMemories?: string[];
   deprecatedMemories: string[];
   confidence: number;
 };

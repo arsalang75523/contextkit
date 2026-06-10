@@ -20,47 +20,17 @@ export const endpoints = [
     event: "context.compressed",
     description: "Compress context into compact structured memory.",
     response: {
-      compressedContext: "project=ContextKit; objective=ship Bankr x402 context API; decisions=Bankr-hosted x402,Postgres; next=verify dashboard metrics",
-      estimatedSavings: "78%",
-      micro: "ContextKit ships Bankr-hosted x402 context APIs; next: verify dashboard metrics.",
-      compact: "ContextKit: Bankr-native x402 context API on Postgres. Preserve routes, keep Bankr-hosted x402, verify metrics/dashboard before launch.",
-      extended: "ContextKit is a Bankr-native x402 context API with dashboard, analytics, webhook, and agent continuation flows. Current priorities: verify dashboard metrics, document paid requests, preserve backward compatibility.",
-      prioritizedFacts: [{ fact: "Bankr-hosted x402 is required", importance: 10 }],
-      importantFactsRanked: [{ fact: "Endpoint names and response fields must remain backward-compatible", importance: 10 }],
+      compressedContext: "ContextKit: Bankr x402 context API. Stack: Next.js/Hono/Postgres/Bankr LLM. State: hosted paid services live. Decisions: Bankr-hosted x402, stable routes. Next: verify dashboard metrics, docs, demos.",
       state: {
-        currentGoals: ["Launch ContextKit as production AI context infrastructure"],
+        goals: ["Launch ContextKit as production AI context infrastructure"],
+        status: ["Bankr-hosted x402 services are live"],
         activeProblems: ["Dashboard metrics must stay scoped per account/API key"],
-        currentStatus: ["Bankr-hosted x402 services are live"],
         constraints: ["Do not rename routes", "Do not remove response fields"],
         decisions: ["Use Bankr-hosted x402", "Use Postgres for persistence"],
-        priorities: ["Verify metrics", "Improve docs", "Ship demo"],
         nextSteps: ["Run paid x402 smoke tests", "Review dashboard data"]
       },
-      commitments: {
-        goals: ["Public launch readiness"],
-        constraints: ["Backward compatibility"],
-        decisions: ["Bankr-hosted x402"],
-        promises: ["Do not introduce breaking changes"],
-        requirements: ["Production-capable API responses"]
-      },
-      agentContinuationPacket: {
-        project: "ContextKit",
-        currentObjective: "Ship production-ready Bankr x402 context APIs",
-        highestPriorityIssue: "Verify scoped dashboard metrics",
-        activeDecisionSet: ["Bankr-hosted x402", "Postgres", "Stable routes"],
-        nextAction: "Run x402 smoke tests and compare dashboard analytics",
-        criticalConstraints: ["No breaking API changes"]
-      },
-      entities: { project: "ContextKit", projects: ["ContextKit"], people: [], organizations: ["Bankr"], stack: ["Bankr", "x402"], technologies: ["x402"], services: ["Bankr LLM"], deadlines: [], constraints: ["Bankr-native"] },
-      conflicts: [{ old: "SQLite", new: "PostgreSQL", reason: "Production persistence decision changed", current: "PostgreSQL", superseded: ["SQLite"] }],
-      supersededFacts: [{ old: "SQLite", new: "PostgreSQL", reason: "Production persistence decision changed", current: "PostgreSQL", superseded: ["SQLite"] }],
-      compressionMetrics: { inputTokens: 120, outputTokens: 26, actualReductionPercent: 78, criticalFactRecall: 1, decisionRecall: 1, constraintRecall: 1 },
-      inputTokens: 120,
-      outputTokens: 26,
-      actualReductionPercent: 78,
-      factRetentionScore: 0.9,
-      criticalFactsRetained: 1,
-      metrics: { originalTokens: 120, compressedTokens: 26, actualReductionPercent: 78, factRetentionScore: 0.9 }
+      entities: { people: [], projects: ["ContextKit"], technologies: ["Next.js", "Hono", "Postgres", "x402"], organizations: ["Bankr"], deadlines: [] },
+      metrics: { inputTokens: 120, compressedTokens: 38, reductionPercent: 68 }
     }
   },
   {
@@ -70,7 +40,19 @@ export const endpoints = [
     price: "$0.003",
     event: "handoff.generated",
     description: "Generate a structured agent-to-agent continuation payload.",
-    response: { goal: "Ship ContextKit", importantFacts: ["Uses Bankr LLM Gateway"], constraints: ["x402 required"], recommendedNextActions: ["Deploy"], tone: "senior and direct", userIntent: "launch product", projectSummary: "ContextKit is context infrastructure for AI agents.", currentState: "Production hardening underway.", completedWork: ["x402 works"], inProgress: ["Auth hardening"], pendingTasks: ["Verify email domain"], knownIssues: [], failedApproaches: [], importantDecisions: [{ decision: "Use Bankr-hosted x402", reason: "Best agent payment UX" }], blockers: [], agentNotes: ["Keep endpoint names stable"], priorityOrder: ["Verify email", "Deploy"], recommendedStartingPoint: "Check production logs", highestRiskArea: "email deliverability", repositories: [], artifacts: [], links: [], owners: [], confidence: 0.88 }
+    response: {
+      project: { name: "ContextKit", goal: "Context infrastructure for AI agents", currentState: "Production hardening underway" },
+      completed: ["Bankr-hosted x402", "Postgres persistence", "API key auth"],
+      inProgress: ["Auth hardening", "docs polish"],
+      pending: ["Webhook UI", "long-context demos"],
+      blockers: [],
+      failedApproaches: [],
+      decisions: [{ decision: "Use Bankr-hosted x402", reason: "Best paid-agent UX" }],
+      priorities: ["verify email", "deploy", "docs"],
+      criticalContext: { mustKnow: ["Keep endpoint names stable"], mustNotDo: ["Do not break API contracts"], biggestRisk: "email deliverability", successMetric: "paid x402 requests succeed" },
+      startHere: "Check production logs and run paid x402 smoke tests.",
+      agentNotes: ["User prefers concise operational guidance"]
+    }
   },
   {
     slug: "extract-profile",
@@ -79,7 +61,33 @@ export const endpoints = [
     price: "$0.004",
     event: "profile.extracted",
     description: "Extract durable user preferences for reusable agent memory.",
-    response: { interests: ["AI agents"], riskTolerance: "unknown", communicationStyle: "concise", preferences: ["production APIs"], importantContext: ["Bankr ecosystem"], identity: { profession: "founder/operator", location: "unknown", age: null }, skills: ["deployment debugging"], goals: ["launch ContextKit"], futurePlans: ["public launch"], behaviorPatterns: ["moves quickly"], dislikes: ["confusing UX"], careerStage: "startup builder", managementIntent: true, entrepreneurial: true, inferredTraits: ["entrepreneurial"], stableMemories: ["prefers concise technical guidance"], evolvingMemories: ["launching ContextKit"], deprecatedMemories: [], memoryImportance: 8, confidence: 0.82 }
+    response: {
+      mode: "compact",
+      micro: { identity: { profession: "founder/operator", location: "unknown", age: null }, preferences: ["concise technical guidance"], goals: ["launch ContextKit"] },
+      compact: { identity: { profession: "founder/operator", location: "unknown", age: null }, skills: ["deployment debugging"], interests: ["AI agents"], preferences: ["concise technical guidance"], goals: ["launch ContextKit"], traits: ["entrepreneurial"] },
+      full: { identity: { profession: "founder/operator", location: "unknown", age: null }, skills: ["deployment debugging"], interests: ["AI agents"], stablePreferences: ["concise technical guidance"], currentGoals: ["launch ContextKit"], futurePlans: ["public launch"], inferredTraits: ["entrepreneurial"], stableMemories: [], evolvingMemories: [] },
+      memoryFacts: [{ fact: "concise technical guidance", category: "preference", stability: "stable", confidence: 0.95 }],
+      interests: ["AI agents"],
+      riskTolerance: "unknown",
+      communicationStyle: "concise technical guidance",
+      preferences: ["concise technical guidance"],
+      importantContext: ["Bankr ecosystem"],
+      identity: { profession: "founder/operator", location: "unknown", age: null },
+      skills: ["deployment debugging"],
+      goals: ["launch ContextKit"],
+      futurePlans: ["public launch"],
+      behaviorPatterns: [],
+      dislikes: [],
+      careerStage: "startup builder",
+      managementIntent: true,
+      entrepreneurial: true,
+      inferredTraits: ["entrepreneurial"],
+      stableMemories: [],
+      evolvingMemories: [],
+      deprecatedMemories: [],
+      memoryImportance: 8,
+      confidence: 0.95
+    }
   },
   {
     slug: "memory-enrichment",
@@ -88,7 +96,20 @@ export const endpoints = [
     price: "$0.003 API key / $0.004 hosted profile",
     event: "request.completed",
     description: "Evolve long-term memory without duplicating stale preferences. Bankr-hosted paid memory extraction is served through contextkit-profile while the direct API-key endpoint remains /api/memory-enrichment.",
-    response: { stablePreferences: ["concise explanations"], evolvingPreferences: [], longTermGoals: ["launch ContextKit"], supersededMemories: [], memoryConflicts: [], stableMemories: ["prefers concise explanations"], evolvingMemories: ["launching ContextKit"], deprecatedMemories: [], confidence: 0.84 }
+    response: {
+      activeMemories: [{ fact: "concise technical guidance", category: "preference", stability: "stable", confidence: 0.95 }],
+      evolvingMemories: [{ fact: "launch ContextKit", category: "goal", stability: "evolving", confidence: 0.9 }],
+      conflicts: [],
+      longTermGoals: ["launch ContextKit"],
+      stablePreferences: ["concise technical guidance"],
+      evolvingPreferences: [],
+      supersededMemories: [],
+      memoryConflicts: [],
+      stableMemories: [],
+      legacyEvolvingMemories: [],
+      deprecatedMemories: [],
+      confidence: 0.93
+    }
   }
 ];
 

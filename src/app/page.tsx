@@ -13,9 +13,9 @@ import { bankrX402Command } from "@/lib/bankr-x402";
 
 const features = [
   ["Conversation Summarization", BrainCircuit, "/api/summarize", "{ summary, tokenReductionEstimate }"],
-  ["Context Compression", Gauge, "/api/compress-context", "{ compressedContext, estimatedSavings }"],
-  ["Agent Handoff Engine", Bot, "/api/handoff", "{ goal, importantFacts, nextActions }"],
-  ["User Profile Extraction", FileJson, "/api/extract-profile", "{ interests, preferences, context }"],
+  ["Context Compression", Gauge, "/api/compress-context", "{ compressedContext, state, entities, metrics }"],
+  ["Agent Handoff Engine", Bot, "/api/handoff", "{ project, completed, priorities, startHere }"],
+  ["User Profile Extraction", FileJson, "/api/extract-profile", "{ micro, compact, full, memoryFacts }"],
   ["x402 Payments", CircleDollarSign, "per request", "$0.002 - $0.004"],
   ["Webhook Automation", Webhook, "signed events", "replayable delivery logs"],
   ["Bankr-native Integration", Cable, "LLM gateway", "claude-sonnet-4.5 via Bankr"]

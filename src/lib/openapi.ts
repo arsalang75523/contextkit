@@ -76,116 +76,84 @@ const summarizeResponse = z.object({
 
 const compressResponse = z.object({
   compressedContext: z.string(),
-  estimatedSavings: z.string(),
-  micro: z.string(),
-  compact: z.string(),
-  extended: z.string(),
-  prioritizedFacts: z.array(z.object({ fact: z.string(), importance: z.number() })),
-  importantFactsRanked: z.array(z.object({ fact: z.string(), importance: z.number() })),
-  entities: z.object({
-    project: z.string(),
-    people: z.array(z.string()),
-    stack: z.array(z.string()),
-    deadlines: z.array(z.string()),
-    constraints: z.array(z.string()),
-    projects: z.array(z.string()),
-    organizations: z.array(z.string()),
-    technologies: z.array(z.string()),
-    services: z.array(z.string())
-  }),
-  conflicts: z.array(z.object({
-    current: z.string(),
-    superseded: z.array(z.string()),
-    old: z.string(),
-    new: z.string(),
-    reason: z.string()
-  })),
-  supersededFacts: z.array(z.object({
-    current: z.string(),
-    superseded: z.array(z.string()),
-    old: z.string(),
-    new: z.string(),
-    reason: z.string()
-  })),
   state: z.object({
-    currentGoals: z.array(z.string()),
+    goals: z.array(z.string()),
+    status: z.array(z.string()),
     activeProblems: z.array(z.string()),
-    currentStatus: z.array(z.string()),
     constraints: z.array(z.string()),
     decisions: z.array(z.string()),
-    priorities: z.array(z.string()),
     nextSteps: z.array(z.string())
   }),
-  commitments: z.object({
-    goals: z.array(z.string()),
-    constraints: z.array(z.string()),
-    decisions: z.array(z.string()),
-    promises: z.array(z.string()),
-    requirements: z.array(z.string())
+  entities: z.object({
+    people: z.array(z.string()),
+    projects: z.array(z.string()),
+    technologies: z.array(z.string()),
+    organizations: z.array(z.string()),
+    deadlines: z.array(z.string())
   }),
-  agentContinuationPacket: z.object({
-    project: z.string(),
-    currentObjective: z.string(),
-    highestPriorityIssue: z.string(),
-    activeDecisionSet: z.array(z.string()),
-    nextAction: z.string(),
-    criticalConstraints: z.array(z.string())
-  }),
-  compressionMetrics: z.object({
-    inputTokens: z.number(),
-    outputTokens: z.number(),
-    actualReductionPercent: z.number(),
-    criticalFactRecall: z.number(),
-    decisionRecall: z.number(),
-    constraintRecall: z.number()
-  }),
-  inputTokens: z.number(),
-  outputTokens: z.number(),
-  actualReductionPercent: z.number(),
-  factRetentionScore: z.number(),
-  criticalFactsRetained: z.number(),
+  conflicts: z.array(z.object({ old: z.string(), new: z.string() })).optional(),
   metrics: z.object({
-    originalTokens: z.number(),
+    inputTokens: z.number(),
     compressedTokens: z.number(),
-    actualReductionPercent: z.number(),
-    factRetentionScore: z.number()
-  }),
-  quality: z.object({
-    duplicateDensity: z.number(),
-    contextScore: z.number(),
-    semanticSimilarity: z.number(),
-    retainedFactsCount: z.number()
+    reductionPercent: z.number()
   })
 });
 
 const handoffResponse = z.object({
-  goal: z.string(),
-  importantFacts: z.array(z.string()),
-  constraints: z.array(z.string()),
-  recommendedNextActions: z.array(z.string()),
-  tone: z.string(),
-  userIntent: z.string(),
-  projectSummary: z.string(),
-  currentState: z.string(),
-  completedWork: z.array(z.string()),
+  project: z.object({
+    name: z.string(),
+    goal: z.string(),
+    currentState: z.string()
+  }),
+  completed: z.array(z.string()),
   inProgress: z.array(z.string()),
-  pendingTasks: z.array(z.string()),
-  knownIssues: z.array(z.string()),
-  failedApproaches: z.array(z.object({ attempt: z.string(), result: z.string(), decision: z.string() })),
-  importantDecisions: z.array(z.object({ decision: z.string(), reason: z.string() })),
+  pending: z.array(z.string()),
   blockers: z.array(z.string()),
+  failedApproaches: z.array(z.object({ attempt: z.string(), result: z.string(), lesson: z.string() })),
+  decisions: z.array(z.object({ decision: z.string(), reason: z.string() })),
+  priorities: z.array(z.string()),
+  criticalContext: z.object({
+    mustKnow: z.array(z.string()),
+    mustNotDo: z.array(z.string()),
+    biggestRisk: z.string(),
+    successMetric: z.string()
+  }),
+  startHere: z.string(),
   agentNotes: z.array(z.string()),
-  priorityOrder: z.array(z.string()),
-  recommendedStartingPoint: z.string(),
-  highestRiskArea: z.string(),
-  repositories: z.array(z.string()),
-  artifacts: z.array(z.string()),
-  links: z.array(z.string()),
-  owners: z.array(z.string()),
-  confidence: z.number()
 });
 
 const profileResponse = z.object({
+  mode: z.enum(["micro", "compact", "full"]),
+  micro: z.object({
+    identity: z.object({ profession: z.string().optional(), location: z.string().optional(), age: z.number().nullable().optional() }),
+    preferences: z.array(z.string()),
+    goals: z.array(z.string())
+  }),
+  compact: z.object({
+    identity: z.object({ profession: z.string().optional(), location: z.string().optional(), age: z.number().nullable().optional() }),
+    skills: z.array(z.string()),
+    interests: z.array(z.string()),
+    preferences: z.array(z.string()),
+    goals: z.array(z.string()),
+    traits: z.array(z.string())
+  }),
+  full: z.object({
+    identity: z.object({ profession: z.string().optional(), location: z.string().optional(), age: z.number().nullable().optional() }),
+    skills: z.array(z.string()),
+    interests: z.array(z.string()),
+    stablePreferences: z.array(z.string()),
+    currentGoals: z.array(z.string()),
+    futurePlans: z.array(z.string()),
+    inferredTraits: z.array(z.string()),
+    stableMemories: z.array(z.string()),
+    evolvingMemories: z.array(z.string())
+  }),
+  memoryFacts: z.array(z.object({
+    fact: z.string(),
+    category: z.string(),
+    stability: z.enum(["stable", "evolving"]),
+    confidence: z.number()
+  })),
   interests: z.array(z.string()),
   riskTolerance: z.string(),
   communicationStyle: z.string(),
@@ -213,13 +181,16 @@ const profileResponse = z.object({
 });
 
 const memoryEnrichmentResponse = z.object({
+  activeMemories: z.array(z.object({ fact: z.string(), category: z.string(), stability: z.literal("stable"), confidence: z.number() })),
+  evolvingMemories: z.array(z.object({ fact: z.string(), category: z.string(), stability: z.literal("evolving"), confidence: z.number() })),
+  conflicts: z.array(z.object({ old: z.string(), new: z.string(), reason: z.string() })),
   stablePreferences: z.array(z.string()),
   evolvingPreferences: z.array(z.string()),
   longTermGoals: z.array(z.string()),
   supersededMemories: z.array(z.string()),
   memoryConflicts: z.array(z.object({ current: z.string(), superseded: z.array(z.string()) })),
   stableMemories: z.array(z.string()),
-  evolvingMemories: z.array(z.string()),
+  legacyEvolvingMemories: z.array(z.string()).optional(),
   deprecatedMemories: z.array(z.string()),
   confidence: z.number()
 });
