@@ -386,7 +386,7 @@ function enforceBudget(candidate: string, facts: string[], inputTokens: number, 
   const maxTokens = Math.min(hardMaxTokens ?? Number.POSITIVE_INFINITY, Math.max(8, Math.floor(inputTokens * ratio)));
   const cleaned = normalizeSummary(candidate);
   if (cleaned && estimateTokens(cleaned) <= maxTokens && estimateTokens(cleaned) < inputTokens) {
-    return cleaned;
+    return completeTextWithinBudget(cleaned, maxTokens);
   }
 
   const selected: string[] = [];
@@ -399,7 +399,7 @@ function enforceBudget(candidate: string, facts: string[], inputTokens: number, 
   }
 
   if (selected.length > 0) return selected.join("; ");
-  return truncateToTokenBudget(cleaned, Math.min(maxTokens, Math.max(0, inputTokens - 1)));
+  return completeTextWithinBudget(cleaned, Math.min(maxTokens, Math.max(0, inputTokens - 1)));
 }
 
 function uniqueStrings(items: string[]) {
@@ -554,11 +554,11 @@ function normalizeComparable(value: string) {
 function shortStateValue(value: string, maxTokens: number) {
   const normalized = normalizeSummary(value);
   if (!normalized || normalized === "unknown") return "unknown";
-  return truncateToTokenBudget(normalized, maxTokens) || normalized;
+  return completeTextWithinBudget(normalized, maxTokens) || normalized;
 }
 
 function compactSentence(value: string) {
-  const trimmed = truncateToTokenBudget(normalizeSummary(value).replace(/[;|]+/g, ". "), 60);
+  const trimmed = completeTextWithinBudget(normalizeSummary(value).replace(/[;|]+/g, ". "), 60);
   if (!trimmed) return "";
   return /[.!?]$/.test(trimmed) ? trimmed : `${trimmed}.`;
 }
@@ -567,7 +567,7 @@ function compactParagraph(value: string) {
   const withoutRationale = normalizeSummary(value)
     .replace(/\b(because|since|therefore|so that|in order to)\b.*?(?=\.|;|$)/gi, "")
     .replace(/[;|]+/g, ". ");
-  const trimmed = truncateToTokenBudget(withoutRationale, 150);
+  const trimmed = completeTextWithinBudget(withoutRationale, 150);
   if (!trimmed) return "";
   return /[.!?]$/.test(trimmed) ? trimmed : `${trimmed}.`;
 }
@@ -577,7 +577,7 @@ function extendedParagraph(value: string) {
     .replace(/\b(first|then|after that|previously|earlier|later|finally)\b[:,]?\s*/gi, "")
     .replace(/\b(because|since|therefore|so that|in order to)\b.*?(?=\.|;|$)/gi, "")
     .replace(/[;|]+/g, ". ");
-  const trimmed = truncateToTokenBudget(withoutReplay, 200);
+  const trimmed = completeTextWithinBudget(withoutReplay, 200);
   if (!trimmed) return "";
   return /[.!?]$/.test(trimmed) ? trimmed : `${trimmed}.`;
 }
@@ -589,16 +589,33 @@ function normalizeSummary(value: string) {
     .trim();
 }
 
-function truncateToTokenBudget(value: string, maxTokens: number) {
-  if (maxTokens <= 0) return "";
-  const words = normalizeSummary(value).split(/\s+/).filter(Boolean);
+function completeTextWithinBudget(value: string, maxTokens: number) {
+  const cleaned = normalizeSummary(value).replace(/\s*[,;:–-]\s*$/g, "");
+  if (!cleaned || maxTokens <= 0) return "";
+  if (estimateTokens(cleaned) <= maxTokens && !endsWithDanglingWord(cleaned)) return cleaned;
+
+  const parts = splitCompleteThoughts(cleaned);
   const selected: string[] = [];
-  for (const word of words) {
-    const next = [...selected, word].join(" ");
+  for (const part of parts) {
+    const next = [...selected, part].join("; ");
     if (estimateTokens(next) > maxTokens) break;
-    selected.push(word);
+    selected.push(part);
   }
-  return selected.join(" ");
+  return selected.join("; ");
+}
+
+function splitCompleteThoughts(value: string) {
+  const normalized = normalizeSummary(value).replace(/[|]+/g, ";");
+  const sentenceParts = normalized
+    .split(/(?<=[.!?])\s+/)
+    .flatMap((part) => part.split(/\s*;\s*/))
+    .map((part) => part.trim().replace(/\s*[,;:–-]\s*$/g, ""))
+    .filter((part) => part && !endsWithDanglingWord(part));
+  return sentenceParts.length > 0 ? sentenceParts : [];
+}
+
+function endsWithDanglingWord(value: string) {
+  return /\b(and|or|with|for|to|from|by|using|including|because|while|after|before|without|within|into|between|of|the|a|an)$/i.test(value);
 }
 
 function compressedState(value: unknown) {
@@ -645,7 +662,7 @@ function denseContext(value: string) {
     .replace(/\b(because|since|therefore|so that|in order to)\b.*?(?=\.|;|$)/gi, "")
     .replace(/\s*[\n\r]+\s*/g, " ")
     .replace(/[|]+/g, "; ");
-  const trimmed = truncateToTokenBudget(cleaned, 120);
+  const trimmed = completeTextWithinBudget(cleaned, 120);
   return /[.!?]$/.test(trimmed) ? trimmed : `${trimmed}.`;
 }
 
