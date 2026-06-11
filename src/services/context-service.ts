@@ -544,9 +544,32 @@ function completeStateList(items: string[]) {
 }
 
 function completeStateText(value: string) {
-  const cleaned = normalizeSummary(value).replace(/\s*[,;:([–-]\s*$/g, "").trim();
+  const cleaned = conciseStateText(value);
   if (!cleaned || cleaned === "unknown" || hasInvalidStateEnding(cleaned)) return "";
   return cleaned;
+}
+
+function conciseStateText(value: string) {
+  const cleaned = normalizeSummary(value)
+    .replace(/\b(because|since|therefore|so that|in order to)\b.*?(?=\.|;|$)/gi, "")
+    .replace(/\b(including|such as)\b.*?(?=\.|;|$)/gi, "")
+    .replace(/\b(requirements? defined with|strict enforcement rules? established for|implementation details?|detailed explanation|rationale)\b/gi, "")
+    .replace(/\s*[,;:([–-]\s*$/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!cleaned) return "";
+  if (wordCount(cleaned) <= 20) return cleaned;
+
+  const completeParts = splitCompleteThoughts(cleaned);
+  const compact = completeParts.find((part) => wordCount(part) >= 3 && wordCount(part) <= 20);
+  if (compact) return compact;
+
+  const clause = cleaned.split(/\s*[,;]\s*/).find((part) => wordCount(part) >= 3 && wordCount(part) <= 20);
+  return clause ? clause.replace(/\s*[,;:([–-]\s*$/g, "").trim() : "";
+}
+
+function wordCount(value: string) {
+  return normalizeSummary(value).split(/\s+/).filter(Boolean).length;
 }
 
 function hasInvalidStateEnding(value: string) {
