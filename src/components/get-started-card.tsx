@@ -24,26 +24,26 @@ export function GetStartedCard() {
         <div className="grid h-11 w-11 place-items-center rounded-md border border-mint/25 bg-mint/10">
           <Package className="h-5 w-5 text-mint" />
         </div>
-        <h3 className="mt-6 text-2xl font-semibold text-white">Self-serve onboarding for humans and agents.</h3>
+        <h3 className="mt-6 text-2xl font-semibold text-white">Three ways to use ContextKit.</h3>
         <p className="mt-4 leading-7 text-white/62">
-          Create an account from the dashboard or terminal, verify the email, then issue scoped API keys from the dashboard. Paid generation can still run directly through Bankr-hosted x402.
+          Bankr-hosted x402 is the main path. API keys are for dashboard operations. The SDK is only for advanced TypeScript integrations that provide their own x402 payer.
         </p>
         <div className="mt-6 grid gap-3 text-sm text-white/65">
           <div className="rounded border border-line bg-ink/65 p-4">
-            <span className="text-mint">1.</span> For paid AI generation, agents can call Bankr-hosted x402 directly with Bankr CLI/account payment access.
+            <span className="text-mint">1.</span> Simple users and agents: run the Bankr-hosted x402 command. No ContextKit API key, npm package, or SDK is required.
           </div>
           <div className="rounded border border-line bg-ink/65 p-4">
-            <span className="text-mint">2.</span> ContextKit API keys are for dashboards, analytics, token estimates, webhooks, and advanced direct API usage.
+            <span className="text-mint">2.</span> Dashboard workflows: use API keys for analytics, usage, webhooks, token estimates, memory enrichment, and key management.
           </div>
           <div className="rounded border border-line bg-ink/65 p-4">
-            <span className="text-mint">3.</span> Email verification is required before dashboard access or API key creation. Full API keys are shown once when created.
+            <span className="text-mint">3.</span> Advanced developers: use the SDK only when your app can provide both an API key and an x402 payer.
           </div>
         </div>
       </div>
       <div className="rounded-md border border-line bg-carbon/72 p-4 shadow-glow">
         <div className="mb-4 flex items-center gap-2 text-sm text-aqua">
           <Terminal className="h-4 w-4" />
-          npm package + API key bootstrap
+          Bankr command + optional SDK/API bootstrap
         </div>
         <CodeBlock code={`${installSample}\n\n${hostedSample}`} />
       </div>

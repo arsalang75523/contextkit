@@ -5,15 +5,6 @@ import { bankrX402Command } from "@/lib/bankr-x402";
 
 const quickStart = `npm install contextkit
 
-curl -X POST https://91.107.248.223.sslip.io/api/dashboard/signup \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "name": "Autonomous Agent Operator",
-    "email": "agent-owner@example.com",
-    "password": "replace-with-12-plus-chars",
-    "company": "Agent Lab"
-  }'
-
 ${bankrX402Command("summarize", {
   messages: [{ role: "user", content: "Summarize this long agent conversation." }]
 })}`;
@@ -22,18 +13,24 @@ const tsExample = `import { ContextKit } from "contextkit";
 
 const client = new ContextKit({
   apiKey: process.env.CONTEXTKIT_API_KEY!,
-  x402: async (challenge) => bankrWallet.pay(challenge)
+  baseUrl: "https://91.107.248.223.sslip.io",
+  x402: async (challenge) => wallet.pay(challenge)
 });
 
 const context = await client.compressContext({ messages });`;
 
+const directApiExample = `curl -X POST https://91.107.248.223.sslip.io/api/memory-enrichment \\
+  -H "Authorization: Bearer ck_live_..." \\
+  -H "Content-Type: application/json" \\
+  -d '{"messages":[{"role":"user","content":"Remember this user preference."}]}'`;
+
 export default function DocsPage() {
   return (
     <main>
-      <Section eyebrow="Docs" title="Ship context-aware agents with a four-endpoint API.">
+      <Section eyebrow="Docs" title="Understand the three ContextKit access paths.">
         <div className="grid gap-8 lg:grid-cols-[260px_1fr]">
           <aside className="h-fit rounded-md border border-line bg-white/[0.035] p-5 text-sm text-white/65">
-            {["Introduction", "Quick Start", "Authentication", "x402 Payments", "API Reference", "Webhooks", "SDK Usage", "Deployment", "Error Handling", "Rate Limits", "Examples"].map((item) => (
+            {["Introduction", "Bankr-hosted x402", "API Key", "SDK", "Quick Start", "API Reference", "Webhooks", "Deployment", "Error Handling", "Rate Limits", "Examples"].map((item) => (
               <a key={item} href={`#${item.toLowerCase().replaceAll(" ", "-")}`} className="block rounded px-2 py-2 hover:bg-white/[0.04] hover:text-white">
                 {item}
               </a>
@@ -41,10 +38,46 @@ export default function DocsPage() {
           </aside>
           <div className="space-y-12">
             <DocSection id="introduction" title="Introduction">
-              ContextKit is a payable context service for autonomous agents. It turns verbose conversations into compact memory, handoff payloads, and durable user profiles.
+              ContextKit is a payable context service for autonomous agents. The main product path is Bankr-hosted x402: agents pay through Bankr and receive structured JSON from ContextKit. API keys and the SDK exist for operational and advanced developer workflows, not as the default paid-user path.
+            </DocSection>
+            <DocSection id="bankr-hosted-x402" title="Bankr-hosted x402">
+              <p>
+                This is the main path for users and agents. A user runs a Bankr x402 command, Bankr handles payment, and ContextKit returns JSON.
+              </p>
+              <CodeBlock code={bankrX402Command("summarize", {
+                messages: [{ role: "user", content: "Summarize this." }]
+              })} />
+              <div className="mt-4 grid gap-3 md:grid-cols-2">
+                {["No ContextKit API key required", "No npm package required", "No SDK required", "Only bankr login is required"].map((item) => (
+                  <div key={item} className="rounded-md border border-mint/20 bg-mint/10 p-3 text-sm text-white/70">
+                    {item}
+                  </div>
+                ))}
+              </div>
+            </DocSection>
+            <DocSection id="api-key" title="API Key">
+              <p>
+                API keys are not payment credentials. They are for dashboard and operational workflows: analytics, usage, webhook register/replay, token estimates, direct memory enrichment, and key management.
+              </p>
+              <p className="mt-3">
+                Important: calling <code>/api/summarize</code> with only an API key does not make summarization free. Direct summarize, compress, handoff, and profile routes still require x402 payment. For normal paid usage, use Bankr-hosted x402.
+              </p>
+              <CodeBlock code={directApiExample} />
+            </DocSection>
+            <DocSection id="sdk" title="SDK">
+              <p>
+                The SDK is a TypeScript wrapper for advanced developers who want to integrate direct ContextKit calls inside their own app. It is not the main product path.
+              </p>
+              <p className="mt-3">
+                The SDK can add the API key header, send typed requests, call an x402 handler when a 402 challenge appears, attach the payment payload, and return JSON. For paid summarize, compress, handoff, and profile calls, the SDK still needs a real x402 payer such as <code>wallet.pay(challenge)</code>.
+              </p>
+              <CodeBlock code={tsExample} />
+              <p className="mt-3 text-sm leading-6 text-white/55">
+                Summary: simple users and simple agents should use Bankr-hosted x402. Dashboard workflows use API keys. Advanced developers use SDK + API key + x402 payer.
+              </p>
             </DocSection>
             <DocSection id="quick-start" title="Quick Start">
-              First create a self-serve account if your agent needs dashboard, analytics, token estimates, or webhook controls. For normal paid generation, use Bankr-hosted x402.
+              Fastest path: run the Bankr-hosted x402 command. Install the SDK only if you are building an advanced TypeScript integration.
               <CodeBlock code={quickStart} />
             </DocSection>
             <DocSection id="authentication" title="Authentication">
@@ -85,6 +118,7 @@ export default function DocsPage() {
               Webhook deliveries include `ContextKit-Signature`, `ContextKit-Event`, and `ContextKit-Request-Id` headers. Replay endpoints are available for audit recovery.
             </DocSection>
             <DocSection id="sdk-usage" title="SDK Usage">
+              SDK usage is advanced. If your app calls paid direct endpoints, provide both a ContextKit API key and a real x402 payment handler.
               <CodeBlock code={tsExample} />
             </DocSection>
             <DocSection id="deployment" title="Deployment">

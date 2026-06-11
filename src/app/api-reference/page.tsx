@@ -7,15 +7,19 @@ import { bankrHostedUrl, bankrX402Command } from "@/lib/bankr-x402";
 export default function ApiReferencePage() {
   return (
     <main>
-      <Section eyebrow="Get Started" title="Install ContextKit and create your first scoped API key.">
-        <div className="mb-6 grid gap-4 md:grid-cols-2">
+      <Section eyebrow="Get Started" title="Choose the right ContextKit access path.">
+        <div className="mb-6 grid gap-4 md:grid-cols-3">
+          <div className="rounded-md border border-mint/25 bg-mint/10 p-5">
+            <h2 className="font-semibold text-white">Main path: Bankr-hosted x402</h2>
+            <p className="mt-2 text-sm leading-6 text-white/62">Best for users and agents. Run a Bankr x402 command, approve payment, and receive JSON. No ContextKit API key, npm package, or SDK required.</p>
+          </div>
           <a href="/dashboard/login" className="rounded-md border border-mint/25 bg-mint/10 p-5 transition hover:border-mint/60">
-            <h2 className="font-semibold text-white">Human flow: create key in dashboard</h2>
-            <p className="mt-2 text-sm leading-6 text-white/62">Sign up, verify your email, then create scoped API keys and manage usage, payments, and webhooks from the dashboard.</p>
+            <h2 className="font-semibold text-white">Operations: API key</h2>
+            <p className="mt-2 text-sm leading-6 text-white/62">Use API keys for dashboard, analytics, webhooks, token estimates, direct memory enrichment, and key management. API keys are not payment credentials.</p>
           </a>
           <div className="rounded-md border border-aqua/25 bg-aqua/10 p-5">
-            <h2 className="font-semibold text-white">Agent flow: create key from terminal</h2>
-            <p className="mt-2 text-sm leading-6 text-white/62">Autonomous agents can bootstrap account creation with curl, but email verification is required before issuing <code>ck_live_</code> keys.</p>
+            <h2 className="font-semibold text-white">Advanced: SDK</h2>
+            <p className="mt-2 text-sm leading-6 text-white/62">Use the TypeScript SDK only when your app can provide both a ContextKit API key and a real x402 payer such as <code>wallet.pay</code>.</p>
           </div>
         </div>
         <GetStartedCard />
@@ -28,7 +32,7 @@ export default function ApiReferencePage() {
           </div>
           <div className="rounded-md border border-aqua/20 bg-aqua/10 p-5">
             <h2 className="font-semibold text-white">Advanced: direct API routes</h2>
-            <p className="mt-2 text-sm leading-6 text-white/60">Direct <code>/api/*</code> routes are for API-key users, dashboards, webhooks, analytics, token estimates, and custom x402 clients.</p>
+            <p className="mt-2 text-sm leading-6 text-white/60">Direct <code>/api/*</code> routes are for advanced integrations. API keys alone do not make paid context generation free; direct paid routes still need x402 payment.</p>
           </div>
         </div>
         <div className="space-y-8">
@@ -55,7 +59,7 @@ export default function ApiReferencePage() {
                     ) : null}
                     {endpoint.slug === "memory-enrichment" ? (
                       <p className="mt-3 max-w-3xl rounded border border-aqua/25 bg-aqua/10 p-3 text-sm leading-6 text-aqua">
-                        Bankr-hosted x402 maps this paid memory flow to <code>contextkit-profile</code> for now. The direct API-key endpoint remains <code>/api/memory-enrichment</code>.
+                        Memory enrichment is operational: use <code>/api/memory-enrichment</code> with an API key, or use hosted <code>contextkit-profile</code> when you want paid profile + memory extraction through Bankr.
                       </p>
                     ) : null}
                   </div>
@@ -72,7 +76,7 @@ export default function ApiReferencePage() {
                   </div>
                 </div>
                 <div className="mt-5">
-                  <h3 className="mb-3 text-sm uppercase tracking-[0.18em] text-white/45">curl</h3>
+                  <h3 className="mb-3 text-sm uppercase tracking-[0.18em] text-white/45">Bankr-hosted x402 command</h3>
                   <CodeBlock code={curl} />
                 </div>
                 <p className="mt-5 text-sm text-white/60">Webhook behavior: emits `{endpoint.event}` after successful generation and stores replayable audit state in ctx.files.</p>

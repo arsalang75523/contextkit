@@ -8,8 +8,14 @@ export const endpoints = [
     description: "Summarize long conversations into concise optimized context with micro, compact, extended, or debug modes.",
     response: {
       mode: "micro",
-      micro: "ContextKit: Bankr x402 context API. Next: deploy.",
-      state: { goal: "Launch ContextKit", status: "deployment update ready", blockers: [], decisions: ["Use Bankr-hosted x402"], priorities: ["Deploy", "Verify metrics"], nextSteps: ["Deploy updated service"] }
+      micro: "Night-bus pilot. Charging and weekend coverage unresolved. Next: finalize schedules and airport terms.",
+      state: {
+        goal: "Reduce overnight transit wait times",
+        status: "Pilot planning in progress",
+        blockers: ["Limited depot charging capacity", "Weekend driver coverage unresolved"],
+        next: ["Finalize charger schedule", "Confirm weekend coverage", "Negotiate airport windows"]
+      },
+      metrics: { inputTokens: 190, compactTokens: 17, stateTokens: 45, totalOutputTokens: 62, reductionPercent: 67, latencyMs: 4200 }
     }
   },
   {
@@ -20,17 +26,17 @@ export const endpoints = [
     event: "context.compressed",
     description: "Compress context into compact structured memory.",
     response: {
-      compressedContext: "ContextKit: Bankr x402 context API. Stack: Next.js/Hono/Postgres/Bankr LLM. State: hosted paid services live. Decisions: Bankr-hosted x402, stable routes. Next: verify dashboard metrics, docs, demos.",
+      compressedContext: "Night-bus pilot: reduce post-midnight waits below 18m without budget increase. Plan: three overnight loops, small electric shuttles, unchanged daytime network. Issues: eight-vehicle charging cap, weekend driver coverage, airport 10m curb windows. Next: charger schedule, driver coverage, airport penalties, council briefing Tuesday.",
       state: {
-        goals: ["Launch ContextKit as production AI context infrastructure"],
-        status: ["Bankr-hosted x402 services are live"],
-        activeProblems: ["Dashboard metrics must stay scoped per account/API key"],
-        constraints: ["Do not rename routes", "Do not remove response fields"],
-        decisions: ["Use Bankr-hosted x402", "Use Postgres for persistence"],
-        nextSteps: ["Run paid x402 smoke tests", "Review dashboard data"]
+        goals: ["Reduce overnight transit waits below 18 minutes"],
+        status: ["Night-bus pilot planning is in progress"],
+        activeProblems: ["Limited charging capacity", "Weekend driver coverage unresolved"],
+        constraints: ["Do not increase annual operating budget", "Respect driver rest-day rules", "Meet airport curb windows"],
+        decisions: ["Keep daytime network unchanged", "Use smaller electric shuttles"],
+        nextSteps: ["Finalize charger schedule", "Confirm weekend coverage", "Prepare council briefing"]
       },
-      entities: { people: [], projects: ["ContextKit"], technologies: ["Next.js", "Hono", "Postgres", "x402"], organizations: ["Bankr"], deadlines: [] },
-      metrics: { inputTokens: 120, compressedTokens: 38, reductionPercent: 68 }
+      entities: { people: [], projects: ["Night-bus pilot"], technologies: ["Electric shuttles"], organizations: ["Transit authority", "Hospital district", "Airport authority"], deadlines: ["City council briefing next Tuesday"] },
+      metrics: { inputTokens: 190, compressedTokens: 67, reductionPercent: 65 }
     }
   },
   {
@@ -41,17 +47,25 @@ export const endpoints = [
     event: "handoff.generated",
     description: "Generate a structured agent-to-agent continuation payload.",
     response: {
-      project: { name: "ContextKit", goal: "Context infrastructure for AI agents", currentState: "Production hardening underway" },
-      completed: ["Bankr-hosted x402", "Postgres persistence", "API key auth"],
-      inProgress: ["Auth hardening", "docs polish"],
-      pending: ["Webhook UI", "long-context demos"],
-      blockers: [],
+      project: { name: "Night-bus pilot", goal: "Reduce overnight transit wait times", currentState: "Route and staffing plan under review" },
+      completed: ["Ridership interviews", "Stop safety audits", "Route maps", "Driver staffing model", "Draft airport agreement"],
+      inProgress: ["Charger scheduling", "Weekend driver coverage", "Airport curb-window terms"],
+      pending: ["East loop frequency decision", "Council briefing", "Cold-weather charging plan"],
+      blockers: ["Charging capacity limited to eight vehicles", "Weekend driver coverage unresolved"],
       failedApproaches: [],
-      decisions: [{ decision: "Use Bankr-hosted x402", reason: "Best paid-agent UX" }],
-      priorities: ["verify email", "deploy", "docs"],
-      criticalContext: { mustKnow: ["Keep endpoint names stable"], mustNotDo: ["Do not break API contracts"], biggestRisk: "email deliverability", successMetric: "paid x402 requests succeed" },
-      startHere: "Check production logs and run paid x402 smoke tests.",
-      agentNotes: ["User prefers concise operational guidance"]
+      decisions: [
+        { decision: "Keep daytime network unchanged", reason: "Avoid disruption and budget expansion" },
+        { decision: "Use smaller electric shuttles", reason: "Match low-demand overnight segments" }
+      ],
+      priorities: ["Finalize charger schedule", "Confirm driver coverage", "Resolve airport penalties", "Prepare council briefing"],
+      criticalContext: {
+        mustKnow: ["Hospital shift change requires service before 5:30 AM", "Airport curb access depends on 10-minute arrival windows"],
+        mustNotDo: ["Do not increase annual operating budget", "Do not violate driver rest-day rules"],
+        biggestRisk: "Charging and staffing constraints delay pilot launch",
+        successMetric: "Average post-midnight wait time below 18 minutes"
+      },
+      startHere: "Resolve charger scheduling and weekend driver coverage before the council briefing.",
+      agentNotes: ["Operations lead prefers concise updates with risks and action lists"]
     }
   },
   {
@@ -63,25 +77,29 @@ export const endpoints = [
     description: "Extract durable user preferences for reusable agent memory.",
     response: {
       mode: "compact",
-      micro: { identity: { profession: "founder/operator", location: "unknown", age: null }, preferences: ["concise technical guidance"], goals: ["launch ContextKit"] },
-      compact: { identity: { profession: "founder/operator", location: "unknown", age: null }, skills: ["deployment debugging"], interests: ["AI agents"], preferences: ["concise technical guidance"], goals: ["launch ContextKit"], traits: ["entrepreneurial"] },
-      full: { identity: { profession: "founder/operator", location: "unknown", age: null }, skills: ["deployment debugging"], interests: ["AI agents"], stablePreferences: ["concise technical guidance"], currentGoals: ["launch ContextKit"], futurePlans: ["public launch"], inferredTraits: ["entrepreneurial"], stableMemories: [], evolvingMemories: [] },
-      memoryFacts: [{ fact: "concise technical guidance", category: "preference", stability: "stable", confidence: 0.95 }],
-      interests: ["AI agents"],
+      micro: { identity: { profession: "operations lead", location: "unknown", age: null }, preferences: ["concise weekly updates"], goals: ["launch night-bus pilot"] },
+      compact: { identity: { profession: "operations lead", location: "unknown", age: null }, skills: ["transit planning"], interests: ["overnight mobility"], preferences: ["clear risks", "short action lists"], goals: ["launch night-bus pilot"], traits: ["execution-focused"] },
+      full: { identity: { profession: "operations lead", location: "unknown", age: null }, skills: ["transit planning"], interests: ["overnight mobility"], stablePreferences: ["concise weekly updates"], currentGoals: ["launch night-bus pilot"], futurePlans: ["city council briefing"], inferredTraits: ["execution-focused"], stableMemories: [], evolvingMemories: [] },
+      memoryFacts: [
+        { fact: "Prefers concise weekly updates", category: "preference", stability: "stable", confidence: 0.96 },
+        { fact: "Wants clear risks and short action lists", category: "preference", stability: "stable", confidence: 0.95 },
+        { fact: "Preparing a night-bus pilot", category: "goal", stability: "evolving", confidence: 0.92 }
+      ],
+      interests: ["overnight mobility"],
       riskTolerance: "unknown",
-      communicationStyle: "concise technical guidance",
-      preferences: ["concise technical guidance"],
-      importantContext: ["Bankr ecosystem"],
-      identity: { profession: "founder/operator", location: "unknown", age: null },
-      skills: ["deployment debugging"],
-      goals: ["launch ContextKit"],
-      futurePlans: ["public launch"],
+      communicationStyle: "concise weekly updates",
+      preferences: ["concise weekly updates", "clear risks", "short action lists"],
+      importantContext: ["Avoid long policy background unless a decision requires it"],
+      identity: { profession: "operations lead", location: "unknown", age: null },
+      skills: ["transit planning"],
+      goals: ["launch night-bus pilot"],
+      futurePlans: ["city council briefing"],
       behaviorPatterns: [],
-      dislikes: [],
-      careerStage: "startup builder",
-      managementIntent: true,
-      entrepreneurial: true,
-      inferredTraits: ["entrepreneurial"],
+      dislikes: ["long policy background"],
+      careerStage: "unknown",
+      managementIntent: false,
+      entrepreneurial: false,
+      inferredTraits: ["execution-focused"],
       stableMemories: [],
       evolvingMemories: [],
       deprecatedMemories: [],
@@ -97,11 +115,11 @@ export const endpoints = [
     event: "request.completed",
     description: "Evolve long-term memory without duplicating stale preferences. Bankr-hosted paid memory extraction is served through contextkit-profile while the direct API-key endpoint remains /api/memory-enrichment.",
     response: {
-      activeMemories: [{ fact: "concise technical guidance", category: "preference", stability: "stable", confidence: 0.95 }],
-      evolvingMemories: [{ fact: "launch ContextKit", category: "goal", stability: "evolving", confidence: 0.9 }],
+      activeMemories: [{ fact: "Prefers concise weekly updates", category: "preference", stability: "stable", confidence: 0.96 }],
+      evolvingMemories: [{ fact: "Preparing a night-bus pilot", category: "project", stability: "evolving", confidence: 0.92 }],
       conflicts: [],
-      longTermGoals: ["launch ContextKit"],
-      stablePreferences: ["concise technical guidance"],
+      longTermGoals: ["Improve overnight transit access"],
+      stablePreferences: ["concise weekly updates"],
       evolvingPreferences: [],
       supersededMemories: [],
       memoryConflicts: [],

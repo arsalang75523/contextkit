@@ -5,17 +5,17 @@ import { Activity, Clock, Coins, Gauge, Play, RotateCcw } from "lucide-react";
 import { CodeBlock } from "@/components/code-block";
 import { bankrX402Command } from "@/lib/bankr-x402";
 
-const starter = `user: We are building ContextKit, a Bankr-native context infrastructure API for autonomous AI agents.
-assistant: The backend runs on Hetzner with Docker Compose, Next.js, Hono, Postgres, and Drizzle migrations.
-user: Bankr-hosted x402 endpoints live at x402.bankr.bot and forward paid requests to internal ContextKit endpoints.
-assistant: Production fixes included Docker env forwarding, public HTTPS resource URLs, and robust JSON parsing for fenced LLM responses.
-user: The product has four paid services: summarize, compress-context, handoff, and extract-profile. Summarize costs $0.002, compress-context costs $0.003, handoff costs $0.003, and profile costs $0.004.
-assistant: The dashboard supports signup, login, API key creation, revocation, usage analytics, webhook management, payment history, and token savings charts.
-user: New users should not be asked for an x402 password. They should copy a Bankr x402 command, run it from a Bankr-authenticated terminal, approve payment, and receive JSON.
-assistant: ContextKit API keys are separate. They are for dashboards, analytics, token estimates, webhook management, and advanced direct API usage.
-user: Webhooks need registration, signed delivery, replay, delivery logs, and secret rotation. Billing should show Bankr-hosted x402 payments that ContextKit records after paid requests are forwarded.
-assistant: The next production priorities are real account onboarding, better dashboard UX, webhook UI, payment reconciliation, monitoring, backups, and a real domain.
-user: Create a concise demo output that proves ContextKit can summarize, compress, hand off, and extract user memory from this deployment context.`;
+const starter = `user: We are coordinating a six-month night-bus pilot for late-shift hospital workers, airport staff, and hospitality employees across three neighborhoods.
+assistant: The project goal is to reduce average wait time after midnight from 35-50 minutes to under 18 minutes without increasing the approved annual transit budget.
+user: The current plan keeps the daytime bus network unchanged, adds three overnight loop routes, and uses smaller electric shuttles for low-demand segments.
+assistant: The transit authority approved a temporary depot lease near the airport, but charging capacity is limited to eight vehicles at once and must be scheduled carefully.
+user: Driver scheduling is constrained by union rules requiring two consecutive rest days, and weekend coverage is still unresolved for the east neighborhood loop.
+assistant: The hospital district needs reliable arrivals before the 5:30 AM shift change. The airport authority will only allow curb access if shuttles arrive inside assigned 10-minute windows.
+user: Completed work includes ridership interviews, stop safety audits, proposed route maps, a driver staffing model, and a draft airport curb-access agreement.
+assistant: Open decisions include whether the east loop should run every 20 or 30 minutes, whether to reserve two vehicles for airport overflow, and how to handle charger priority during cold weather.
+user: The operations lead prefers concise weekly updates with clear risks, short action lists, and no long policy background unless a decision requires it.
+assistant: Immediate next steps are to finalize charger scheduling, confirm weekend driver coverage, negotiate the airport window penalties, and prepare a city council briefing for next Tuesday.
+user: Create a concise demo output that summarizes, compresses, hands off, and extracts durable planning memory from this transit pilot conversation.`;
 
 type DemoResult = {
   requestId?: string;

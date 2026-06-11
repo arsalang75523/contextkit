@@ -7,8 +7,12 @@ import { endpoints } from "@/content/docs";
 import { bankrHostedUrl, bankrX402Command } from "@/lib/bankr-x402";
 
 const seed = `[
-  {"role":"system","content":"You are helping deploy a production AI infrastructure platform called ContextKit."},
-  {"role":"user","content":"ContextKit is deployed on Hetzner with Bankr-hosted x402. Summarize deployment state, fixes, and next steps for another AI agent."}
+  {"role":"system","content":"You are helping a city operations team prepare a continuation handoff for a complex public transit pilot."},
+  {"role":"user","content":"The city is running a six-month night-bus pilot across three neighborhoods where late-shift hospital workers and airport staff currently wait 35-50 minutes after midnight. The goal is to reduce average wait time below 18 minutes without increasing the annual operating budget."},
+  {"role":"assistant","content":"Current plan: keep the existing daytime bus network unchanged, add three overnight loop routes, and use smaller electric shuttles for low-demand segments. The transit authority approved a temporary depot lease near the airport, but charging capacity is limited to eight vehicles at once."},
+  {"role":"user","content":"Important constraints: union rules require two consecutive rest days for drivers, the hospital district needs service before 5:30 AM shift change, and the airport authority will only allow curb access if buses arrive within assigned 10-minute windows."},
+  {"role":"assistant","content":"Completed work includes ridership interviews, stop safety audits, proposed route maps, a driver staffing model, and a draft agreement with the airport. Open issues are charger scheduling, weekend driver coverage, and whether the east neighborhood loop should run every 20 or 30 minutes."},
+  {"role":"user","content":"Please turn this into a concise state update for the next planning agent, preserving goals, decisions, blockers, constraints, and immediate next steps."}
 ]`;
 
 export default function PlaygroundPage() {
