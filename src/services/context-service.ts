@@ -38,10 +38,10 @@ export class ContextService {
       ...stateValue.blockers.map((item) => `Blocker: ${item}`)
     ].filter((item) => item && item !== "unknown");
     const compactFacts = [
-      ...microFacts,
-      ...stateValue.decisions.slice(0, 4).map((item) => `Decision: ${shortStateValue(item, 6)}`),
-      ...keyDecisions.slice(0, 4).map((item) => `Decision: ${shortStateValue(item, 6)}`),
-      ...actionItems.slice(0, 6).map((item) => `Next: ${shortStateValue(item, 4)}`)
+      stateValue.goal,
+      stateValue.status,
+      categorySentence("Main challenge", stateValue.blockers),
+      categorySentence("Current focus", [...stateValue.priorities, ...stateValue.nextSteps, ...actionItems])
     ].filter((item) => item && item !== "unknown");
     const extendedFacts = [
       ...compactFacts,
@@ -49,7 +49,7 @@ export class ContextService {
       ...risks.map((item) => `Risk: ${item}`)
     ];
     const micro = compactSentence(enforceBudget(String(output.micro ?? ""), microFacts, inputTokens, 0.2, 40));
-    const compact = compactParagraph(enforceBudget(String(output.compact ?? output.summary ?? ""), compactFacts, inputTokens, 0.4, 120));
+    const compact = compactSummaryParagraph(enforceBudget(String(output.compact ?? output.summary ?? ""), compactFacts, inputTokens, 0.4, 60));
     const extended = extendedParagraph(enforceBudget(String(output.extended ?? output.summary ?? compact), extendedFacts, inputTokens, 0.6, 180));
     const summary = compact || micro || extended;
     const microTokens = estimateTokens(micro);
@@ -582,13 +582,32 @@ function compactSentence(value: string) {
   return /[.!?]$/.test(trimmed) ? trimmed : `${trimmed}.`;
 }
 
-function compactParagraph(value: string) {
-  const withoutRationale = normalizeSummary(value)
+function compactSummaryParagraph(value: string) {
+  const withoutLists = normalizeSummary(value)
+    .replace(/\b(Blocker|Decision|Priority|Next):\s*/gi, "")
     .replace(/\b(because|since|therefore|so that|in order to)\b.*?(?=\.|;|$)/gi, "")
     .replace(/[;|]+/g, ". ");
-  const trimmed = completeTextWithinBudget(withoutRationale, 150);
+  const trimmed = completeTextWithinBudget(withoutLists, 60);
   if (!trimmed) return "";
   return /[.!?]$/.test(trimmed) ? trimmed : `${trimmed}.`;
+}
+
+function categorySentence(label: string, items: string[]) {
+  const categories = summarizeCategories(items);
+  if (categories.length === 0) return "";
+  return `${label} is ${categories.join(" and ")}.`;
+}
+
+function summarizeCategories(items: string[]) {
+  const text = items.join(" ").toLowerCase();
+  const categories: string[] = [];
+  if (/(performance|latency|slow|query|memory|scale|optimization)/.test(text)) categories.push("performance optimization");
+  if (/(enterprise|sso|soc2|security|audit|compliance)/.test(text)) categories.push("enterprise readiness");
+  if (/(docs|documentation|onboarding|guide)/.test(text)) categories.push("documentation and onboarding");
+  if (/(payment|billing|x402|bankr|revenue)/.test(text)) categories.push("payments integration");
+  if (/(api|sdk|endpoint|schema|contract)/.test(text)) categories.push("API reliability");
+  if (categories.length === 0 && items.length > 0) categories.push("execution follow-through");
+  return uniqueStrings(categories).slice(0, 3);
 }
 
 function extendedParagraph(value: string) {
