@@ -37,12 +37,7 @@ export class ContextService {
       stateValue.status,
       ...stateValue.blockers.map((item) => `Blocker: ${item}`)
     ].filter((item) => item && item !== "unknown");
-    const compactFacts = [
-      stateValue.goal,
-      compactSituationSentence(stateValue.status, [...stateValue.blockers, ...stateValue.priorities, ...stateValue.nextSteps, ...actionItems]),
-      categorySentence("Main challenge", stateValue.blockers),
-      categorySentence("Current focus", [...stateValue.priorities, ...stateValue.nextSteps, ...actionItems])
-    ].filter((item) => item && item !== "unknown");
+    const compactFacts = compactNarrativeFacts(stateValue, actionItems);
     const extendedFacts = [
       ...compactFacts,
       ...openQuestions.map((item) => `Open: ${item}`),
@@ -592,29 +587,49 @@ function compactSummaryParagraph(value: string) {
   return /[.!?]$/.test(trimmed) ? trimmed : `${trimmed}.`;
 }
 
-function compactSituationSentence(status: string, contextItems: string[]) {
-  const statusText = normalizeSummary(status);
-  const categories = summarizeCategories(contextItems);
-  const focus = formatCategoryList(categories);
-  if (!statusText || statusText === "unknown") {
-    return focus ? `Remaining work focuses on ${focus}.` : "";
-  }
-  if (/complete|live|ready|deployed|working|operational/i.test(statusText)) {
-    return focus ? `Core work is stable while ${focus} remains active.` : "Core work is stable.";
-  }
-  if (/block|fail|issue|bug|problem|broken/i.test(statusText)) {
-    return focus ? `Progress depends on resolving ${focus}.` : "Progress depends on resolving active issues.";
-  }
-  if (/progress|active|underway|building|implement|refactor|optim/i.test(statusText)) {
-    return focus ? `Execution is active across ${focus}.` : "Execution is active.";
-  }
-  return focus ? `Remaining work focuses on ${focus}.` : "Work is active.";
+function compactNarrativeFacts(stateValue: ReturnType<typeof summarizeState>, actionItems: string[]) {
+  const blockerCategories = summarizeCategories(stateValue.blockers);
+  const focusCategories = summarizeCategories([...stateValue.priorities, ...stateValue.nextSteps, ...actionItems])
+    .filter((category) => !blockerCategories.includes(category));
+  return uniqueStrings([
+    compactGoalSentence(stateValue.goal),
+    compactSituationSentence(stateValue.status),
+    compactRemainingWorkSentence(blockerCategories, focusCategories)
+  ]).filter((item) => item && item !== "unknown");
 }
 
-function categorySentence(label: string, items: string[]) {
-  const categories = summarizeCategories(items);
-  if (categories.length === 0) return "";
-  return `${label} is ${formatCategoryList(categories)}.`;
+function compactGoalSentence(goal: string) {
+  const goalText = normalizeSummary(goal);
+  if (!goalText || goalText === "unknown") return "";
+  const compactGoal = completeTextWithinBudget(goalText, 12) || conciseStateText(goalText);
+  if (!compactGoal) return "";
+  return /[.!?]$/.test(compactGoal) ? compactGoal : `${compactGoal}.`;
+}
+
+function compactSituationSentence(status: string) {
+  const statusText = normalizeSummary(status);
+  if (!statusText || statusText === "unknown") return "";
+  if (/complete|live|ready|deployed|working|operational/i.test(statusText)) {
+    return "Core capabilities are in place.";
+  }
+  if (/block|fail|issue|bug|problem|broken/i.test(statusText)) {
+    return "Progress depends on resolving active issues.";
+  }
+  if (/progress|active|underway|building|implement|refactor|optim/i.test(statusText)) {
+    return "Execution is moving through active refinement.";
+  }
+  return "Work is active.";
+}
+
+function compactRemainingWorkSentence(blockerCategories: string[], focusCategories: string[]) {
+  const focus = formatCategoryList(focusCategories);
+  const blockers = formatCategoryList(blockerCategories);
+  if (focus && blockers) {
+    return `Remaining work centers on ${focus}, with ${blockers} still unresolved.`;
+  }
+  if (focus) return `Remaining work centers on ${focus}.`;
+  if (blockers) return `The primary risk is unresolved ${blockers}.`;
+  return "";
 }
 
 function summarizeCategories(items: string[]) {
