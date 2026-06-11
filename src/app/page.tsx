@@ -12,7 +12,7 @@ import { Section } from "@/components/section";
 import { bankrX402Command } from "@/lib/bankr-x402";
 
 const features = [
-  ["Conversation Summarization", BrainCircuit, "/api/summarize", "{ summary, tokenReductionEstimate }"],
+  ["Conversation Summarization", BrainCircuit, "/api/summarize", "{ compact, state, metrics }"],
   ["Context Compression", Gauge, "/api/compress-context", "{ compressedContext, state, entities, metrics }"],
   ["Agent Handoff Engine", Bot, "/api/handoff", "{ project, completed, priorities, startHere }"],
   ["User Profile Extraction", FileJson, "/api/extract-profile", "{ micro, compact, full, memoryFacts }"],

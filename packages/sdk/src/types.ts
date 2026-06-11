@@ -15,7 +15,6 @@ export type ContextRequest = {
 export type SummarizeResponse = {
   mode: "micro" | "compact" | "extended" | "debug";
   summary?: string;
-  tokenReductionEstimate?: number;
   micro?: string;
   compact?: string;
   extended?: string;
@@ -25,23 +24,16 @@ export type SummarizeResponse = {
     blockers: string[];
     next: string[];
   };
-  inputTokens?: number;
-  microTokens?: number;
-  compactTokens?: number;
-  extendedTokens?: number;
-  microReductionPercent?: number;
-  compactReductionPercent?: number;
-  extendedReductionPercent?: number;
   keyDecisions?: string[];
   actionItems?: string[];
   openQuestions?: string[];
   risks?: string[];
-  tokenMetrics?: {
-    inputTokens: number;
-    outputTokens: number;
-    microTokens: number;
+  metrics: {
     compactTokens: number;
-    extendedTokens: number;
+    stateTokens: number;
+    totalOutputTokens: number;
+    reductionPercent: number;
+    latencyMs: number;
   };
   confidence?: number;
 };

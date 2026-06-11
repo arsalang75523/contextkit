@@ -41,7 +41,6 @@ const errorSchema = z.object({
 const summarizeResponse = z.object({
   mode: z.enum(["micro", "compact", "extended", "debug"]),
   summary: z.string().optional(),
-  tokenReductionEstimate: z.number().optional(),
   micro: z.string().optional(),
   compact: z.string().optional(),
   extended: z.string().optional(),
@@ -51,24 +50,17 @@ const summarizeResponse = z.object({
     blockers: z.array(z.string()),
     next: z.array(z.string())
   }),
-  inputTokens: z.number().optional(),
-  microTokens: z.number().optional(),
-  compactTokens: z.number().optional(),
-  extendedTokens: z.number().optional(),
-  microReductionPercent: z.number().optional(),
-  compactReductionPercent: z.number().optional(),
-  extendedReductionPercent: z.number().optional(),
   keyDecisions: z.array(z.string()).optional(),
   actionItems: z.array(z.string()).optional(),
   openQuestions: z.array(z.string()).optional(),
   risks: z.array(z.string()).optional(),
-  tokenMetrics: z.object({
-    inputTokens: z.number(),
-    outputTokens: z.number(),
-    microTokens: z.number(),
+  metrics: z.object({
     compactTokens: z.number(),
-    extendedTokens: z.number()
-  }).optional(),
+    stateTokens: z.number(),
+    totalOutputTokens: z.number(),
+    reductionPercent: z.number(),
+    latencyMs: z.number()
+  }),
   confidence: z.number().optional()
 });
 

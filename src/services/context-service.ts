@@ -23,6 +23,7 @@ export class ContextService {
   constructor(private readonly serviceContext: ServiceContext) {}
 
   async summarize(request: ConversationRequest): Promise<SummarizeResponse> {
+    const startedAt = Date.now();
     const output = await this.generate("summarize", request);
     const mode = request.mode ?? "micro";
     const inputTokens = estimateTokens(request.messages);
@@ -50,76 +51,34 @@ export class ContextService {
     const microTokens = estimateTokens(micro);
     const compactTokens = estimateTokens(compact);
     const extendedTokens = estimateTokens(extended);
-    const microStateTokens = estimateTokens(JSON.stringify(responseState));
-    const compactStateTokens = microStateTokens;
-    const extendedStateTokens = microStateTokens;
+    const stateTokens = estimateTokens(JSON.stringify(responseState));
+    const selectedTokens = mode === "extended" ? extendedTokens : mode === "compact" ? compactTokens : microTokens;
+    const totalOutputTokens = selectedTokens + stateTokens;
     const metrics = {
-      inputTokens,
-      microTokens,
-      compactTokens,
-      extendedTokens,
-      microStateTokens,
-      compactStateTokens,
-      extendedStateTokens,
-      totalOutputTokens: estimateTokens(JSON.stringify({ summary, micro, compact, extended, state: stateValue, keyDecisions, actionItems, openQuestions, risks })),
-      microReductionPercent: estimateReduction(inputTokens, microTokens + microStateTokens),
-      compactReductionPercent: estimateReduction(inputTokens, compactTokens + compactStateTokens),
-      extendedReductionPercent: estimateReduction(inputTokens, extendedTokens + extendedStateTokens)
-    };
-    const microMetrics = {
-      inputTokens,
-      microTokens,
-      stateTokens: microStateTokens,
-      totalOutputTokens: estimateTokens(JSON.stringify({ mode: "micro", micro, state: responseState })),
-      reductionPercent: estimateReduction(inputTokens, microTokens + microStateTokens)
-    };
-    const compactMetrics = {
-      inputTokens,
-      compactTokens,
-      stateTokens: compactStateTokens,
-      totalOutputTokens: estimateTokens(JSON.stringify({ mode: "compact", compact, state: responseState })),
-      reductionPercent: estimateReduction(inputTokens, compactTokens + compactStateTokens)
-    };
-    const extendedMetrics = {
-      inputTokens,
-      extendedTokens,
-      stateTokens: extendedStateTokens,
-      totalOutputTokens: estimateTokens(JSON.stringify({ mode: "extended", extended, state: responseState })),
-      reductionPercent: estimateReduction(inputTokens, extendedTokens + extendedStateTokens)
+      compactTokens: selectedTokens,
+      stateTokens,
+      totalOutputTokens,
+      reductionPercent: estimateReduction(inputTokens, totalOutputTokens),
+      latencyMs: Date.now() - startedAt
     };
     const debugResponse = {
       mode,
       summary,
-      tokenReductionEstimate: estimateReduction(inputTokens, compactTokens || estimateTokens(summary)),
       micro,
       compact,
       extended,
       state: responseState,
-      inputTokens,
-      microTokens,
-      compactTokens,
-      extendedTokens,
-      microReductionPercent: metrics.microReductionPercent,
-      compactReductionPercent: metrics.compactReductionPercent,
-      extendedReductionPercent: metrics.extendedReductionPercent,
       keyDecisions,
       actionItems,
       openQuestions,
       risks,
-      tokenMetrics: {
-        inputTokens,
-        outputTokens: metrics.totalOutputTokens,
-        microTokens,
-        compactTokens,
-        extendedTokens
-      },
       metrics,
       confidence: confidence(output.confidence)
     };
     if (mode === "debug") return debugResponse;
-    if (mode === "extended") return { mode, extended, state: responseState, metrics: extendedMetrics };
-    if (mode === "compact") return { mode, compact, state: responseState, metrics: compactMetrics };
-    return { mode: "micro", micro, state: responseState, metrics: microMetrics };
+    if (mode === "extended") return { mode, extended, state: responseState, metrics };
+    if (mode === "compact") return { mode, compact, state: responseState, metrics };
+    return { mode: "micro", micro, state: responseState, metrics };
   }
 
   async compress(request: ConversationRequest): Promise<CompressContextResponse> {
