@@ -29,6 +29,7 @@ export type SummarizeResponse = {
   openQuestions?: string[];
   risks?: string[];
   metrics: {
+    inputTokens: number;
     compactTokens: number;
     stateTokens: number;
     totalOutputTokens: number;

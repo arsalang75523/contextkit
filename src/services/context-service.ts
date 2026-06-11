@@ -55,6 +55,7 @@ export class ContextService {
     const selectedTokens = mode === "extended" ? extendedTokens : mode === "compact" ? compactTokens : microTokens;
     const totalOutputTokens = selectedTokens + stateTokens;
     const metrics = {
+      inputTokens,
       compactTokens: selectedTokens,
       stateTokens,
       totalOutputTokens,

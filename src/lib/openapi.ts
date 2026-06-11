@@ -55,6 +55,7 @@ const summarizeResponse = z.object({
   openQuestions: z.array(z.string()).optional(),
   risks: z.array(z.string()).optional(),
   metrics: z.object({
+    inputTokens: z.number(),
     compactTokens: z.number(),
     stateTokens: z.number(),
     totalOutputTokens: z.number(),

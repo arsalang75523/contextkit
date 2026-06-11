@@ -188,17 +188,25 @@ dashboardSessionRoutes.post("/playground/run", zValidator("json", playgroundRunS
     status: "success"
   });
 
-  return c.json({
+  const payload = {
     endpoint: body.endpoint,
     requestId: c.get("requestId"),
     response: result,
+    quota
+  };
+
+  if (body.endpoint === "summarize") {
+    return c.json(payload);
+  }
+
+  return c.json({
+    ...payload,
     metrics: {
       inputTokens,
       outputTokens,
       reductionPercent: estimateReduction(inputTokens, outputTokens),
       latencyMs
-    },
-    quota
+    }
   });
 });
 
