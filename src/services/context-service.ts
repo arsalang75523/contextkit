@@ -162,27 +162,39 @@ export class ContextService {
     const averageConfidence = facts.length > 0 ? Number((facts.reduce((total, item) => total + item.confidence, 0) / facts.length).toFixed(2)) : confidence(output.confidence);
     const micro = {
       identity: identityValue,
-      preferences: preferences.slice(0, 3),
-      goals: goals.slice(0, 3)
+      preferences: preferences.slice(0, 2),
+      goals: goals.slice(0, 2)
     };
+    const compactPreferences = uniqueMemoryList(preferences, micro.preferences).slice(0, 4);
+    const compactGoals = uniqueMemoryList(goals, micro.goals).slice(0, 4);
+    const compactTraits = uniqueMemoryList(inferredTraits, compactPreferences).slice(0, 4);
     const compact = {
       identity: identityValue,
-      skills: skills.slice(0, 6),
-      interests: interests.slice(0, 6),
-      preferences: preferences.slice(0, 6),
-      goals: goals.slice(0, 6),
-      traits: inferredTraits.slice(0, 6)
+      skills: skills.slice(0, 5),
+      interests: interests.slice(0, 5),
+      preferences: compactPreferences,
+      goals: compactGoals,
+      traits: compactTraits
     };
+    const compactUsed = [
+      ...compact.skills,
+      ...compact.interests,
+      ...compact.preferences,
+      ...compact.goals,
+      ...compact.traits,
+      ...micro.preferences,
+      ...micro.goals
+    ];
     const full = {
       identity: identityValue,
-      skills,
-      interests,
-      stablePreferences: preferences,
-      currentGoals: goals,
-      futurePlans,
-      inferredTraits,
-      stableMemories,
-      evolvingMemories
+      skills: uniqueMemoryList(skills, compact.skills),
+      interests: uniqueMemoryList(interests, compact.interests),
+      stablePreferences: uniqueMemoryList(preferences, compactUsed),
+      currentGoals: uniqueMemoryList(goals, compactUsed),
+      futurePlans: uniqueMemoryList(futurePlans, compactUsed),
+      inferredTraits: uniqueMemoryList(inferredTraits, compactUsed),
+      stableMemories: uniqueMemoryList(stableMemories, compactUsed),
+      evolvingMemories: uniqueMemoryList(evolvingMemories, compactUsed)
     };
 
     return {
@@ -192,8 +204,8 @@ export class ContextService {
       full,
       memoryFacts: facts,
       interests,
-      riskTolerance: String(output.riskTolerance ?? "unknown"),
-      communicationStyle: preferences[0] ?? String(output.communicationStyle ?? "unknown"),
+      riskTolerance: cleanMemoryText(output.riskTolerance) || "unknown",
+      communicationStyle: preferences[0] ?? cleanMemoryText(output.communicationStyle) ?? "unknown",
       preferences,
       importantContext: uniqueMemoryList(output.importantContext, [...preferences, ...goals, ...interests]),
       identity: identityValue,
@@ -219,18 +231,17 @@ export class ContextService {
     const stablePreferences = uniqueMemoryList(output.stablePreferences);
     const longTermGoals = uniqueMemoryList(output.longTermGoals);
     const legacyStableMemories = uniqueMemoryList(output.stableMemories, stablePreferences);
-    const evolvingPreferenceValues = uniqueMemoryList(output.evolvingPreferences, stablePreferences);
-    const legacyEvolvingMemories = uniqueMemoryList(output.evolvingMemories, [...longTermGoals, ...evolvingPreferenceValues]);
+    const evolvingPreferenceValues = uniqueMemoryList(output.evolvingPreferences, [...stablePreferences, ...longTermGoals]);
+    const legacyEvolvingMemories = uniqueMemoryList(output.evolvingMemories, [...longTermGoals, ...evolvingPreferenceValues, ...stablePreferences, ...legacyStableMemories]);
     const deprecatedMemories = uniqueMemoryList([output.deprecatedMemories, output.supersededMemories]);
     const activeMemories = canonicalMemories(output.activeMemories, [
       ...stablePreferences.map((fact) => ({ fact, category: "preference", stability: "stable" as const, confidence: 0.95 })),
       ...legacyStableMemories.map((fact) => ({ fact, category: "memory", stability: "stable" as const, confidence: 0.85 }))
-    ], "stable") as Array<{ fact: string; category: string; stability: "stable"; confidence: number }>;
+    ], "stable", deprecatedMemories) as Array<{ fact: string; category: string; stability: "stable"; confidence: number }>;
     const evolvingMemories = canonicalMemories(output.evolvingMemories, [
       ...evolvingPreferenceValues.map((fact) => ({ fact, category: "preference", stability: "evolving" as const, confidence: 0.85 })),
-      ...longTermGoals.map((fact) => ({ fact, category: "goal", stability: "evolving" as const, confidence: 0.9 })),
       ...legacyEvolvingMemories.map((fact) => ({ fact, category: "memory", stability: "evolving" as const, confidence: 0.8 }))
-    ], "evolving", activeMemories.map((item) => item.fact)) as Array<{ fact: string; category: string; stability: "evolving"; confidence: number }>;
+    ], "evolving", [...activeMemories.map((item) => item.fact), ...longTermGoals, ...deprecatedMemories]) as Array<{ fact: string; category: string; stability: "evolving"; confidence: number }>;
     const conflictValue = canonicalMemoryConflicts(output.conflicts ?? output.memoryConflicts ?? output.supersededMemories);
     const confidenceValue = [...activeMemories, ...evolvingMemories].length > 0
       ? Number(([...activeMemories, ...evolvingMemories].reduce((total, item) => total + item.confidence, 0) / [...activeMemories, ...evolvingMemories].length).toFixed(2))
@@ -272,12 +283,12 @@ export class ContextService {
 }
 
 function arrayOfStrings(value: unknown): string[] {
-  return Array.isArray(value) ? value.map(String).filter(Boolean) : [];
+  return Array.isArray(value) ? value.map(cleanMemoryText).filter(Boolean) : [];
 }
 
 function confidence(value: unknown) {
   const number = Number(value);
-  return Number.isFinite(number) ? Number(Math.max(0, Math.min(1, number)).toFixed(2)) : 0;
+  return Number.isFinite(number) ? Number(Math.max(0.75, Math.min(0.99, number)).toFixed(2)) : 0.85;
 }
 
 function summarizeState(value: unknown) {
@@ -350,8 +361,8 @@ function uniqueStrings(items: string[]) {
 }
 
 function uniqueMemoryList(value: unknown, exclude: string[] = []) {
-  const raw = Array.isArray(value) ? value.flatMap((item) => Array.isArray(item) ? item : [item]) : Array.isArray(exclude) && Array.isArray(value) ? value : [];
-  const values = raw.length > 0 ? raw.map(String) : arrayOfStrings(value);
+  const raw = Array.isArray(value) ? value.flatMap((item) => Array.isArray(item) ? item : [item]) : [];
+  const values = raw.length > 0 ? raw.map(cleanMemoryText) : arrayOfStrings(value);
   const blocked = new Set(exclude.map(normalizeMemoryFact));
   const seen = new Set<string>();
   const result: string[] = [];
@@ -370,10 +381,10 @@ function memoryFacts(value: unknown, fallback: Record<string, string[]>) {
   const explicit = Array.isArray(value) ? value.map((item) => {
     const record = item && typeof item === "object" ? item as Record<string, unknown> : {};
     const confidenceValue = confidence(record.confidence ?? 0.8);
-    if (confidenceValue < 0.6) return null;
+    if (confidenceValue < 0.75) return null;
     return {
-      fact: canonicalMemoryLabel(String(record.fact ?? "")),
-      category: String(record.category ?? "memory"),
+      fact: canonicalMemoryLabel(cleanMemoryText(record.fact)),
+      category: canonicalCategory(record.category),
       stability: String(record.stability) === "evolving" ? "evolving" as const : "stable" as const,
       confidence: confidenceValue
     };
@@ -391,7 +402,7 @@ function memoryFacts(value: unknown, fallback: Record<string, string[]>) {
   const seen = new Set<string>();
   return [...explicit, ...generated].filter((item) => {
     const key = normalizeMemoryFact(item.fact);
-    if (!key || item.confidence < 0.6 || seen.has(key)) return false;
+      if (!key || item.confidence < 0.75 || seen.has(key)) return false;
     seen.add(key);
     return true;
   });
@@ -406,7 +417,7 @@ function canonicalMemories(
   const explicit = Array.isArray(value) ? value.map((item) => {
     const record = item && typeof item === "object" ? item as Record<string, unknown> : {};
     return {
-      fact: canonicalMemoryLabel(String(record.fact ?? "")),
+      fact: canonicalMemoryLabel(cleanMemoryText(record.fact)),
       category: canonicalCategory(record.category),
       stability,
       confidence: confidence(record.confidence ?? 0.8)
@@ -423,7 +434,7 @@ function canonicalMemories(
     }))
     .filter((item) => {
       const key = normalizeMemoryFact(item.fact);
-      if (!key || item.confidence < 0.6 || blocked.has(key) || seen.has(key)) return false;
+      if (!key || item.confidence < 0.75 || blocked.has(key) || seen.has(key)) return false;
       seen.add(key);
       return true;
     });
@@ -435,20 +446,21 @@ function canonicalMemoryConflicts(value: unknown) {
   return value
     .map((item) => {
       if (typeof item === "string") {
-        return { old: canonicalMemoryLabel(item), new: "unknown", reason: "superseded" };
+        return null;
       }
       const record = item && typeof item === "object" ? item as Record<string, unknown> : {};
-      const oldValue = canonicalMemoryLabel(String(record.old ?? arrayOfStrings(record.superseded)[0] ?? ""));
-      const newValue = canonicalMemoryLabel(String(record.new ?? record.current ?? ""));
+      const oldValue = canonicalMemoryLabel(cleanMemoryText(record.old) || arrayOfStrings(record.superseded)[0] || "");
+      const newValue = canonicalMemoryLabel(cleanMemoryText(record.new) || cleanMemoryText(record.current));
       return {
         old: oldValue,
         new: newValue,
-        reason: String(record.reason ?? "superseded")
+        reason: cleanMemoryText(record.reason) || "superseded"
       };
     })
-    .filter((item) => {
+    .filter((item): item is { old: string; new: string; reason: string } => {
+      if (!item) return false;
       const key = `${normalizeMemoryFact(item.old)}:${normalizeMemoryFact(item.new)}`;
-      if (!item.old || item.old === "unknown" || seen.has(key)) return false;
+      if (!item.old || !item.new || item.old === item.new || seen.has(key)) return false;
       seen.add(key);
       return true;
     });
@@ -461,13 +473,23 @@ function canonicalCategory(value: unknown) {
 }
 
 function canonicalMemoryLabel(value: string) {
-  return normalizeSummary(value)
+  return cleanMemoryText(value)
     .replace(/^prefers?\s+/i, "")
     .replace(/^likes?\s+/i, "")
     .replace(/^dislikes?\s+/i, "avoids ")
     .replace(/^avoids?\s+meetings?$/i, "async communication")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function cleanMemoryText(value: unknown) {
+  if (typeof value !== "string" && typeof value !== "number" && typeof value !== "boolean") return "";
+  const text = normalizeSummary(String(value))
+    .replace(/\b(undefined|null|nan|\[object object\])\b/gi, "")
+    .replace(/^unknown$/i, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  return text;
 }
 
 function normalizeMemoryFact(value: string) {
