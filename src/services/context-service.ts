@@ -27,7 +27,7 @@ export class ContextService {
     const mode = request.mode ?? "micro";
     const inputTokens = estimateTokens(request.messages);
     const stateValue = dedupeSummaryState(summarizeState(output.state));
-    const responseState = compactContinuityState(stateValue);
+    const responseState = extractedContinuityState(stateValue);
     const keyDecisions = arrayOfStrings(output.keyDecisions);
     const actionItems = arrayOfStrings(output.actionItems);
     const openQuestions = arrayOfStrings(output.openQuestions);
@@ -337,12 +337,12 @@ function summarizeState(value: unknown) {
   };
 }
 
-function compactContinuityState(stateValue: ReturnType<typeof summarizeState>) {
+function extractedContinuityState(stateValue: ReturnType<typeof summarizeState>) {
   return {
-    goal: compactStatePhrase(stateValue.goal, 12),
-    status: compactStatePhrase(stateValue.status, 10),
-    blockers: stateValue.blockers.slice(0, 5).map((item) => compactStatePhrase(item, 6)).filter((item) => item !== "unknown"),
-    next: stateValue.nextSteps.slice(0, 5).map((item) => compactStatePhrase(item, 5)).filter((item) => item !== "unknown")
+    goal: completeStateText(stateValue.goal) || "unknown",
+    status: completeStateText(stateValue.status) || "unknown",
+    blockers: completeStateList(stateValue.blockers),
+    next: completeStateList(stateValue.nextSteps)
   };
 }
 
@@ -537,16 +537,20 @@ function shortStateValue(value: string, maxTokens: number) {
   return completeTextWithinBudget(normalized, maxTokens) || normalized;
 }
 
-function compactStatePhrase(value: string, maxTokens: number) {
-  const normalized = normalizeSummary(value)
-    .replace(/\b(implement|implementation of|requirements? defined with|strict enforcement rules? established for|including|because|while|that|which)\b/gi, "")
-    .replace(/\s+/g, " ")
-    .trim();
-  if (!normalized || normalized === "unknown") return "unknown";
-  const complete = completeTextWithinBudget(normalized, maxTokens);
-  if (complete) return complete;
-  const words = normalized.split(/\s+/).filter((word) => !/^(and|or|to|for|with|the|a|an|of|in|on)$/i.test(word));
-  return words.slice(0, maxTokens).join(" ") || normalized;
+function completeStateList(items: string[]) {
+  return uniqueStrings(items)
+    .map(completeStateText)
+    .filter((item): item is string => Boolean(item));
+}
+
+function completeStateText(value: string) {
+  const cleaned = normalizeSummary(value).replace(/\s*[,;:([–-]\s*$/g, "").trim();
+  if (!cleaned || cleaned === "unknown" || hasInvalidStateEnding(cleaned)) return "";
+  return cleaned;
+}
+
+function hasInvalidStateEnding(value: string) {
+  return /(?:,|:|\(|\band\b|\bor\b|\bwith\b|\bincluding\b|\bsuch as\b)$/i.test(value.trim());
 }
 
 function compactSentence(value: string) {
