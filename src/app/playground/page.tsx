@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Calculator, Play, RotateCcw, Terminal } from "lucide-react";
+import { Play, RotateCcw, Terminal } from "lucide-react";
 import { CodeBlock } from "@/components/code-block";
 import { endpoints } from "@/content/docs";
 import { bankrHostedUrl, bankrX402Command } from "@/lib/bankr-x402";
@@ -19,12 +19,8 @@ export default function PlaygroundPage() {
   const [endpoint, setEndpoint] = useState("summarize");
   const [summaryMode, setSummaryMode] = useState<"micro" | "compact" | "extended" | "debug">("micro");
   const [input, setInput] = useState(seed);
-  const [apiKey, setApiKey] = useState("");
-  const [tokenResult, setTokenResult] = useState<object | null>(null);
   const [runResult, setRunResult] = useState<object | null>(null);
-  const [error, setError] = useState("");
   const [isRunning, setIsRunning] = useState(false);
-  const [isEstimating, setIsEstimating] = useState(false);
 
   const active = useMemo(() => endpoints.find((item) => item.slug === endpoint) ?? endpoints[0], [endpoint]);
   const payload = useMemo(() => {
@@ -38,7 +34,6 @@ export default function PlaygroundPage() {
   const command = useMemo(() => bankrX402Command(active.slug, payload), [active.slug, payload]);
 
   function runLivePlayground() {
-    setError("");
     setRunResult(null);
     setIsRunning(true);
     void (async () => {
@@ -51,36 +46,10 @@ export default function PlaygroundPage() {
         });
         const result = (await response.json()) as Record<string, unknown>;
         setRunResult(result);
-        if (!response.ok) {
-          setError(JSON.stringify(result, null, 2));
-        }
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Invalid JSON input.");
+        setRunResult({ error: err instanceof Error ? err.message : "Invalid JSON input." });
       } finally {
         setIsRunning(false);
-      }
-    })();
-  }
-
-  function estimateTokens() {
-    setError("");
-    setIsEstimating(true);
-    void (async () => {
-      try {
-        const messages = JSON.parse(input);
-        const response = await fetch("/api/tokens/estimate", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${apiKey}`
-          },
-          body: JSON.stringify({ modelFamily: "openai", input: messages })
-        });
-        setTokenResult(await response.json());
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Invalid JSON input.");
-      } finally {
-        setIsEstimating(false);
       }
     })();
   }
@@ -149,20 +118,10 @@ export default function PlaygroundPage() {
               onChange={(event) => setInput(event.target.value)}
               className="min-h-[430px] w-full resize-y rounded-md border border-line bg-ink/70 p-4 font-mono text-sm leading-7 text-white outline-none focus:border-mint/60"
             />
-            <div className="mt-4 grid gap-3 rounded-md border border-line bg-carbon/60 p-4">
-              <label htmlFor="api-key" className="text-sm text-white/55">
-                Optional ContextKit API key for token estimation
-              </label>
-              <p className="text-sm leading-6 text-white/45">
-              This only measures token counts for developers who already have a ContextKit key. To run the full process here, use the live playground button below.
-              </p>
+            <div className="mt-4 rounded-md border border-line bg-carbon/60 p-4">
               <div className="flex flex-col gap-3 sm:flex-row">
-                <input id="api-key" value={apiKey} onChange={(event) => setApiKey(event.target.value)} placeholder="ck_live_... or ck_test_..." className="h-11 flex-1 rounded-md border border-line bg-ink/80 px-3 font-mono text-sm text-white outline-none focus:border-mint" />
-                <button type="button" onClick={runLivePlayground} disabled={isRunning || isEstimating} className="inline-flex h-11 items-center justify-center gap-2 rounded-md bg-aqua px-5 text-sm font-medium text-ink disabled:cursor-not-allowed disabled:opacity-60">
+                <button type="button" onClick={runLivePlayground} disabled={isRunning} className="inline-flex h-11 items-center justify-center gap-2 rounded-md bg-aqua px-5 text-sm font-medium text-ink disabled:cursor-not-allowed disabled:opacity-60">
                   {isRunning ? <Spinner /> : <Play className="h-4 w-4" />} {isRunning ? "Running..." : "Run full process"}
-                </button>
-                <button type="button" onClick={estimateTokens} disabled={isRunning || isEstimating} className="inline-flex h-11 items-center justify-center gap-2 rounded-md bg-mint px-5 text-sm font-medium text-ink disabled:cursor-not-allowed disabled:opacity-60">
-                  {isEstimating ? <Spinner /> : <Calculator className="h-4 w-4" />} {isEstimating ? "Estimating..." : "Estimate tokens"}
                 </button>
                 <button type="button" onClick={() => setInput(seed)} className="inline-flex h-11 items-center justify-center gap-2 rounded-md border border-line px-5 text-sm text-white/75">
                   <RotateCcw className="h-4 w-4" /> Reset
@@ -197,10 +156,6 @@ export default function PlaygroundPage() {
                 Copy this command into a terminal where <code>bankr login</code> is already configured. Bankr will ask for payment approval, then return the ContextKit JSON response.
               </p>
               <CodeBlock code={command} />
-            </div>
-            <div>
-              <p className="mb-3 text-sm uppercase tracking-[0.18em] text-white/45">API key token estimate</p>
-              <CodeBlock code={JSON.stringify(error ? { error } : tokenResult ?? { status: "Enter an API key to estimate tokens without paying x402." }, null, 2)} />
             </div>
           </section>
         </div>
