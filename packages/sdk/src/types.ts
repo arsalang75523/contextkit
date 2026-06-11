@@ -23,9 +23,7 @@ export type SummarizeResponse = {
     goal: string;
     status: string;
     blockers: string[];
-    decisions: string[];
-    priorities: string[];
-    nextSteps: string[];
+    next: string[];
   };
   inputTokens?: number;
   microTokens?: number;

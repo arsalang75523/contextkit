@@ -49,9 +49,7 @@ const summarizeResponse = z.object({
     goal: z.string(),
     status: z.string(),
     blockers: z.array(z.string()),
-    decisions: z.array(z.string()),
-    priorities: z.array(z.string()),
-    nextSteps: z.array(z.string())
+    next: z.array(z.string())
   }),
   inputTokens: z.number().optional(),
   microTokens: z.number().optional(),
