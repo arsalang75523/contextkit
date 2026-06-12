@@ -3,13 +3,13 @@ import { Section } from "@/components/section";
 import { endpoints } from "@/content/docs";
 import { bankrX402Command } from "@/lib/bankr-x402";
 
-const quickStart = `npm install contextkit
+const quickStart = `npm install @basedchef/contextkit
 
 ${bankrX402Command("summarize", {
   messages: [{ role: "user", content: "Summarize this long agent conversation." }]
 })}`;
 
-const tsExample = `import { ContextKit } from "contextkit";
+const tsExample = `import { ContextKit } from "@basedchef/contextkit";
 
 const client = new ContextKit({
   apiKey: process.env.CONTEXTKIT_API_KEY!,

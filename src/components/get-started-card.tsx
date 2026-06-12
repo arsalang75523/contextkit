@@ -2,7 +2,7 @@ import { Package, Terminal } from "lucide-react";
 import { CodeBlock } from "@/components/code-block";
 import { bankrX402Command } from "@/lib/bankr-x402";
 
-const installSample = `npm install contextkit
+const installSample = `npm install @basedchef/contextkit
 
 curl -X POST https://91.107.248.223.sslip.io/api/dashboard/signup \\
   -H "Content-Type: application/json" \\

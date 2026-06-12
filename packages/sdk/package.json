@@ -1,12 +1,37 @@
 {
-  "name": "contextkit",
-  "version": "0.1.0",
-  "description": "TypeScript SDK for ContextKit context infrastructure APIs.",
+  "name": "@basedchef/contextkit",
+  "version": "0.1.1",
+  "description": "TypeScript SDK for ContextKit, a Bankr-hosted x402 context API for AI agents, memory compression, handoffs, profiles, and webhooks.",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "files": ["dist", "README.md"],
+  "files": ["dist", "README.md", "LICENSE"],
+  "license": "MIT",
+  "author": "basedchef",
+  "homepage": "https://91.107.248.223.sslip.io",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/arsalang75523/contextkit.git",
+    "directory": "packages/sdk"
+  },
+  "bugs": {
+    "url": "https://github.com/arsalang75523/contextkit/issues"
+  },
+  "keywords": [
+    "contextkit",
+    "ai",
+    "ai-agents",
+    "agent-memory",
+    "context-compression",
+    "context-engineering",
+    "summarization",
+    "handoff",
+    "webhooks",
+    "x402",
+    "bankr",
+    "typescript-sdk"
+  ],
   "sideEffects": false,
   "publishConfig": {
     "access": "public"

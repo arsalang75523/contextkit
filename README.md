@@ -189,7 +189,7 @@ The spec is generated from Zod request/response schemas and documents API-key au
 ## TypeScript SDK
 
 ```ts
-import { ContextKit } from "contextkit";
+import { ContextKit } from "@basedchef/contextkit";
 
 const client = new ContextKit({
   apiKey: process.env.CONTEXTKIT_API_KEY!,
