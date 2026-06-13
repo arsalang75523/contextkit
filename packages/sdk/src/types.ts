@@ -155,4 +155,23 @@ export type MemoryEnrichmentResponse = {
   confidence: number;
 };
 
+export type CreditEvent = {
+  id: string;
+  ownerId: string;
+  type: "grant" | "debit" | "refund";
+  amountUsd: number;
+  balanceAfterUsd: number;
+  route?: string;
+  requestId?: string;
+  apiKeyId?: string;
+  note?: string;
+  createdAt: string;
+};
+
+export type CreditsResponse = {
+  ownerId: string;
+  balanceUsd: number;
+  events: CreditEvent[];
+};
+
 export type X402PaymentHandler = (challenge: unknown, request: RequestInit & { url: string }) => Promise<string>;

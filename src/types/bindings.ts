@@ -8,6 +8,12 @@ export type AppBindings = {
       paymentId: string;
       payer?: string;
     };
+    creditCharge?: {
+      ownerId: string;
+      apiKeyId?: string;
+      route: string;
+      amountUsd: number;
+    };
     apiKey?: {
       id: string;
       hash: string;

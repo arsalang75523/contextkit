@@ -13,8 +13,7 @@ const tsExample = `import { ContextKit } from "@basedchef/contextkit";
 
 const client = new ContextKit({
   apiKey: process.env.CONTEXTKIT_API_KEY!,
-  baseUrl: "https://91.107.248.223.sslip.io",
-  x402: async (challenge) => wallet.pay(challenge)
+  baseUrl: "https://91.107.248.223.sslip.io"
 });
 
 const context = await client.compressContext({ messages });`;
@@ -57,10 +56,10 @@ export default function DocsPage() {
             </DocSection>
             <DocSection id="api-key" title="API Key">
               <p>
-                API keys are not payment credentials. They are for dashboard and operational workflows: analytics, usage, webhook register/replay, token estimates, direct memory enrichment, and key management.
+                API keys identify dashboard accounts and SDK integrations. They are used for analytics, usage, webhook register/replay, token estimates, direct memory enrichment, key management, and API-credit billing.
               </p>
               <p className="mt-3">
-                Important: calling <code>/api/summarize</code> with only an API key does not make summarization free. Direct summarize, compress, handoff, and profile routes still require x402 payment. For normal paid usage, use Bankr-hosted x402.
+                If the API key owner has ContextKit credits, direct summarize, compress, handoff, and profile routes run without Bankr and deduct the endpoint price from the account balance. If credits are insufficient, direct routes fall back to a normal x402 payment challenge.
               </p>
               <CodeBlock code={directApiExample} />
             </DocSection>
@@ -69,11 +68,11 @@ export default function DocsPage() {
                 The SDK is a TypeScript wrapper for advanced developers who want to integrate direct ContextKit calls inside their own app. It is not the main product path.
               </p>
               <p className="mt-3">
-                The SDK can add the API key header, send typed requests, call an x402 handler when a 402 challenge appears, attach the payment payload, and return JSON. For paid summarize, compress, handoff, and profile calls, the SDK still needs a real x402 payer such as <code>wallet.pay(challenge)</code>.
+                The SDK can add the API key header, send typed requests, use account credits for paid endpoints, optionally call an x402 handler when a 402 challenge appears, and return JSON.
               </p>
               <CodeBlock code={tsExample} />
               <p className="mt-3 text-sm leading-6 text-white/55">
-                Summary: simple users and simple agents should use Bankr-hosted x402. Dashboard workflows use API keys. Advanced developers use SDK + API key + x402 payer.
+                Summary: simple users and simple agents can use Bankr-hosted x402. Developers can use SDK + API key + credits without Bankr. Advanced clients may still provide an optional x402 payer fallback.
               </p>
             </DocSection>
             <DocSection id="quick-start" title="Quick Start">
@@ -118,7 +117,7 @@ export default function DocsPage() {
               Webhook deliveries include `ContextKit-Signature`, `ContextKit-Event`, and `ContextKit-Request-Id` headers. Replay endpoints are available for audit recovery.
             </DocSection>
             <DocSection id="sdk-usage" title="SDK Usage">
-              SDK usage is advanced. If your app calls paid direct endpoints, provide both a ContextKit API key and a real x402 payment handler.
+              SDK usage is for direct app integrations. With API credits, paid direct endpoints work without Bankr. If credits run out, provide an optional x402 payment handler or add more credits.
               <CodeBlock code={tsExample} />
             </DocSection>
             <DocSection id="deployment" title="Deployment">

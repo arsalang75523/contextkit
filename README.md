@@ -193,7 +193,7 @@ import { ContextKit } from "@basedchef/contextkit";
 
 const client = new ContextKit({
   apiKey: process.env.CONTEXTKIT_API_KEY!,
-  x402: async (challenge) => wallet.pay(challenge)
+  baseUrl: "https://91.107.248.223.sslip.io"
 });
 
 const response = await client.handoff({ messages });

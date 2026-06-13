@@ -1,6 +1,6 @@
 {
   "name": "@basedchef/contextkit",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "TypeScript SDK for ContextKit, a Bankr-hosted x402 context API for AI agents, memory compression, handoffs, profiles, and webhooks.",
   "type": "module",
   "main": "./dist/index.cjs",

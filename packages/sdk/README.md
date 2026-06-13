@@ -2,7 +2,7 @@
 
 TypeScript SDK for ContextKit, a Bankr-hosted x402 context API for AI agents.
 
-Use it when you are building an advanced TypeScript integration that needs typed calls to ContextKit direct APIs, webhook verification, and optional x402 payment handling. For the simplest paid path, agents can call the Bankr-hosted x402 endpoints directly without this SDK.
+Use it when you are building a TypeScript integration that needs typed calls to ContextKit direct APIs, webhook verification, API-key credits, and optional x402 payment handling. For the simplest paid path, agents can still call the Bankr-hosted x402 endpoints directly without this SDK.
 
 ## Install
 
@@ -18,7 +18,9 @@ npm install @basedchef/contextkit
 - Extract durable user profile memory.
 - Estimate tokens for API-key workflows.
 - Verify signed ContextKit webhook deliveries.
-- Attach API keys and optional x402 payment handlers for direct API integrations.
+- Attach API keys for direct API integrations.
+- Use account credits so SDK users can call paid endpoints without Bankr.
+- Optionally attach an x402 payment handler when credits are not available.
 
 ## Quick Start
 
@@ -27,8 +29,7 @@ import { ContextKit } from "@basedchef/contextkit";
 
 const client = new ContextKit({
   apiKey: process.env.CONTEXTKIT_API_KEY!,
-  baseUrl: "https://91.107.248.223.sslip.io",
-  x402: async (challenge) => wallet.pay(challenge)
+  baseUrl: "https://91.107.248.223.sslip.io"
 });
 
 const response = await client.summarize({
@@ -50,6 +51,7 @@ await client.compressContext({ messages });
 await client.handoff({ messages });
 await client.extractProfile({ messages });
 await client.estimateTokens({ modelFamily: "openai", input: messages });
+await client.credits();
 ```
 
 ## Bankr-Hosted x402 Path
@@ -66,7 +68,16 @@ That flow requires no ContextKit API key, no npm package, and no SDK.
 
 ## Direct API Path
 
-The SDK is for advanced integrations. Direct paid generation routes still require x402 payment. API keys are used for dashboard operations, analytics, webhook management, token estimates, and selected direct API routes.
+The SDK is for direct API integrations. If the API key owner has ContextKit credits, paid generation routes run without Bankr and deduct the endpoint price from the account balance. If credits are insufficient, the API falls back to the standard x402 payment challenge.
+
+```ts
+const client = new ContextKit({
+  apiKey: process.env.CONTEXTKIT_API_KEY!,
+  baseUrl: "https://91.107.248.223.sslip.io"
+});
+```
+
+Optional x402 fallback:
 
 ```ts
 const client = new ContextKit({

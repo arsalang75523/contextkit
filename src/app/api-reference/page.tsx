@@ -15,11 +15,11 @@ export default function ApiReferencePage() {
           </div>
           <a href="/dashboard/login" className="rounded-md border border-mint/25 bg-mint/10 p-5 transition hover:border-mint/60">
             <h2 className="font-semibold text-white">Operations: API key</h2>
-            <p className="mt-2 text-sm leading-6 text-white/62">Use API keys for dashboard, analytics, webhooks, token estimates, direct memory enrichment, and key management. API keys are not payment credentials.</p>
+            <p className="mt-2 text-sm leading-6 text-white/62">Use API keys for dashboard, analytics, webhooks, token estimates, direct memory enrichment, key management, and credit-backed SDK calls.</p>
           </a>
           <div className="rounded-md border border-aqua/25 bg-aqua/10 p-5">
             <h2 className="font-semibold text-white">Advanced: SDK</h2>
-            <p className="mt-2 text-sm leading-6 text-white/62">Use the TypeScript SDK only when your app can provide both a ContextKit API key and a real x402 payer such as <code>wallet.pay</code>.</p>
+            <p className="mt-2 text-sm leading-6 text-white/62">Use the TypeScript SDK with a ContextKit API key. If the account has credits, paid endpoints work without Bankr; x402 can remain an optional fallback.</p>
           </div>
         </div>
         <GetStartedCard />
@@ -32,7 +32,7 @@ export default function ApiReferencePage() {
           </div>
           <div className="rounded-md border border-aqua/20 bg-aqua/10 p-5">
             <h2 className="font-semibold text-white">Advanced: direct API routes</h2>
-            <p className="mt-2 text-sm leading-6 text-white/60">Direct <code>/api/*</code> routes are for advanced integrations. API keys alone do not make paid context generation free; direct paid routes still need x402 payment.</p>
+            <p className="mt-2 text-sm leading-6 text-white/60">Direct <code>/api/*</code> routes are for SDK and server integrations. API credits let paid endpoints run without Bankr; insufficient credits fall back to x402 payment.</p>
           </div>
         </div>
         <div className="space-y-8">

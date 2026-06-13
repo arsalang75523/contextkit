@@ -7,6 +7,7 @@ import { estimateTokens } from "@/utils/tokens";
 import { ContextService } from "@/services/context-service";
 import { AnalyticsService } from "@/services/analytics-service";
 import { ApiKeyService } from "@/services/api-key-service";
+import { CreditService } from "@/services/credit-service";
 import { PaymentService } from "@/services/payment-service";
 import { x402PaymentRequired } from "@/middleware/x402";
 import { requireApiKey, requireInternalToken } from "@/middleware/auth";
@@ -19,7 +20,7 @@ import type { ConversationMessage, ConversationRequest } from "@/types/api";
 
 export const contextRoutes = new Hono<AppBindings>();
 
-contextRoutes.post("/summarize", requireApiKey("context:write"), apiKeyRateLimit(), x402PaymentRequired("summarize"), zValidator("json", conversationRequestSchema), async (c) => {
+contextRoutes.post("/summarize", requireApiKey("context:write"), apiKeyRateLimit(), apiCreditOrX402PaymentRequired("summarize"), zValidator("json", conversationRequestSchema), async (c) => {
   const request = { ...c.req.valid("json"), messages: sanitizeMessages(c.req.valid("json").messages) };
   const service = new ContextService({ env: c.env ?? {}, requestId: c.get("requestId") });
   const result = await service.summarize(request);
@@ -32,7 +33,7 @@ contextRoutes.post(
   "/compress-context",
   requireApiKey("context:write"),
   apiKeyRateLimit(),
-  x402PaymentRequired("compress-context"),
+  apiCreditOrX402PaymentRequired("compress-context"),
   zValidator("json", conversationRequestSchema),
   async (c) => {
     const request = { ...c.req.valid("json"), messages: sanitizeMessages(c.req.valid("json").messages) };
@@ -44,7 +45,7 @@ contextRoutes.post(
   }
 );
 
-contextRoutes.post("/handoff", requireApiKey("context:write"), apiKeyRateLimit(), x402PaymentRequired("handoff"), zValidator("json", conversationRequestSchema), async (c) => {
+contextRoutes.post("/handoff", requireApiKey("context:write"), apiKeyRateLimit(), apiCreditOrX402PaymentRequired("handoff"), zValidator("json", conversationRequestSchema), async (c) => {
   const request = { ...c.req.valid("json"), messages: sanitizeMessages(c.req.valid("json").messages) };
   const service = new ContextService({ env: c.env ?? {}, requestId: c.get("requestId") });
   const result = await service.handoff(request);
@@ -57,7 +58,7 @@ contextRoutes.post(
   "/extract-profile",
   requireApiKey("context:write"),
   apiKeyRateLimit(),
-  x402PaymentRequired("extract-profile"),
+  apiCreditOrX402PaymentRequired("extract-profile"),
   zValidator("json", conversationRequestSchema),
   async (c) => {
     const request = { ...c.req.valid("json"), messages: sanitizeMessages(c.req.valid("json").messages) };
@@ -204,6 +205,29 @@ async function markHostedPayment(c: Context<AppBindings>, endpoint: keyof typeof
   });
 }
 
+function apiCreditOrX402PaymentRequired(endpoint: keyof typeof endpointPricing) {
+  return async (c: Context<AppBindings>, next: () => Promise<void>) => {
+    const apiKey = c.get("apiKey");
+    if (apiKey) {
+      const ownerId = apiKey.ownerId ?? `api-key:${apiKey.id}`;
+      const amountUsd = endpointPricing[endpoint];
+      const credits = new CreditService(c.env ?? {});
+      if (await credits.canDebit(ownerId, amountUsd)) {
+        c.set("creditCharge", {
+          ownerId,
+          apiKeyId: apiKey.id,
+          route: `/${endpoint}`,
+          amountUsd
+        });
+        await next();
+        return;
+      }
+    }
+
+    return x402PaymentRequired(endpoint)(c, next);
+  };
+}
+
 async function complete(
   c: Context<AppBindings>,
   route: string,
@@ -213,7 +237,16 @@ async function complete(
 ) {
   const requestId = c.get("requestId");
   const payment = c.get("payment");
+  const creditCharge = c.get("creditCharge");
   const apiKey = c.get("apiKey");
+  const ownerId = apiKey?.ownerId ?? (apiKey ? `api-key:${apiKey.id}` : undefined);
+  if (creditCharge) {
+    await new CreditService(c.env ?? {}).debit({
+      ...creditCharge,
+      requestId
+    });
+  }
+
   await new AnalyticsService(c.env ?? {}).recordRequest({
     requestId,
     route,
@@ -222,13 +255,13 @@ async function complete(
     outputTokens: estimateTokens(output),
     paymentId,
     apiKeyId: apiKey?.id,
-    ownerId: apiKey?.ownerId,
-    amountUsd: payment?.amountUsd,
+    ownerId,
+    amountUsd: payment?.amountUsd ?? creditCharge?.amountUsd,
     status: "success"
   });
 
   if (apiKey) {
-    await new ApiKeyService(c.env ?? {}).recordUsage(apiKey.hash, route, payment?.amountUsd ?? 0);
+    await new ApiKeyService(c.env ?? {}).recordUsage(apiKey.hash, route, payment?.amountUsd ?? creditCharge?.amountUsd ?? 0);
   }
 
   if (payment) {

@@ -5,6 +5,8 @@ export type {
   CompressContextResponse,
   ContextRequest,
   ConversationMessage,
+  CreditEvent,
+  CreditsResponse,
   HandoffResponse,
   MemoryEnrichmentResponse,
   ProfileResponse,

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { CodeBlock } from "@/components/code-block";
 
-type View = "overview" | "keys" | "usage" | "webhooks" | "payments";
+type View = "overview" | "keys" | "usage" | "webhooks" | "payments" | "credits";
 type ApiData = Record<string, unknown>;
 
 const routes: Array<[View, string, string]> = [
@@ -12,7 +12,8 @@ const routes: Array<[View, string, string]> = [
   ["keys", "API Keys", "/api/auth/my-keys"],
   ["usage", "Usage", "/api/analytics/usage"],
   ["webhooks", "Webhooks", "/api/webhooks/deliveries"],
-  ["payments", "Payments", "/api/analytics/payments"]
+  ["payments", "Payments", "/api/analytics/payments"],
+  ["credits", "Credits", "/api/auth/credits"]
 ];
 
 const allScopes = ["context:write", "analytics:read", "webhooks:write", "keys:read"] as const;
@@ -140,7 +141,7 @@ export function DashboardClient({ view = "overview" }: { view?: View }) {
             <p className="text-sm uppercase tracking-[0.22em] text-mint">Developer Dashboard</p>
             <h1 className="mt-4 text-4xl font-semibold text-white md:text-6xl">Operate ContextKit in production.</h1>
             <p className="mt-4 max-w-3xl leading-7 text-white/60">
-              Sign up to create API keys, inspect usage, manage webhooks, and track ContextKit-side payment events. Bankr-hosted x402 calls still happen through Bankr; dashboard keys are for operations and advanced APIs.
+              Sign up to create API keys, inspect usage, manage webhooks, and track ContextKit-side payment events. API-key credits let SDK users call paid endpoints without Bankr; Bankr-hosted x402 remains the public pay-per-call path.
             </p>
           </div>
           <div className="flex gap-3">
@@ -153,7 +154,7 @@ export function DashboardClient({ view = "overview" }: { view?: View }) {
           </div>
         </div>
 
-        <div className="mt-8 grid gap-3 md:grid-cols-5">
+        <div className="mt-8 grid gap-3 md:grid-cols-6">
           {routes.map(([key, label]) => (
             <Link key={key} href={key === "overview" ? "/dashboard" : `/dashboard/${key}`} className={`rounded-md border px-4 py-3 text-sm ${view === key ? "border-mint bg-mint/10 text-mint" : "border-line text-white/65"}`}>
               {label}
@@ -244,6 +245,7 @@ function DashboardView({ view, data }: { view: View; data: ApiData | null }) {
   if (view === "overview") return <OverviewData data={data} />;
   if (view === "usage") return <UsageData data={data} />;
   if (view === "payments") return <PaymentsData data={data} />;
+  if (view === "credits") return <CreditsData data={data} />;
   if (view === "webhooks") return <WebhookData data={data} />;
   return null;
 }
@@ -312,6 +314,36 @@ function PaymentsData({ data }: { data: ApiData }) {
           </div>
         ))}
         {!payments.length ? <p className="text-sm text-white/45">No ContextKit-tracked payment events yet. Bankr historical earnings remain visible in `bankr x402 list`.</p> : null}
+      </div>
+    </section>
+  );
+}
+
+function CreditsData({ data }: { data: ApiData }) {
+  const events = Array.isArray(data.events) ? data.events as Array<Record<string, unknown>> : [];
+  return (
+    <section className="mt-6 rounded-md border border-line bg-white/[0.035] p-5">
+      <div className="grid gap-4 md:grid-cols-3">
+        <Metric label="API credit balance" value={`$${Number(data.balanceUsd ?? 0).toFixed(3)}`} />
+        <Metric label="Owner" value={String(data.ownerId ?? "unknown")} />
+        <Metric label="SDK mode" value="API key credits" />
+      </div>
+      <div className="mt-5 rounded-md border border-aqua/25 bg-aqua/10 p-4 text-sm leading-6 text-white/65">
+        SDK users can call summarize, compress, handoff, and profile without Bankr when this balance covers the endpoint price. If credits are insufficient, direct routes fall back to the normal x402 payment challenge.
+      </div>
+      <div className="mt-5 grid gap-3">
+        {events.slice(0, 10).map((event) => (
+          <div key={String(event.id)} className="rounded border border-line bg-ink/70 p-3 text-sm">
+            <div className="flex flex-col justify-between gap-2 md:flex-row">
+              <span className="font-mono text-mint">{String(event.type ?? "credit")}</span>
+              <span className="text-white/45">{String(event.createdAt ?? "")}</span>
+            </div>
+            <p className="mt-2 text-white/55">
+              amount ${String(event.amountUsd ?? 0)} · balance ${String(event.balanceAfterUsd ?? 0)} · {String(event.route ?? event.note ?? "")}
+            </p>
+          </div>
+        ))}
+        {!events.length ? <p className="text-sm text-white/45">No credit events yet. Add credits with the admin grant endpoint before using SDK paid routes without Bankr.</p> : null}
       </div>
     </section>
   );

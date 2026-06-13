@@ -1,6 +1,7 @@
 import type {
   CompressContextResponse,
   ContextRequest,
+  CreditsResponse,
   HandoffResponse,
   MemoryEnrichmentResponse,
   ProfileResponse,
@@ -51,6 +52,24 @@ export class ContextKit {
 
   async estimateTokens(input: unknown) {
     return this.post<{ inputTokens: number; compressedTokens: number; reductionPercent: number }>("/api/tokens/estimate", input);
+  }
+
+  credits() {
+    return this.get<CreditsResponse>("/api/auth/credits");
+  }
+
+  private async get<T>(path: string): Promise<T> {
+    const response = await this.fetcher(`${this.baseUrl.replace(/\/$/, "")}${path}`, {
+      headers: {
+        Authorization: `Bearer ${this.options.apiKey}`
+      }
+    });
+
+    if (response.ok) {
+      return (await response.json()) as T;
+    }
+
+    throw new ContextKitError(response.status, await response.text());
   }
 
   private async post<T>(path: string, body: unknown): Promise<T> {

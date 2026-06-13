@@ -26,17 +26,17 @@ export function GetStartedCard() {
         </div>
         <h3 className="mt-6 text-2xl font-semibold text-white">Three ways to use ContextKit.</h3>
         <p className="mt-4 leading-7 text-white/62">
-          Bankr-hosted x402 is the main path. API keys are for dashboard operations. The SDK is only for advanced TypeScript integrations that provide their own x402 payer.
+          Bankr-hosted x402 is the public pay-per-call path. API keys are for dashboard operations and credit-backed SDK calls. The SDK can run paid endpoints without Bankr when the account has credits.
         </p>
         <div className="mt-6 grid gap-3 text-sm text-white/65">
           <div className="rounded border border-line bg-ink/65 p-4">
             <span className="text-mint">1.</span> Simple users and agents: run the Bankr-hosted x402 command. No ContextKit API key, npm package, or SDK is required.
           </div>
           <div className="rounded border border-line bg-ink/65 p-4">
-            <span className="text-mint">2.</span> Dashboard workflows: use API keys for analytics, usage, webhooks, token estimates, memory enrichment, and key management.
+            <span className="text-mint">2.</span> Dashboard workflows: use API keys for analytics, usage, webhooks, token estimates, credits, memory enrichment, and key management.
           </div>
           <div className="rounded border border-line bg-ink/65 p-4">
-            <span className="text-mint">3.</span> Advanced developers: use the SDK only when your app can provide both an API key and an x402 payer.
+            <span className="text-mint">3.</span> Developers: use the SDK with an API key and account credits. Add an x402 payer only as an optional fallback.
           </div>
         </div>
       </div>
