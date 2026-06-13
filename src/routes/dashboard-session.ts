@@ -5,6 +5,7 @@ import { ApiKeyService } from "@/services/api-key-service";
 import { AccountService } from "@/services/account-service";
 import { AnalyticsService } from "@/services/analytics-service";
 import { ContextService } from "@/services/context-service";
+import { CryptoTopUpService } from "@/services/crypto-topup-service";
 import { AppKV } from "@/storage/app-kv";
 import { createId } from "@/utils/id";
 import { sanitizeMessages } from "@/utils/sanitize";
@@ -301,6 +302,53 @@ dashboardSessionRoutes.post("/dashboard/session", async (c) => {
 
   setSessionCookie(c, sessionId);
   return c.json({ ok: true, apiKeyId: record.id, accountId: record.ownerId });
+});
+
+dashboardSessionRoutes.post("/dashboard/credits/top-up", async (c) => {
+  const session = await readDashboardSession(c);
+  if (!session?.accountId) {
+    return c.json({ error: { code: "unauthorized", message: "Dashboard session required.", requestId: c.get("requestId") } }, 401);
+  }
+
+  const body = (await c.req.json().catch(() => ({}))) as { amountUsd?: number };
+  if (typeof body.amountUsd !== "number" || body.amountUsd < 1) {
+    return c.json({ error: { code: "invalid_topup_amount", message: "amountUsd must be at least 1.", requestId: c.get("requestId") } }, 400);
+  }
+
+  const invoice = await new CryptoTopUpService(c.env ?? {}).createInvoice({
+    ownerId: session.accountId,
+    amountUsd: body.amountUsd
+  });
+  return c.json({
+    invoice,
+    instructions: {
+      network: "Base",
+      asset: "USDC",
+      send: invoice.amountUsdc,
+      to: invoice.payTo,
+      tokenContract: invoice.tokenContract,
+      nextStep: "Send the USDC transaction, then paste the transaction hash to activate credits."
+    }
+  });
+});
+
+dashboardSessionRoutes.post("/dashboard/credits/verify", async (c) => {
+  const session = await readDashboardSession(c);
+  if (!session?.accountId) {
+    return c.json({ error: { code: "unauthorized", message: "Dashboard session required.", requestId: c.get("requestId") } }, 401);
+  }
+
+  const body = (await c.req.json().catch(() => ({}))) as { invoiceId?: string; txHash?: string };
+  if (!body.invoiceId || !body.txHash) {
+    return c.json({ error: { code: "invalid_topup_verification", message: "invoiceId and txHash are required.", requestId: c.get("requestId") } }, 400);
+  }
+
+  const invoice = await new CryptoTopUpService(c.env ?? {}).verifyInvoice({
+    ownerId: session.accountId,
+    invoiceId: body.invoiceId,
+    txHash: body.txHash
+  });
+  return c.json({ ok: true, invoice });
 });
 
 async function consumeDailyQuota(c: Context<AppBindings>, namespace: string, ownerId: string, limit: number) {

@@ -17,6 +17,8 @@ export function readEnv(c?: { env?: Record<string, unknown> }) {
     adminToken: get("CONTEXTKIT_ADMIN_TOKEN"),
     x402PayTo: get("X402_PAY_TO", "0x0000000000000000000000000000000000000000"),
     x402Network: get("X402_NETWORK", "base"),
-    x402FacilitatorUrl: get("X402_FACILITATOR_URL", "https://facilitator.x402.org")
+    x402FacilitatorUrl: get("X402_FACILITATOR_URL", "https://facilitator.x402.org"),
+    creditBaseRpcUrl: get("CREDIT_BASE_RPC_URL", "https://mainnet.base.org"),
+    creditUsdcContract: get("CREDIT_USDC_CONTRACT", "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913")
   };
 }

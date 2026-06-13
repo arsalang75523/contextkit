@@ -15,7 +15,7 @@ export default function ApiReferencePage() {
           </div>
           <a href="/dashboard/login" className="rounded-md border border-mint/25 bg-mint/10 p-5 transition hover:border-mint/60">
             <h2 className="font-semibold text-white">Operations: API key</h2>
-            <p className="mt-2 text-sm leading-6 text-white/62">Use API keys for dashboard, analytics, webhooks, token estimates, direct memory enrichment, key management, and credit-backed SDK calls.</p>
+            <p className="mt-2 text-sm leading-6 text-white/62">Use API keys for dashboard, analytics, webhooks, token estimates, direct memory enrichment, key management, and credit-backed SDK calls. Users can buy credits with USDC on Base from the dashboard.</p>
           </a>
           <div className="rounded-md border border-aqua/25 bg-aqua/10 p-5">
             <h2 className="font-semibold text-white">Advanced: SDK</h2>

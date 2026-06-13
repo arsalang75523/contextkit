@@ -31,6 +31,9 @@ export function DashboardClient({ view = "overview" }: { view?: View }) {
   const [webhookUrl, setWebhookUrl] = useState("");
   const [webhookEvents, setWebhookEvents] = useState("payment.received,request.completed,handoff.generated");
   const [replayEventId, setReplayEventId] = useState("");
+  const [topUpAmount, setTopUpAmount] = useState("10");
+  const [topUpInvoice, setTopUpInvoice] = useState<ApiData | null>(null);
+  const [topUpTxHash, setTopUpTxHash] = useState("");
   const route = routes.find(([key]) => key === view) ?? routes[0];
 
   useEffect(() => {
@@ -125,6 +128,31 @@ export function DashboardClient({ view = "overview" }: { view?: View }) {
     setActionResult(payload);
   }
 
+  async function createTopUpInvoice() {
+    const response = await fetch("/api/dashboard/credits/top-up", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ amountUsd: Number(topUpAmount) })
+    });
+    const payload = await response.json() as ApiData;
+    setMessage(response.ok ? "Credit invoice created. Send USDC on Base, then submit the transaction hash." : "Credit invoice request failed.");
+    setActionResult(payload);
+    setTopUpInvoice(payload);
+  }
+
+  async function verifyTopUpInvoice() {
+    const invoice = topUpInvoice?.invoice && typeof topUpInvoice.invoice === "object" ? topUpInvoice.invoice as Record<string, unknown> : {};
+    const response = await fetch("/api/dashboard/credits/verify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ invoiceId: invoice.id, txHash: topUpTxHash })
+    });
+    const payload = await response.json() as ApiData;
+    setMessage(response.ok ? "Credit top-up verified and balance updated." : "Credit top-up verification failed.");
+    setActionResult(payload);
+    await load();
+  }
+
   async function logout() {
     await fetch("/api/dashboard/logout", { method: "POST" }).catch(() => null);
     window.localStorage.removeItem("contextkit_api_key");
@@ -174,7 +202,17 @@ export function DashboardClient({ view = "overview" }: { view?: View }) {
           </div>
         </section>
 
-        <DashboardView view={view} data={data} />
+        <DashboardView
+          view={view}
+          data={data}
+          topUpAmount={topUpAmount}
+          setTopUpAmount={setTopUpAmount}
+          topUpInvoice={topUpInvoice}
+          topUpTxHash={topUpTxHash}
+          setTopUpTxHash={setTopUpTxHash}
+          onCreateTopUpInvoice={createTopUpInvoice}
+          onVerifyTopUpInvoice={verifyTopUpInvoice}
+        />
 
         {view === "keys" ? (
           <section className="mt-6 rounded-md border border-line bg-white/[0.035] p-5">
@@ -234,7 +272,27 @@ export function DashboardClient({ view = "overview" }: { view?: View }) {
   );
 }
 
-function DashboardView({ view, data }: { view: View; data: ApiData | null }) {
+function DashboardView({
+  view,
+  data,
+  topUpAmount,
+  setTopUpAmount,
+  topUpInvoice,
+  topUpTxHash,
+  setTopUpTxHash,
+  onCreateTopUpInvoice,
+  onVerifyTopUpInvoice
+}: {
+  view: View;
+  data: ApiData | null;
+  topUpAmount: string;
+  setTopUpAmount: (value: string) => void;
+  topUpInvoice: ApiData | null;
+  topUpTxHash: string;
+  setTopUpTxHash: (value: string) => void;
+  onCreateTopUpInvoice: () => void;
+  onVerifyTopUpInvoice: () => void;
+}) {
   if (!data) {
     return (
       <section className="mt-6 rounded-md border border-line bg-white/[0.035] p-5 text-sm text-white/55">
@@ -245,7 +303,20 @@ function DashboardView({ view, data }: { view: View; data: ApiData | null }) {
   if (view === "overview") return <OverviewData data={data} />;
   if (view === "usage") return <UsageData data={data} />;
   if (view === "payments") return <PaymentsData data={data} />;
-  if (view === "credits") return <CreditsData data={data} />;
+  if (view === "credits") {
+    return (
+      <CreditsData
+        data={data}
+        topUpAmount={topUpAmount}
+        setTopUpAmount={setTopUpAmount}
+        topUpInvoice={topUpInvoice}
+        topUpTxHash={topUpTxHash}
+        setTopUpTxHash={setTopUpTxHash}
+        onCreateTopUpInvoice={onCreateTopUpInvoice}
+        onVerifyTopUpInvoice={onVerifyTopUpInvoice}
+      />
+    );
+  }
   if (view === "webhooks") return <WebhookData data={data} />;
   return null;
 }
@@ -319,8 +390,28 @@ function PaymentsData({ data }: { data: ApiData }) {
   );
 }
 
-function CreditsData({ data }: { data: ApiData }) {
+function CreditsData({
+  data,
+  topUpAmount,
+  setTopUpAmount,
+  topUpInvoice,
+  topUpTxHash,
+  setTopUpTxHash,
+  onCreateTopUpInvoice,
+  onVerifyTopUpInvoice
+}: {
+  data: ApiData;
+  topUpAmount: string;
+  setTopUpAmount: (value: string) => void;
+  topUpInvoice: ApiData | null;
+  topUpTxHash: string;
+  setTopUpTxHash: (value: string) => void;
+  onCreateTopUpInvoice: () => void;
+  onVerifyTopUpInvoice: () => void;
+}) {
   const events = Array.isArray(data.events) ? data.events as Array<Record<string, unknown>> : [];
+  const invoice = topUpInvoice?.invoice && typeof topUpInvoice.invoice === "object" ? topUpInvoice.invoice as Record<string, unknown> : {};
+  const instructions = topUpInvoice?.instructions && typeof topUpInvoice.instructions === "object" ? topUpInvoice.instructions as Record<string, unknown> : {};
   return (
     <section className="mt-6 rounded-md border border-line bg-white/[0.035] p-5">
       <div className="grid gap-4 md:grid-cols-3">
@@ -330,6 +421,27 @@ function CreditsData({ data }: { data: ApiData }) {
       </div>
       <div className="mt-5 rounded-md border border-aqua/25 bg-aqua/10 p-4 text-sm leading-6 text-white/65">
         SDK users can call summarize, compress, handoff, and profile without Bankr when this balance covers the endpoint price. If credits are insufficient, direct routes fall back to the normal x402 payment challenge.
+      </div>
+      <div className="mt-5 rounded-md border border-mint/25 bg-mint/10 p-4">
+        <h2 className="font-semibold text-white">Buy credits with crypto</h2>
+        <p className="mt-2 text-sm leading-6 text-white/60">
+          Create an invoice, send USDC on Base to the ContextKit wallet, then paste the transaction hash. Verified payments activate API credits for this dashboard account.
+        </p>
+        <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+          <input value={topUpAmount} onChange={(event) => setTopUpAmount(event.target.value)} className="h-11 rounded-md border border-line bg-ink/80 px-3 text-sm text-white outline-none focus:border-mint" />
+          <button type="button" onClick={onCreateTopUpInvoice} className="h-11 rounded-md bg-mint px-5 text-sm font-medium text-ink">Create USDC invoice</button>
+        </div>
+        {invoice.id ? (
+          <div className="mt-4 grid gap-3 rounded border border-line bg-ink/70 p-4 text-sm">
+            <p className="text-white/70">Send <span className="font-semibold text-mint">{String(instructions.send ?? invoice.amountUsdc)} USDC</span> on Base.</p>
+            <p className="break-all font-mono text-aqua">To: {String(instructions.to ?? invoice.payTo)}</p>
+            <p className="break-all font-mono text-white/45">USDC contract: {String(instructions.tokenContract ?? invoice.tokenContract)}</p>
+            <div className="grid gap-3 md:grid-cols-[1fr_auto]">
+              <input value={topUpTxHash} onChange={(event) => setTopUpTxHash(event.target.value)} placeholder="0x transaction hash" className="h-11 rounded-md border border-line bg-ink/80 px-3 font-mono text-sm text-white outline-none focus:border-mint" />
+              <button type="button" onClick={onVerifyTopUpInvoice} className="h-11 rounded-md border border-mint/40 px-5 text-sm text-mint">Verify payment</button>
+            </div>
+          </div>
+        ) : null}
       </div>
       <div className="mt-5 grid gap-3">
         {events.slice(0, 10).map((event) => (

@@ -62,6 +62,9 @@ export default function DocsPage() {
                 If the API key owner has ContextKit credits, direct summarize, compress, handoff, and profile routes run without Bankr and deduct the endpoint price from the account balance. If credits are insufficient, direct routes fall back to a normal x402 payment challenge.
               </p>
               <CodeBlock code={directApiExample} />
+              <p className="mt-3">
+                Users can buy API credits from the dashboard with USDC on Base. ContextKit verifies the transaction, credits the account balance, and SDK calls spend from that balance without requiring Bankr per request.
+              </p>
             </DocSection>
             <DocSection id="sdk" title="SDK">
               <p>

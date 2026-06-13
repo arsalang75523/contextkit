@@ -101,6 +101,8 @@ X402_NETWORK=base
 
 `BANKR_LLM_KEY` is required for generation. For the recommended Bankr-hosted x402 flow, developers call the `x402.bankr.bot` endpoint and do not paste payment secrets into ContextKit. Direct self-hosted `/api/*` generation routes require a ContextKit API key plus an x402-compatible payment header.
 
+API-key users can also buy ContextKit credits with USDC on Base from the dashboard. The backend verifies the transaction, grants account credits, and SDK calls spend down that balance without requiring Bankr on every request.
+
 ## Analytics
 
 All metrics are calculated from real requests:
