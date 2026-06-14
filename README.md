@@ -24,7 +24,7 @@ The product supports three usage paths:
 This is the main public path for simple users and agents.
 
 ```bash
-bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-summarize \
+bankr x402 call https://x402.bankr.bot/YOUR_WALLET/contextkit-summarize \
   -X POST \
   -d '{"messages":[{"role":"user","content":"Summarize this context for another AI agent."}]}'
 ```
@@ -36,7 +36,7 @@ No ContextKit API key, npm package, or SDK is required. The user only needs Bank
 Summarize:
 
 ```bash
-bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-summarize \
+bankr x402 call https://x402.bankr.bot/YOUR_WALLET/contextkit-summarize \
   -X POST \
   -d '{"messages":[{"role":"user","content":"Summarize the deployment state, blockers, and next actions."}],"mode":"compact"}'
 ```
@@ -44,7 +44,7 @@ bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd82
 Compress context:
 
 ```bash
-bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-compress \
+bankr x402 call https://x402.bankr.bot/YOUR_WALLET/contextkit-compress \
   -X POST \
   -d '{"messages":[{"role":"user","content":"Project Atlas uses Next.js, Postgres, and Redis. Auth is complete. Slow report generation and enterprise onboarding remain. Beta is due in six weeks."}]}'
 ```
@@ -52,7 +52,7 @@ bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd82
 Handoff:
 
 ```bash
-bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-handoff \
+bankr x402 call https://x402.bankr.bot/YOUR_WALLET/contextkit-handoff \
   -X POST \
   -d '{"messages":[{"role":"user","content":"ContextKit is live on Hetzner with Postgres, dashboard auth, API credits, Bankr-hosted x402, webhooks, and SDK publishing. Next work is docs, demo polish, and credit top-up testing."}]}'
 ```
@@ -60,7 +60,7 @@ bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd82
 Extract profile:
 
 ```bash
-bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-profile \
+bankr x402 call https://x402.bankr.bot/YOUR_WALLET/contextkit-profile \
   -X POST \
   -d '{"messages":[{"role":"user","content":"I prefer short technical explanations, direct debugging help, clear risks, and step-by-step deployment commands."}]}'
 ```
@@ -68,8 +68,8 @@ bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd82
 Schema and interactive mode:
 
 ```bash
-bankr x402 schema https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-summarize
-bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-summarize -i
+bankr x402 schema https://x402.bankr.bot/YOUR_WALLET/contextkit-summarize
+bankr x402 call https://x402.bankr.bot/YOUR_WALLET/contextkit-summarize -i
 bankr x402 list
 ```
 
@@ -78,7 +78,7 @@ bankr x402 list
 Create an account:
 
 ```bash
-curl -X POST https://91.107.248.223.sslip.io/api/dashboard/signup \
+curl -X POST https://your-domain.com/api/dashboard/signup \
   -H "Content-Type: application/json" \
   -d '{
     "name": "Autonomous Agent Operator",
@@ -91,7 +91,7 @@ curl -X POST https://91.107.248.223.sslip.io/api/dashboard/signup \
 Login:
 
 ```bash
-curl -i -X POST https://91.107.248.223.sslip.io/api/dashboard/login \
+curl -i -X POST https://your-domain.com/api/dashboard/login \
   -H "Content-Type: application/json" \
   -d '{
     "email": "agent-owner@example.com",
@@ -127,15 +127,15 @@ New keys are shown once when created. Store the key safely, because ContextKit o
 List keys:
 
 ```bash
-curl https://91.107.248.223.sslip.io/api/auth/keys \
-  -H "Authorization: Bearer ck_live_replace_me"
+curl https://your-domain.com/api/auth/keys \
+  -H "Authorization: Bearer <CONTEXTKIT_API_KEY>"
 ```
 
 Revoke a key:
 
 ```bash
-curl -X POST https://91.107.248.223.sslip.io/api/auth/revoke-key \
-  -H "Authorization: Bearer ck_live_replace_me" \
+curl -X POST https://your-domain.com/api/auth/revoke-key \
+  -H "Authorization: Bearer <CONTEXTKIT_API_KEY>" \
   -H "Content-Type: application/json" \
   -d '{"keyId":"key_replace_me"}'
 ```
@@ -143,8 +143,8 @@ curl -X POST https://91.107.248.223.sslip.io/api/auth/revoke-key \
 Check usage:
 
 ```bash
-curl https://91.107.248.223.sslip.io/api/auth/usage \
-  -H "Authorization: Bearer ck_live_replace_me"
+curl https://your-domain.com/api/auth/usage \
+  -H "Authorization: Bearer <CONTEXTKIT_API_KEY>"
 ```
 
 ## Credits
@@ -154,8 +154,8 @@ Credits let SDK/API-key users call paid endpoints without Bankr per request.
 Check credits:
 
 ```bash
-curl https://91.107.248.223.sslip.io/api/auth/credits \
-  -H "Authorization: Bearer ck_live_replace_me"
+curl https://your-domain.com/api/auth/credits \
+  -H "Authorization: Bearer <CONTEXTKIT_API_KEY>"
 ```
 
 Self-serve crypto top-up:
@@ -183,8 +183,8 @@ These commands use API key credits. If credits are missing, paid generation rout
 Summarize:
 
 ```bash
-curl -X POST https://91.107.248.223.sslip.io/api/summarize \
-  -H "Authorization: Bearer ck_live_replace_me" \
+curl -X POST https://your-domain.com/api/summarize \
+  -H "Authorization: Bearer <CONTEXTKIT_API_KEY>" \
   -H "Content-Type: application/json" \
   -d '{
     "mode": "compact",
@@ -200,8 +200,8 @@ curl -X POST https://91.107.248.223.sslip.io/api/summarize \
 Compress context:
 
 ```bash
-curl -X POST https://91.107.248.223.sslip.io/api/compress-context \
-  -H "Authorization: Bearer ck_live_replace_me" \
+curl -X POST https://your-domain.com/api/compress-context \
+  -H "Authorization: Bearer <CONTEXTKIT_API_KEY>" \
   -H "Content-Type: application/json" \
   -d '{
     "messages": [
@@ -216,8 +216,8 @@ curl -X POST https://91.107.248.223.sslip.io/api/compress-context \
 Handoff:
 
 ```bash
-curl -X POST https://91.107.248.223.sslip.io/api/handoff \
-  -H "Authorization: Bearer ck_live_replace_me" \
+curl -X POST https://your-domain.com/api/handoff \
+  -H "Authorization: Bearer <CONTEXTKIT_API_KEY>" \
   -H "Content-Type: application/json" \
   -d '{
     "messages": [
@@ -232,8 +232,8 @@ curl -X POST https://91.107.248.223.sslip.io/api/handoff \
 Extract profile:
 
 ```bash
-curl -X POST https://91.107.248.223.sslip.io/api/extract-profile \
-  -H "Authorization: Bearer ck_live_replace_me" \
+curl -X POST https://your-domain.com/api/extract-profile \
+  -H "Authorization: Bearer <CONTEXTKIT_API_KEY>" \
   -H "Content-Type: application/json" \
   -d '{
     "messages": [
@@ -248,8 +248,8 @@ curl -X POST https://91.107.248.223.sslip.io/api/extract-profile \
 Memory enrichment:
 
 ```bash
-curl -X POST https://91.107.248.223.sslip.io/api/memory-enrichment \
-  -H "Authorization: Bearer ck_live_replace_me" \
+curl -X POST https://your-domain.com/api/memory-enrichment \
+  -H "Authorization: Bearer <CONTEXTKIT_API_KEY>" \
   -H "Content-Type: application/json" \
   -d '{
     "messages": [
@@ -264,8 +264,8 @@ curl -X POST https://91.107.248.223.sslip.io/api/memory-enrichment \
 Token estimate:
 
 ```bash
-curl -X POST https://91.107.248.223.sslip.io/api/tokens/estimate \
-  -H "Authorization: Bearer ck_live_replace_me" \
+curl -X POST https://your-domain.com/api/tokens/estimate \
+  -H "Authorization: Bearer <CONTEXTKIT_API_KEY>" \
   -H "Content-Type: application/json" \
   -d '{
     "modelFamily": "openai",
@@ -295,8 +295,8 @@ cat > summarize-sdk.mjs <<'EOF'
 import { ContextKit } from "@basedchef/contextkit";
 
 const client = new ContextKit({
-  apiKey: "ck_live_replace_me",
-  baseUrl: "https://91.107.248.223.sslip.io"
+  apiKey: "<CONTEXTKIT_API_KEY>",
+  baseUrl: "https://your-domain.com"
 });
 
 const result = await client.summarize({
@@ -322,8 +322,8 @@ cat > credits-sdk.mjs <<'EOF'
 import { ContextKit } from "@basedchef/contextkit";
 
 const client = new ContextKit({
-  apiKey: "ck_live_replace_me",
-  baseUrl: "https://91.107.248.223.sslip.io"
+  apiKey: "<CONTEXTKIT_API_KEY>",
+  baseUrl: "https://your-domain.com"
 });
 
 console.log(JSON.stringify(await client.credits(), null, 2));
@@ -349,8 +349,8 @@ await client.credits();
 Register webhook:
 
 ```bash
-curl -X POST https://91.107.248.223.sslip.io/api/webhooks/register \
-  -H "Authorization: Bearer ck_live_replace_me" \
+curl -X POST https://your-domain.com/api/webhooks/register \
+  -H "Authorization: Bearer <CONTEXTKIT_API_KEY>" \
   -H "Content-Type: application/json" \
   -d '{
     "url": "https://example.com/contextkit/webhook",
@@ -361,22 +361,22 @@ curl -X POST https://91.107.248.223.sslip.io/api/webhooks/register \
 List webhook events:
 
 ```bash
-curl https://91.107.248.223.sslip.io/api/webhooks/events \
-  -H "Authorization: Bearer ck_live_replace_me"
+curl https://your-domain.com/api/webhooks/events \
+  -H "Authorization: Bearer <CONTEXTKIT_API_KEY>"
 ```
 
 List deliveries:
 
 ```bash
-curl https://91.107.248.223.sslip.io/api/webhooks/deliveries \
-  -H "Authorization: Bearer ck_live_replace_me"
+curl https://your-domain.com/api/webhooks/deliveries \
+  -H "Authorization: Bearer <CONTEXTKIT_API_KEY>"
 ```
 
 Replay a webhook event:
 
 ```bash
-curl -X POST https://91.107.248.223.sslip.io/api/webhooks/replay \
-  -H "Authorization: Bearer ck_live_replace_me" \
+curl -X POST https://your-domain.com/api/webhooks/replay \
+  -H "Authorization: Bearer <CONTEXTKIT_API_KEY>" \
   -H "Content-Type: application/json" \
   -d '{"eventId":"evt_replace_me"}'
 ```
@@ -392,19 +392,19 @@ ContextKit-Request-Id: req_...
 ## Analytics
 
 ```bash
-curl https://91.107.248.223.sslip.io/api/analytics/overview \
-  -H "Authorization: Bearer ck_live_replace_me"
+curl https://your-domain.com/api/analytics/overview \
+  -H "Authorization: Bearer <CONTEXTKIT_API_KEY>"
 
-curl https://91.107.248.223.sslip.io/api/analytics/tokens \
-  -H "Authorization: Bearer ck_live_replace_me"
+curl https://your-domain.com/api/analytics/tokens \
+  -H "Authorization: Bearer <CONTEXTKIT_API_KEY>"
 
-curl https://91.107.248.223.sslip.io/api/analytics/payments \
-  -H "Authorization: Bearer ck_live_replace_me"
+curl https://your-domain.com/api/analytics/payments \
+  -H "Authorization: Bearer <CONTEXTKIT_API_KEY>"
 
-curl https://91.107.248.223.sslip.io/api/analytics/usage \
-  -H "Authorization: Bearer ck_live_replace_me"
+curl https://your-domain.com/api/analytics/usage \
+  -H "Authorization: Bearer <CONTEXTKIT_API_KEY>"
 
-curl https://91.107.248.223.sslip.io/api/public/metrics
+curl https://your-domain.com/api/public/metrics
 ```
 
 ## Local Development
@@ -481,7 +481,7 @@ docker compose -p contextkit exec app printenv CREDIT_BASE_RPC_URL
 Internal endpoint test:
 
 ```bash
-curl -i -X POST https://91.107.248.223.sslip.io/api/internal/summarize \
+curl -i -X POST https://your-domain.com/api/internal/summarize \
   -H "Authorization: Bearer replace_with_internal_forwarder_token" \
   -H "Content-Type: application/json" \
   -d '{"messages":[{"role":"user","content":"Summarize ContextKit production state."}],"mode":"micro"}'
@@ -506,7 +506,7 @@ curl -i -X POST https://91.107.248.223.sslip.io/api/internal/summarize \
 For the current Hetzner test deployment, HTTPS is served at:
 
 ```txt
-https://91.107.248.223.sslip.io
+https://your-domain.com
 ```
 
 Nginx terminates TLS and forwards to the Next.js app on port `3000`.

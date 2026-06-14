@@ -45,8 +45,8 @@ function
 import { ContextKit } from "@basedchef/contextkit";
 
 const client = new ContextKit({
-  apiKey: "ck_live_replace_me",
-  baseUrl: "https://91.107.248.223.sslip.io"
+  apiKey: "<CONTEXTKIT_API_KEY>",
+  baseUrl: "https://your-domain.com"
 });
 ```
 
@@ -57,8 +57,8 @@ cat > summarize.mjs <<'EOF'
 import { ContextKit } from "@basedchef/contextkit";
 
 const client = new ContextKit({
-  apiKey: "ck_live_replace_me",
-  baseUrl: "https://91.107.248.223.sslip.io"
+  apiKey: "<CONTEXTKIT_API_KEY>",
+  baseUrl: "https://your-domain.com"
 });
 
 const result = await client.summarize({
@@ -91,8 +91,8 @@ cat > compress.mjs <<'EOF'
 import { ContextKit } from "@basedchef/contextkit";
 
 const client = new ContextKit({
-  apiKey: "ck_live_replace_me",
-  baseUrl: "https://91.107.248.223.sslip.io"
+  apiKey: "<CONTEXTKIT_API_KEY>",
+  baseUrl: "https://your-domain.com"
 });
 
 const result = await client.compressContext({
@@ -117,8 +117,8 @@ cat > handoff.mjs <<'EOF'
 import { ContextKit } from "@basedchef/contextkit";
 
 const client = new ContextKit({
-  apiKey: "ck_live_replace_me",
-  baseUrl: "https://91.107.248.223.sslip.io"
+  apiKey: "<CONTEXTKIT_API_KEY>",
+  baseUrl: "https://your-domain.com"
 });
 
 const result = await client.handoff({
@@ -143,8 +143,8 @@ cat > profile.mjs <<'EOF'
 import { ContextKit } from "@basedchef/contextkit";
 
 const client = new ContextKit({
-  apiKey: "ck_live_replace_me",
-  baseUrl: "https://91.107.248.223.sslip.io"
+  apiKey: "<CONTEXTKIT_API_KEY>",
+  baseUrl: "https://your-domain.com"
 });
 
 const result = await client.extractProfile({
@@ -171,8 +171,8 @@ cat > memory.mjs <<'EOF'
 import { ContextKit } from "@basedchef/contextkit";
 
 const client = new ContextKit({
-  apiKey: "ck_live_replace_me",
-  baseUrl: "https://91.107.248.223.sslip.io"
+  apiKey: "<CONTEXTKIT_API_KEY>",
+  baseUrl: "https://your-domain.com"
 });
 
 const result = await client.memoryEnrichment({
@@ -197,8 +197,8 @@ cat > estimate.mjs <<'EOF'
 import { ContextKit } from "@basedchef/contextkit";
 
 const client = new ContextKit({
-  apiKey: "ck_live_replace_me",
-  baseUrl: "https://91.107.248.223.sslip.io"
+  apiKey: "<CONTEXTKIT_API_KEY>",
+  baseUrl: "https://your-domain.com"
 });
 
 const result = await client.estimateTokens({
@@ -224,8 +224,8 @@ If an API key has no credits, ContextKit direct paid routes return HTTP 402. Adv
 
 ```ts
 const client = new ContextKit({
-  apiKey: "ck_live_replace_me",
-  baseUrl: "https://91.107.248.223.sslip.io",
+  apiKey: "<CONTEXTKIT_API_KEY>",
+  baseUrl: "https://your-domain.com",
   x402: async (challenge, request) => {
     return wallet.pay(challenge, request);
   }
@@ -241,7 +241,7 @@ For simple users and autonomous agents, this is the main path:
 Summarize:
 
 ```bash
-bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-summarize \
+bankr x402 call https://x402.bankr.bot/YOUR_WALLET/contextkit-summarize \
   -X POST \
   -d '{"messages":[{"role":"user","content":"Summarize this context."}]}'
 ```
@@ -249,7 +249,7 @@ bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd82
 Compress context:
 
 ```bash
-bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-compress \
+bankr x402 call https://x402.bankr.bot/YOUR_WALLET/contextkit-compress \
   -X POST \
   -d '{"messages":[{"role":"user","content":"Compress this project context into compact memory."}]}'
 ```
@@ -257,7 +257,7 @@ bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd82
 Handoff:
 
 ```bash
-bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-handoff \
+bankr x402 call https://x402.bankr.bot/YOUR_WALLET/contextkit-handoff \
   -X POST \
   -d '{"messages":[{"role":"user","content":"Create a project handoff for the next AI agent."}]}'
 ```
@@ -265,7 +265,7 @@ bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd82
 Extract profile:
 
 ```bash
-bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-profile \
+bankr x402 call https://x402.bankr.bot/YOUR_WALLET/contextkit-profile \
   -X POST \
   -d '{"messages":[{"role":"user","content":"Extract durable user preferences and profile memory."}]}'
 ```
@@ -309,8 +309,8 @@ cat > credits.mjs <<'EOF'
 import { ContextKit } from "@basedchef/contextkit";
 
 const client = new ContextKit({
-  apiKey: "ck_live_replace_me",
-  baseUrl: "https://91.107.248.223.sslip.io"
+  apiKey: "<CONTEXTKIT_API_KEY>",
+  baseUrl: "https://your-domain.com"
 });
 
 const result = await client.credits();

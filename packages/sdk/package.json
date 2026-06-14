@@ -9,7 +9,7 @@
   "files": ["dist", "README.md", "LICENSE"],
   "license": "MIT",
   "author": "basedchef",
-  "homepage": "https://91.107.248.223.sslip.io",
+  "homepage": "https://your-domain.com",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/arsalang75523/contextkit.git",

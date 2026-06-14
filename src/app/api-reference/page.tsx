@@ -11,15 +11,15 @@ export default function ApiReferencePage() {
         <div className="mb-6 grid gap-4 md:grid-cols-3">
           <div className="rounded-md border border-mint/25 bg-mint/10 p-5">
             <h2 className="font-semibold text-white">Main path: Bankr-hosted x402</h2>
-            <p className="mt-2 text-sm leading-6 text-white/62">Best for users and agents. Run a Bankr x402 command, approve payment, and receive JSON. No ContextKit API key, npm package, or SDK required.</p>
+            <p className="mt-2 text-sm leading-6 text-white/62">Best for new users, operators, and autonomous agents. Run a Bankr x402 command, approve USDC payment in Bankr, and receive JSON. No ContextKit API key, npm install, or SDK required.</p>
           </div>
           <a href="/dashboard/login" className="rounded-md border border-mint/25 bg-mint/10 p-5 transition hover:border-mint/60">
             <h2 className="font-semibold text-white">Operations: API key</h2>
-            <p className="mt-2 text-sm leading-6 text-white/62">Use API keys for dashboard, analytics, webhooks, token estimates, direct memory enrichment, key management, and credit-backed SDK calls. Users can buy credits with USDC on Base from the dashboard.</p>
+            <p className="mt-2 text-sm leading-6 text-white/62">API keys identify dashboard accounts and server integrations. Use them for analytics, webhooks, token estimates, direct memory enrichment, key management, and credit-backed direct API calls. Users can buy credits with USDC on Base from the dashboard.</p>
           </a>
           <div className="rounded-md border border-aqua/25 bg-aqua/10 p-5">
             <h2 className="font-semibold text-white">Advanced: SDK</h2>
-            <p className="mt-2 text-sm leading-6 text-white/62">Use the TypeScript SDK with a ContextKit API key. If the account has credits, paid endpoints work without Bankr; x402 can remain an optional fallback.</p>
+            <p className="mt-2 text-sm leading-6 text-white/62">The SDK is a TypeScript wrapper around direct API routes. It attaches your API key, sends typed requests, checks credits, returns typed JSON, verifies webhooks, and can optionally handle x402 fallback when credits run out.</p>
           </div>
         </div>
         <GetStartedCard />
@@ -32,7 +32,7 @@ export default function ApiReferencePage() {
           </div>
           <div className="rounded-md border border-aqua/20 bg-aqua/10 p-5">
             <h2 className="font-semibold text-white">Advanced: direct API routes</h2>
-            <p className="mt-2 text-sm leading-6 text-white/60">Direct <code>/api/*</code> routes are for SDK and server integrations. API credits let paid endpoints run without Bankr; insufficient credits fall back to x402 payment.</p>
+            <p className="mt-2 text-sm leading-6 text-white/60">Direct <code>/api/*</code> routes are for SDK and backend integrations. Send <code>Authorization: Bearer &lt;CONTEXTKIT_API_KEY&gt;</code>. If the account has credits, paid endpoints run without Bankr; otherwise the route returns an x402 payment challenge.</p>
           </div>
         </div>
         <div className="space-y-8">
@@ -42,7 +42,9 @@ export default function ApiReferencePage() {
               ...(endpoint.slug === "summarize" ? { mode: "micro" } : {})
             }, null, 2);
             const response = JSON.stringify(endpoint.response, null, 2);
-            const curl = bankrX402Command(endpoint.slug, JSON.parse(request));
+            const payload = JSON.parse(request);
+            const bankrCurl = bankrX402Command(endpoint.slug, payload);
+            const directCurl = directApiCurl(endpoint.path, payload);
             return (
               <article key={endpoint.slug} className="rounded-md border border-line bg-white/[0.035] p-6">
                 <div className="flex flex-wrap items-center justify-between gap-4">
@@ -75,9 +77,17 @@ export default function ApiReferencePage() {
                     <CodeBlock code={response} />
                   </div>
                 </div>
-                <div className="mt-5">
-                  <h3 className="mb-3 text-sm uppercase tracking-[0.18em] text-white/45">Bankr-hosted x402 command</h3>
-                  <CodeBlock code={curl} />
+                <div className="mt-5 grid gap-5 lg:grid-cols-2">
+                  <div>
+                    <h3 className="mb-3 text-sm uppercase tracking-[0.18em] text-white/45">Bankr-hosted x402 POST</h3>
+                    <p className="mb-3 text-sm leading-6 text-white/55">Public paid path. Bankr handles payment and forwards to ContextKit. No ContextKit API key required.</p>
+                    <CodeBlock code={bankrCurl} />
+                  </div>
+                  <div>
+                    <h3 className="mb-3 text-sm uppercase tracking-[0.18em] text-white/45">Direct API curl with API key</h3>
+                    <p className="mb-3 text-sm leading-6 text-white/55">Server/SDK path. Uses account credits first; if credits are insufficient, paid endpoints return HTTP 402.</p>
+                    <CodeBlock code={directCurl} />
+                  </div>
                 </div>
                 <p className="mt-5 text-sm text-white/60">Webhook behavior: emits `{endpoint.event}` after successful generation and stores replayable audit state in ctx.files.</p>
               </article>
@@ -87,4 +97,12 @@ export default function ApiReferencePage() {
       </Section>
     </main>
   );
+}
+
+function directApiCurl(path: string, payload: unknown) {
+  const body = JSON.stringify(payload).replaceAll("'", "'\\''");
+  return `curl -X POST https://your-domain.com${path} \\
+  -H "Authorization: Bearer <CONTEXTKIT_API_KEY>" \\
+  -H "Content-Type: application/json" \\
+  -d '${body}'`;
 }

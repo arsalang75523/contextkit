@@ -1,6 +1,6 @@
 import { endpoints } from "@/content/docs";
 
-const defaultBankrHostedBaseUrl = "https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824";
+const defaultBankrHostedBaseUrl = "https://x402.bankr.bot/YOUR_WALLET";
 
 export const bankrHostedBaseUrl = process.env.NEXT_PUBLIC_BANKR_X402_BASE_URL ?? defaultBankrHostedBaseUrl;
 

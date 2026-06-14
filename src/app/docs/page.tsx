@@ -3,139 +3,409 @@ import { Section } from "@/components/section";
 import { endpoints } from "@/content/docs";
 import { bankrX402Command } from "@/lib/bankr-x402";
 
-const quickStart = `npm install @basedchef/contextkit
+const samplePayload = {
+  messages: [
+    {
+      role: "user",
+      content: "Project Atlas is preparing a night-bus pilot. Preserve goal, status, blockers, constraints, decisions, and next actions."
+    }
+  ]
+};
 
-${bankrX402Command("summarize", {
-  messages: [{ role: "user", content: "Summarize this long agent conversation." }]
-})}`;
+const summarizePayload = {
+  ...samplePayload,
+  mode: "compact"
+};
 
-const tsExample = `import { ContextKit } from "@basedchef/contextkit";
+const directApiExample = directApiCurl("/api/summarize", summarizePayload);
+
+const sdkInstall = `npm install @basedchef/contextkit`;
+
+const sdkClient = `import { ContextKit } from "@basedchef/contextkit";
 
 const client = new ContextKit({
   apiKey: process.env.CONTEXTKIT_API_KEY!,
-  baseUrl: "https://91.107.248.223.sslip.io"
+  baseUrl: "https://your-domain.com"
+});`;
+
+const sdkMethods = `${sdkClient}
+
+await client.summarize({ messages, mode: "micro" });
+await client.compressContext({ messages });
+await client.handoff({ messages });
+await client.extractProfile({ messages });
+await client.memoryEnrichment({ messages });
+await client.estimateTokens({ modelFamily: "openai", input: messages });
+await client.credits();`;
+
+const sdkCredits = `${sdkClient}
+
+const credits = await client.credits();
+console.log(credits.balanceUsd);`;
+
+const optionalX402 = `const client = new ContextKit({
+  apiKey: process.env.CONTEXTKIT_API_KEY!,
+  baseUrl: "https://your-domain.com",
+  x402: async (challenge, request) => {
+    return wallet.pay(challenge, request);
+  }
+});`;
+
+const dashboardSignup = `curl -X POST https://your-domain.com/api/dashboard/signup \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "name": "Autonomous Agent Operator",
+    "email": "agent-owner@example.com",
+    "password": "replace-with-12-plus-chars",
+    "company": "Agent Lab"
+  }'`;
+
+const dashboardLogin = `curl -i -X POST https://your-domain.com/api/dashboard/login \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "email": "agent-owner@example.com",
+    "password": "replace-with-12-plus-chars"
+  }'`;
+
+const tokenEstimate = directApiCurl("/api/tokens/estimate", {
+  modelFamily: "openai",
+  input: [{ role: "user", content: "Long context to estimate." }],
+  compressed: "Compressed context."
 });
 
-const context = await client.compressContext({ messages });`;
+const creditsCurl = `curl https://your-domain.com/api/auth/credits \\
+  -H "Authorization: Bearer <CONTEXTKIT_API_KEY>"`;
 
-const directApiExample = `curl -X POST https://91.107.248.223.sslip.io/api/memory-enrichment \\
-  -H "Authorization: Bearer ck_live_..." \\
+const webhookRegister = `curl -X POST https://your-domain.com/api/webhooks/register \\
+  -H "Authorization: Bearer <CONTEXTKIT_API_KEY>" \\
   -H "Content-Type: application/json" \\
-  -d '{"messages":[{"role":"user","content":"Remember this user preference."}]}'`;
+  -d '{
+    "url": "https://example.com/contextkit/webhook",
+    "events": ["request.completed", "summarization.completed", "context.compressed", "handoff.generated", "profile.extracted"]
+  }'`;
+
+const webhookVerify = `import { verifyContextKitWebhook } from "@basedchef/contextkit";
+
+const valid = await verifyContextKitWebhook({
+  payload: rawBody,
+  signature: request.headers.get("ContextKit-Signature")!,
+  secret: process.env.CONTEXTKIT_WEBHOOK_SECRET!
+});`;
+
+const productionEnv = `CONTEXTKIT_BASE_URL=https://your-domain.com
+CONTEXTKIT_BACKEND_URL=https://your-domain.com
+CONTEXTKIT_ADMIN_TOKEN=replace_with_admin_token
+CONTEXTKIT_INTERNAL_TOKEN=replace_with_internal_forwarder_token
+CONTEXTKIT_WEBHOOK_SECRET=replace_with_webhook_secret
+
+BANKR_LLM_KEY=bk_replace_me
+BANKR_LLM_BASE_URL=https://llm.bankr.bot/v1
+BANKR_LLM_MODEL=claude-sonnet-4.5
+
+X402_PAY_TO=0x_your_wallet
+X402_NETWORK=base
+X402_FACILITATOR_URL=https://facilitator.x402.org
+
+CREDIT_BASE_RPC_URL=https://mainnet.base.org
+CREDIT_USDC_CONTRACT=0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913`;
+
+const deployCommands = `git pull
+docker compose -p contextkit up -d --build --force-recreate
+docker compose -p contextkit ps
+docker compose -p contextkit logs app --tail=120`;
+
+const navItems = [
+  "Introduction",
+  "Access Paths",
+  "Bankr Hosted x402",
+  "Dashboard And Keys",
+  "API Credits",
+  "Direct API",
+  "SDK",
+  "Endpoint Reference",
+  "Webhooks",
+  "Analytics",
+  "Deployment",
+  "Errors",
+  "Checklist"
+];
 
 export default function DocsPage() {
   return (
     <main>
-      <Section eyebrow="Docs" title="Understand the three ContextKit access paths.">
+      <Section eyebrow="Docs" title="ContextKit usage guide for Bankr, API keys, and SDK integrations.">
         <div className="grid gap-8 lg:grid-cols-[260px_1fr]">
           <aside className="h-fit rounded-md border border-line bg-white/[0.035] p-5 text-sm text-white/65">
-            {["Introduction", "Bankr-hosted x402", "API Key", "SDK", "Quick Start", "API Reference", "Webhooks", "Deployment", "Error Handling", "Rate Limits", "Examples"].map((item) => (
-              <a key={item} href={`#${item.toLowerCase().replaceAll(" ", "-")}`} className="block rounded px-2 py-2 hover:bg-white/[0.04] hover:text-white">
+            {navItems.map((item) => (
+              <a key={item} href={`#${slugify(item)}`} className="block rounded px-2 py-2 hover:bg-white/[0.04] hover:text-white">
                 {item}
               </a>
             ))}
           </aside>
+
           <div className="space-y-12">
             <DocSection id="introduction" title="Introduction">
-              ContextKit is a payable context service for autonomous agents. The main product path is Bankr-hosted x402: agents pay through Bankr and receive structured JSON from ContextKit. API keys and the SDK exist for operational and advanced developer workflows, not as the default paid-user path.
-            </DocSection>
-            <DocSection id="bankr-hosted-x402" title="Bankr-hosted x402">
               <p>
-                This is the main path for users and agents. A user runs a Bankr x402 command, Bankr handles payment, and ContextKit returns JSON.
+                ContextKit is a payable context infrastructure service for autonomous agents. It provides summarization, context compression, project handoff generation, profile extraction, memory enrichment, webhooks, usage analytics, and API-credit billing.
               </p>
-              <CodeBlock code={bankrX402Command("summarize", {
-                messages: [{ role: "user", content: "Summarize this." }]
-              })} />
+              <p className="mt-3">
+                The simplest public product path is Bankr-hosted x402. API keys and the SDK are for dashboard operations, server integrations, credit-backed direct calls, and advanced developer workflows.
+              </p>
+            </DocSection>
+
+            <DocSection id="access-paths" title="Access Paths">
+              <div className="grid gap-4 md:grid-cols-3">
+                <InfoCard title="Bankr-hosted x402" body="Best for users and autonomous agents. Run a Bankr x402 command, approve payment, and receive JSON. No ContextKit API key or SDK required." />
+                <InfoCard title="API key + credits" body="Best for server integrations. Use dashboard-created API keys and account credits to call direct /api routes without Bankr on every request." />
+                <InfoCard title="TypeScript SDK" body="Best for app developers. The SDK wraps direct API routes, attaches API keys, returns typed JSON, verifies webhooks, and can optionally handle x402 fallback." />
+              </div>
+            </DocSection>
+
+            <DocSection id="bankr-hosted-x402" title="Bankr Hosted x402">
+              <p>
+                Bankr-hosted endpoints are the main paid public URLs. Bankr handles the x402 payment and forwards the paid request to ContextKit internal endpoints.
+              </p>
+              <div className="mt-4 grid gap-4">
+                {hostedExamples().map((item) => (
+                  <div key={item.title}>
+                    <h3 className="mb-2 font-semibold text-white">{item.title}</h3>
+                    <CodeBlock code={item.code} />
+                  </div>
+                ))}
+              </div>
               <div className="mt-4 grid gap-3 md:grid-cols-2">
-                {["No ContextKit API key required", "No npm package required", "No SDK required", "Only bankr login is required"].map((item) => (
+                {["No ContextKit API key required", "No npm package required", "No SDK required", "Only Bankr login and payment approval required"].map((item) => (
                   <div key={item} className="rounded-md border border-mint/20 bg-mint/10 p-3 text-sm text-white/70">
                     {item}
                   </div>
                 ))}
               </div>
             </DocSection>
-            <DocSection id="api-key" title="API Key">
+
+            <DocSection id="dashboard-and-keys" title="Dashboard And Keys">
               <p>
-                API keys identify dashboard accounts and SDK integrations. They are used for analytics, usage, webhook register/replay, token estimates, direct memory enrichment, key management, and API-credit billing.
+                API keys are created from the dashboard and shown once. They identify accounts, scopes, usage, webhooks, analytics, credits, and SDK integrations. Do not hardcode real keys in public repos.
               </p>
-              <p className="mt-3">
-                If the API key owner has ContextKit credits, direct summarize, compress, handoff, and profile routes run without Bankr and deduct the endpoint price from the account balance. If credits are insufficient, direct routes fall back to a normal x402 payment challenge.
-              </p>
-              <CodeBlock code={directApiExample} />
-              <p className="mt-3">
-                Users can buy API credits from the dashboard with USDC on Base. ContextKit verifies the transaction, credits the account balance, and SDK calls spend from that balance without requiring Bankr per request.
-              </p>
-            </DocSection>
-            <DocSection id="sdk" title="SDK">
-              <p>
-                The SDK is a TypeScript wrapper for advanced developers who want to integrate direct ContextKit calls inside their own app. It is not the main product path.
-              </p>
-              <p className="mt-3">
-                The SDK can add the API key header, send typed requests, use account credits for paid endpoints, optionally call an x402 handler when a 402 challenge appears, and return JSON.
-              </p>
-              <CodeBlock code={tsExample} />
-              <p className="mt-3 text-sm leading-6 text-white/55">
-                Summary: simple users and simple agents can use Bankr-hosted x402. Developers can use SDK + API key + credits without Bankr. Advanced clients may still provide an optional x402 payer fallback.
-              </p>
-            </DocSection>
-            <DocSection id="quick-start" title="Quick Start">
-              Fastest path: run the Bankr-hosted x402 command. Install the SDK only if you are building an advanced TypeScript integration.
-              <CodeBlock code={quickStart} />
-            </DocSection>
-            <DocSection id="authentication" title="Authentication">
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="rounded-md border border-mint/20 bg-mint/10 p-4">
-                  <h3 className="font-semibold text-white">Bankr-hosted x402 calls</h3>
-                  <p className="mt-2 text-sm leading-6 text-white/60">
-                    Best for new users and agents. Call <code>x402.bankr.bot</code>, approve payment with Bankr, and receive JSON. No ContextKit API key is required.
-                  </p>
+              <div className="mt-4 grid gap-4 lg:grid-cols-2">
+                <div>
+                  <h3 className="mb-2 font-semibold text-white">Signup</h3>
+                  <CodeBlock code={dashboardSignup} />
                 </div>
-                <div className="rounded-md border border-aqua/20 bg-aqua/10 p-4">
-                  <h3 className="font-semibold text-white">ContextKit API keys</h3>
-                  <p className="mt-2 text-sm leading-6 text-white/60">
-                    Used for dashboard data, analytics, token estimates, webhook management, and advanced direct API integrations. Keys are scoped and can be revoked.
-                  </p>
+                <div>
+                  <h3 className="mb-2 font-semibold text-white">Login</h3>
+                  <CodeBlock code={dashboardLogin} />
                 </div>
               </div>
+              <div className="mt-4 rounded-md border border-aqua/20 bg-aqua/10 p-4 text-sm leading-6 text-white/65">
+                Create and revoke API keys in <code>/dashboard/keys</code>. Use API keys with <code>Authorization: Bearer &lt;CONTEXTKIT_API_KEY&gt;</code>.
+              </div>
             </DocSection>
-            <DocSection id="x402-payments" title="x402 Payments">
-              Recommended production flow is Bankr-hosted x402: agents call <code>x402.bankr.bot</code>, Bankr settles USDC on Base, then forwards to ContextKit internal endpoints. Advanced self-hosted clients can still use direct HTTP 402 challenge/retry flows.
-            </DocSection>
-            <DocSection id="api-reference" title="API Reference">
-              <div className="grid gap-4">
-                {endpoints.map((endpoint) => (
-                  <div key={endpoint.path} className="rounded-md border border-line bg-white/[0.035] p-5">
-                    <div className="flex flex-wrap items-center gap-3">
-                      <span className="rounded bg-mint/10 px-2 py-1 font-mono text-xs text-mint">{endpoint.method}</span>
-                      <span className="font-mono text-sm text-white">{endpoint.path}</span>
-                      <span className="rounded bg-aqua/10 px-2 py-1 text-xs text-aqua">{endpoint.price}</span>
-                    </div>
-                    <p className="mt-3 text-sm text-white/60">{endpoint.description}</p>
-                    <p className="mt-3 text-xs uppercase tracking-[0.2em] text-white/35">Webhook: {endpoint.event}</p>
+
+            <DocSection id="api-credits" title="API Credits">
+              <p>
+                Credits let API-key and SDK users call paid direct endpoints without Bankr per request. Direct paid routes spend credits first; if credits are insufficient, ContextKit returns a normal HTTP 402 x402 challenge.
+              </p>
+              <CodeBlock code={creditsCurl} />
+              <p className="mt-3">
+                Users can buy credits from <code>/dashboard/credits</code>. The dashboard creates a USDC invoice, the user sends USDC on Base, pastes the transaction hash, and ContextKit verifies the transfer before granting credits.
+              </p>
+              <div className="mt-4 grid gap-3 md:grid-cols-2">
+                {["Verifies transaction receipt on Base", "Checks Base USDC Transfer event", "Requires recipient to match ContextKit wallet", "Blocks reused transaction hashes"].map((item) => (
+                  <div key={item} className="rounded-md border border-line bg-white/[0.035] p-3 text-sm text-white/65">
+                    {item}
                   </div>
                 ))}
               </div>
             </DocSection>
+
+            <DocSection id="direct-api" title="Direct API">
+              <p>
+                Direct API routes are for SDK and backend integrations. They require an API key. Paid generation routes use credits first and return 402 when payment is still required.
+              </p>
+              <CodeBlock code={directApiExample} />
+              <p className="mt-4">Token estimates are API-key only and do not require Bankr payment:</p>
+              <CodeBlock code={tokenEstimate} />
+            </DocSection>
+
+            <DocSection id="sdk" title="SDK">
+              <p>
+                The SDK is a TypeScript wrapper around the direct API. It attaches API keys, sends typed requests, uses account credits, returns typed JSON, exposes credit balance, verifies webhooks, and supports optional x402 fallback.
+              </p>
+              <div className="mt-4 grid gap-4">
+                <div>
+                  <h3 className="mb-2 font-semibold text-white">Install</h3>
+                  <CodeBlock code={sdkInstall} />
+                </div>
+                <div>
+                  <h3 className="mb-2 font-semibold text-white">Client</h3>
+                  <CodeBlock code={sdkClient} />
+                </div>
+                <div>
+                  <h3 className="mb-2 font-semibold text-white">Methods</h3>
+                  <CodeBlock code={sdkMethods} />
+                </div>
+                <div>
+                  <h3 className="mb-2 font-semibold text-white">Credits</h3>
+                  <CodeBlock code={sdkCredits} />
+                </div>
+                <div>
+                  <h3 className="mb-2 font-semibold text-white">Optional x402 fallback</h3>
+                  <CodeBlock code={optionalX402} />
+                </div>
+              </div>
+            </DocSection>
+
+            <DocSection id="endpoint-reference" title="Endpoint Reference">
+              <div className="grid gap-5">
+                {endpoints.map((endpoint) => {
+                  const payload = endpoint.slug === "summarize" ? summarizePayload : samplePayload;
+                  return (
+                    <div key={endpoint.path} className="rounded-md border border-line bg-white/[0.035] p-5">
+                      <div className="flex flex-wrap items-center gap-3">
+                        <span className="rounded bg-mint/10 px-2 py-1 font-mono text-xs text-mint">{endpoint.method}</span>
+                        <span className="font-mono text-sm text-white">{endpoint.path}</span>
+                        <span className="rounded bg-aqua/10 px-2 py-1 text-xs text-aqua">{endpoint.price}</span>
+                      </div>
+                      <p className="mt-3 text-sm text-white/60">{endpoint.description}</p>
+                      <div className="mt-4 grid gap-4 lg:grid-cols-2">
+                        <div>
+                          <h3 className="mb-2 text-xs uppercase tracking-[0.18em] text-white/40">Bankr hosted</h3>
+                          <CodeBlock code={bankrX402Command(endpoint.slug, payload)} />
+                        </div>
+                        <div>
+                          <h3 className="mb-2 text-xs uppercase tracking-[0.18em] text-white/40">Direct API key curl</h3>
+                          <CodeBlock code={directApiCurl(endpoint.path, payload)} />
+                        </div>
+                      </div>
+                      <p className="mt-3 text-xs uppercase tracking-[0.2em] text-white/35">Webhook: {endpoint.event}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            </DocSection>
+
             <DocSection id="webhooks" title="Webhooks">
-              Webhook deliveries include `ContextKit-Signature`, `ContextKit-Event`, and `ContextKit-Request-Id` headers. Replay endpoints are available for audit recovery.
+              <p>
+                Webhooks notify your system after completed requests. Deliveries include <code>ContextKit-Signature</code>, <code>ContextKit-Event</code>, and <code>ContextKit-Request-Id</code> headers. Use replay endpoints for audit recovery.
+              </p>
+              <div className="mt-4 grid gap-4 lg:grid-cols-2">
+                <div>
+                  <h3 className="mb-2 font-semibold text-white">Register</h3>
+                  <CodeBlock code={webhookRegister} />
+                </div>
+                <div>
+                  <h3 className="mb-2 font-semibold text-white">Verify signature</h3>
+                  <CodeBlock code={webhookVerify} />
+                </div>
+              </div>
             </DocSection>
-            <DocSection id="sdk-usage" title="SDK Usage">
-              SDK usage is for direct app integrations. With API credits, paid direct endpoints work without Bankr. If credits run out, provide an optional x402 payment handler or add more credits.
-              <CodeBlock code={tsExample} />
+
+            <DocSection id="analytics" title="Analytics">
+              <p>
+                API-key users can inspect usage, tokens, payments, request history, webhook deliveries, and credits from the dashboard. Public aggregate metrics are available for lightweight status displays.
+              </p>
+              <CodeBlock code={`curl https://your-domain.com/api/analytics/overview \\
+  -H "Authorization: Bearer <CONTEXTKIT_API_KEY>"
+
+curl https://your-domain.com/api/analytics/usage \\
+  -H "Authorization: Bearer <CONTEXTKIT_API_KEY>"
+
+curl https://your-domain.com/api/public/metrics`} />
             </DocSection>
+
             <DocSection id="deployment" title="Deployment">
-              Deploy the web app to Vercel or Cloudflare Pages. Set `BANKR_LLM_KEY`, `CONTEXTKIT_WEBHOOK_SECRET`, `X402_PAY_TO`, and `X402_NETWORK`.
+              <p>
+                Production needs a configured LLM key, webhook secret, x402 wallet, internal forwarding token, database, and credit verification RPC.
+              </p>
+              <div className="mt-4 grid gap-4 lg:grid-cols-2">
+                <div>
+                  <h3 className="mb-2 font-semibold text-white">Environment</h3>
+                  <CodeBlock code={productionEnv} />
+                </div>
+                <div>
+                  <h3 className="mb-2 font-semibold text-white">Hetzner Docker deploy</h3>
+                  <CodeBlock code={deployCommands} />
+                </div>
+              </div>
             </DocSection>
-            <DocSection id="error-handling" title="Error Handling">
-              Errors are structured with `code`, `message`, `requestId`, and optional validation details so agents can retry intelligently.
+
+            <DocSection id="errors" title="Errors">
+              <div className="grid gap-3">
+                <ErrorRow code="401 invalid_api_key" text="API key is missing, invalid, or revoked." />
+                <ErrorRow code="402 payment_required" text="Credits are insufficient or direct x402 payment is required." />
+                <ErrorRow code="403 forbidden" text="The caller is authenticated but not allowed to perform the requested operation." />
+                <ErrorRow code="429 rate_limited" text="The caller exceeded the configured rate limit." />
+                <ErrorRow code="503 internal_not_configured" text="Required server environment variable is missing." />
+                <ErrorRow code="payment_not_verified" text="Credit top-up transaction did not match the invoice transfer requirements." />
+              </div>
             </DocSection>
-            <DocSection id="rate-limits" title="Rate Limits">
-              Default abuse prevention is 120 requests per IP per minute. Replace the storage adapter with durable appKV bindings in production.
+
+            <DocSection id="checklist" title="Checklist">
+              <div className="grid gap-3 md:grid-cols-2">
+                {[
+                  "Use Bankr-hosted x402 for the simplest public paid calls.",
+                  "Use dashboard-created API keys for server integrations.",
+                  "Top up API credits before SDK paid endpoint calls.",
+                  "Use <CONTEXTKIT_API_KEY> placeholders in public docs and repos.",
+                  "Use /dashboard/keys for key creation and revocation.",
+                  "Use /dashboard/credits for USDC credit purchases.",
+                  "Use SDK only when building a TypeScript integration.",
+                  "Configure webhook secrets before production webhooks.",
+                  "Set CREDIT_BASE_RPC_URL for crypto credit verification.",
+                  "Never commit .env, real API keys, Bankr keys, or GitHub tokens."
+                ].map((item) => (
+                  <div key={item} className="rounded-md border border-line bg-white/[0.035] p-3 text-sm text-white/65">
+                    {item}
+                  </div>
+                ))}
+              </div>
             </DocSection>
           </div>
         </div>
       </Section>
     </main>
+  );
+}
+
+function directApiCurl(path: string, payload: unknown) {
+  const body = JSON.stringify(payload).replaceAll("'", "'\\''");
+  return `curl -X POST https://your-domain.com${path} \\
+  -H "Authorization: Bearer <CONTEXTKIT_API_KEY>" \\
+  -H "Content-Type: application/json" \\
+  -d '${body}'`;
+}
+
+function hostedExamples() {
+  return [
+    ["Summarize", "summarize", { ...samplePayload, mode: "micro" }],
+    ["Compress context", "compress-context", samplePayload],
+    ["Agent handoff", "handoff", samplePayload],
+    ["Extract profile", "extract-profile", samplePayload]
+  ].map(([title, slug, payload]) => ({
+    title: String(title),
+    code: bankrX402Command(String(slug), payload)
+  }));
+}
+
+function slugify(value: string) {
+  return value.toLowerCase().replaceAll(" ", "-");
+}
+
+function InfoCard({ title, body }: { title: string; body: string }) {
+  return (
+    <div className="rounded-md border border-mint/20 bg-mint/10 p-4">
+      <h3 className="font-semibold text-white">{title}</h3>
+      <p className="mt-2 text-sm leading-6 text-white/60">{body}</p>
+    </div>
+  );
+}
+
+function ErrorRow({ code, text }: { code: string; text: string }) {
+  return (
+    <div className="rounded-md border border-line bg-white/[0.035] p-4">
+      <p className="font-mono text-sm text-mint">{code}</p>
+      <p className="mt-2 text-sm leading-6 text-white/60">{text}</p>
+    </div>
   );
 }
 

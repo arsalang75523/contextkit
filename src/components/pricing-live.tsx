@@ -52,7 +52,6 @@ function endpointStats(endpoint: string, metric: EndpointMetric | null) {
   const inputTokens = metric?.inputTokens ?? 0;
   const outputTokens = metric?.outputTokens ?? 0;
   const savedTokens = metric?.savedTokens ?? 0;
-  const reduction = `${metric?.averageReductionPercent ?? 0}%`;
   const latency = `${metric?.averageLatencyMs ?? 0}ms`;
 
   if (endpoint === "summarize") {
@@ -62,7 +61,7 @@ function endpointStats(endpoint: string, metric: EndpointMetric | null) {
         { label: "Summaries", value: requests },
         { label: "Revenue", value: revenue },
         { label: "Saved tokens", value: savedTokens },
-        { label: "Avg reduction", value: reduction }
+        { label: "Avg latency", value: latency }
       ],
       note: `Input ${inputTokens} -> output ${outputTokens} tokens.`
     };
@@ -74,7 +73,7 @@ function endpointStats(endpoint: string, metric: EndpointMetric | null) {
       items: [
         { label: "Compression runs", value: requests },
         { label: "Revenue", value: revenue },
-        { label: "Avg compression", value: reduction },
+        { label: "Compressed tokens", value: outputTokens },
         { label: "Avg latency", value: latency }
       ],
       note: `Processed ${inputTokens} source tokens into ${outputTokens} compressed-state tokens.`

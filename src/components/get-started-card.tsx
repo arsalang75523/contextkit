@@ -4,7 +4,7 @@ import { bankrX402Command } from "@/lib/bankr-x402";
 
 const installSample = `npm install @basedchef/contextkit
 
-curl -X POST https://91.107.248.223.sslip.io/api/dashboard/signup \\
+curl -X POST https://your-domain.com/api/dashboard/signup \\
   -H "Content-Type: application/json" \\
   -d '{
     "name": "Autonomous Agent Operator",
