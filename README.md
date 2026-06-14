@@ -1,166 +1,420 @@
 # ContextKit
 
-**Context Infrastructure for AI Agents.**
+ContextKit is context infrastructure for autonomous AI agents. It turns long conversations and project history into compact, structured outputs for agent memory, handoffs, profile extraction, and continuation workflows.
 
-ContextKit is an x402-powered API platform for AI agents that provides conversation summarization, context compression, agent handoff generation, and reusable user profile extraction. It is designed for Bankr agents, autonomous workflows, and teams building token-efficient multi-agent systems.
+The product supports three usage paths:
 
-## What It Includes
+- **Bankr-hosted x402:** simplest paid path. User runs `bankr x402 call`, pays with Bankr, receives JSON. No API key or SDK needed.
+- **API key credits:** dashboard users buy credits with USDC on Base, then use direct `/api/*` endpoints without Bankr per request.
+- **TypeScript SDK:** advanced developers integrate ContextKit into their own app using API keys, credits, webhooks, and optional x402 fallback.
 
-- Production-oriented Hono API with TypeScript, Zod validation, request IDs, payload limits, rate limiting, structured errors, and analytics hooks.
-- Bankr LLM Gateway integration at `https://llm.bankr.bot/v1/chat/completions` with deterministic JSON prompting and retry-on-malformed-JSON behavior.
-- x402 payment middleware with per-route pricing, HTTP 402 payment instructions, facilitator verification, and payment logs.
-- API key authentication with crypto-secure `ck_live_` / `ck_test_` keys, hashed storage, scopes, revocation, and per-key analytics.
-- Real token analytics, request latency tracking, endpoint usage, payment totals, webhook delivery status, and public aggregate metrics.
-- OpenAPI 3.1 at `/openapi.json`, Swagger UI at `/docs/api`, and Redoc at `/docs/redoc`.
-- Publish-ready TypeScript SDK in `packages/sdk` with retries, typed responses, webhook verification, and x402 helpers.
-- Webhook system with signed events, retries, verification, replay endpoint, and ctx.files-compatible audit trails.
-- Next.js product site with landing page, docs portal, API reference, x402 explainer, integration guides, pricing, live dashboard, real demo, and interactive playground.
-- Deployment configuration for Vercel and Cloudflare Pages.
+## Endpoints
 
-## API Surface
+| Endpoint | Purpose | Price |
+| --- | --- | ---: |
+| `POST /api/summarize` | Micro/compact/extended context reduction | `$0.002` |
+| `POST /api/compress-context` | Machine-optimized context packet | `$0.003` |
+| `POST /api/handoff` | Agent-to-agent project transfer | `$0.003` |
+| `POST /api/extract-profile` | Durable user profile memory | `$0.004` |
+| `POST /api/memory-enrichment` | Evolve long-term memory | API key credits/direct |
+| `POST /api/tokens/estimate` | Token estimate for API-key workflows | API key |
 
-| Endpoint | Purpose | Price | Completion Event |
-| --- | --- | ---: | --- |
-| `POST /api/summarize` | Summarize long conversations into concise optimized context | `$0.002` | `summarization.completed` |
-| `POST /api/compress-context` | Compress context into compact structured memory | `$0.003` | `context.compressed` |
-| `POST /api/handoff` | Generate agent-to-agent handoff payloads | `$0.003` | `handoff.generated` |
-| `POST /api/extract-profile` | Extract durable user profile information | `$0.004` | `profile.extracted` |
+## Fastest User Path: Bankr-Hosted x402
 
-## Authentication
-
-Create keys with an admin token:
+This is the main public path for simple users and agents.
 
 ```bash
-curl -X POST http://localhost:3000/api/auth/create-key \
-  -H "Authorization: Bearer $CONTEXTKIT_ADMIN_TOKEN" \
+bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-summarize \
+  -X POST \
+  -d '{"messages":[{"role":"user","content":"Summarize this context for another AI agent."}]}'
+```
+
+No ContextKit API key, npm package, or SDK is required. The user only needs Bankr login and payment approval.
+
+### Hosted Commands
+
+Summarize:
+
+```bash
+bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-summarize \
+  -X POST \
+  -d '{"messages":[{"role":"user","content":"Summarize the deployment state, blockers, and next actions."}],"mode":"compact"}'
+```
+
+Compress context:
+
+```bash
+bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-compress \
+  -X POST \
+  -d '{"messages":[{"role":"user","content":"Project Atlas uses Next.js, Postgres, and Redis. Auth is complete. Slow report generation and enterprise onboarding remain. Beta is due in six weeks."}]}'
+```
+
+Handoff:
+
+```bash
+bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-handoff \
+  -X POST \
+  -d '{"messages":[{"role":"user","content":"ContextKit is live on Hetzner with Postgres, dashboard auth, API credits, Bankr-hosted x402, webhooks, and SDK publishing. Next work is docs, demo polish, and credit top-up testing."}]}'
+```
+
+Extract profile:
+
+```bash
+bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-profile \
+  -X POST \
+  -d '{"messages":[{"role":"user","content":"I prefer short technical explanations, direct debugging help, clear risks, and step-by-step deployment commands."}]}'
+```
+
+Schema and interactive mode:
+
+```bash
+bankr x402 schema https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-summarize
+bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-summarize -i
+bankr x402 list
+```
+
+## Dashboard Signup
+
+Create an account:
+
+```bash
+curl -X POST https://91.107.248.223.sslip.io/api/dashboard/signup \
   -H "Content-Type: application/json" \
   -d '{
-    "name": "Production agent",
+    "name": "Autonomous Agent Operator",
+    "email": "agent-owner@example.com",
+    "password": "replace-with-12-plus-chars",
+    "company": "Agent Lab"
+  }'
+```
+
+Login:
+
+```bash
+curl -i -X POST https://91.107.248.223.sslip.io/api/dashboard/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "agent-owner@example.com",
+    "password": "replace-with-12-plus-chars"
+  }'
+```
+
+Browser dashboard paths:
+
+```txt
+/dashboard
+/dashboard/keys
+/dashboard/credits
+/dashboard/usage
+/dashboard/payments
+/dashboard/webhooks
+```
+
+## API Keys
+
+API keys identify dashboard accounts and direct API integrations. They are used for dashboard auth, analytics, usage, token estimates, webhook management, memory enrichment, and credit billing.
+
+API keys do **not** make paid generation free by themselves. Direct paid routes first try account credits. If credits are insufficient, the route returns an x402 payment challenge.
+
+Create an API key with admin token:
+
+```bash
+curl -X POST https://91.107.248.223.sslip.io/api/auth/create-key \
+  -H "Authorization: Bearer Arsalang" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Production SDK key",
     "environment": "live",
     "scopes": ["context:write", "analytics:read", "webhooks:write", "keys:read"]
   }'
 ```
 
-ContextKit returns the full key once. The stored record is hashed and future list responses only include masked key metadata.
-
-Key management:
-
-```txt
-POST /api/auth/create-key
-POST /api/auth/revoke-key
-GET  /api/auth/keys
-GET  /api/auth/usage
-```
-
-Use keys with:
-
-```txt
-Authorization: Bearer ck_live_...
-```
-
-## Architecture
-
-```mermaid
-flowchart LR
-  A[Bankr or autonomous agent] --> B[x402 payment middleware]
-  B --> C[ContextKit Hono API]
-  C --> D[Bankr LLM Gateway]
-  C --> E[appKV usage, request, payment logs]
-  C --> F[ctx.files snapshots and webhook audits]
-  C --> G[Signed webhooks]
-  G --> H[Agent workflow continuation]
-```
-
-## Quick Start
+List keys:
 
 ```bash
-npm install
-npm run dev
+curl https://91.107.248.223.sslip.io/api/auth/keys \
+  -H "Authorization: Bearer ck_live_replace_me"
 ```
 
-Then call the demo API:
+Revoke a key:
 
 ```bash
-bankr x402 call https://x402.bankr.bot/<your-wallet>/contextkit-summarize \
-  -X POST \
-  -d '{"messages":[{"role":"user","content":"Summarize this long agent conversation."}]}'
+curl -X POST https://91.107.248.223.sslip.io/api/auth/revoke-key \
+  -H "Authorization: Bearer ck_live_replace_me" \
+  -H "Content-Type: application/json" \
+  -d '{"keyId":"key_replace_me"}'
 ```
 
-## Environment
-
-Copy `.env.example` into your deployment environment and configure:
+Check usage:
 
 ```bash
-BANKR_LLM_KEY=bk_replace_me
-BANKR_LLM_BASE_URL=https://llm.bankr.bot/v1
-BANKR_LLM_MODEL=claude-sonnet-4.5
-CONTEXTKIT_WEBHOOK_SECRET=whsec_replace_me
-X402_PAY_TO=0x0000000000000000000000000000000000000000
-X402_NETWORK=base
+curl https://91.107.248.223.sslip.io/api/auth/usage \
+  -H "Authorization: Bearer ck_live_replace_me"
 ```
 
-`BANKR_LLM_KEY` is required for generation. For the recommended Bankr-hosted x402 flow, developers call the `x402.bankr.bot` endpoint and do not paste payment secrets into ContextKit. Direct self-hosted `/api/*` generation routes require a ContextKit API key plus an x402-compatible payment header.
+## Credits
 
-API-key users can also buy ContextKit credits with USDC on Base from the dashboard. The backend verifies the transaction, grants account credits, and SDK calls spend down that balance without requiring Bankr on every request.
+Credits let SDK/API-key users call paid endpoints without Bankr per request.
 
-## Analytics
-
-All metrics are calculated from real requests:
-
-```txt
-GET /api/analytics/overview
-GET /api/analytics/tokens
-GET /api/analytics/payments
-GET /api/analytics/usage
-GET /api/public/metrics
-```
-
-Tracked fields include input tokens, output tokens, token reduction, latency, endpoint usage, payment totals, webhook delivery success rate, and monthly savings estimate.
-
-## Token Estimation
+Check credits:
 
 ```bash
-curl -X POST http://localhost:3000/api/tokens/estimate \
-  -H "Authorization: Bearer $CONTEXTKIT_API_KEY" \
+curl https://91.107.248.223.sslip.io/api/auth/credits \
+  -H "Authorization: Bearer ck_live_replace_me"
+```
+
+Admin grant for testing:
+
+```bash
+curl -X POST https://91.107.248.223.sslip.io/api/auth/credits/grant \
+  -H "Authorization: Bearer Arsalang" \
+  -H "Content-Type: application/json" \
+  -d '{"ownerId":"acct_replace_me","amountUsd":1,"note":"Test credit grant"}'
+```
+
+Self-serve crypto top-up:
+
+1. User opens `/dashboard/credits`.
+2. User creates a USDC invoice.
+3. User sends USDC on Base to the shown wallet.
+4. User pastes the transaction hash.
+5. ContextKit verifies the on-chain USDC transfer and grants credits automatically.
+
+Required env:
+
+```env
+X402_PAY_TO=0xYourWallet
+CREDIT_BASE_RPC_URL=https://mainnet.base.org
+CREDIT_USDC_CONTRACT=0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913
+```
+
+If the public Base RPC rate-limits, use Alchemy, Infura, QuickNode, or another Base RPC URL.
+
+## Direct API Commands
+
+These commands use API key credits. If credits are missing, paid generation routes return HTTP 402.
+
+Summarize:
+
+```bash
+curl -X POST https://91.107.248.223.sslip.io/api/summarize \
+  -H "Authorization: Bearer ck_live_replace_me" \
   -H "Content-Type: application/json" \
   -d '{
-    "modelFamily": "openai",
-    "input": [{"role":"user","content":"long context"}],
-    "compressed": "compact context"
+    "mode": "compact",
+    "messages": [
+      {
+        "role": "user",
+        "content": "Summarize this night-bus pilot context. Preserve goal, status, blockers, and next actions."
+      }
+    ]
   }'
 ```
 
-OpenAI-compatible counting uses `gpt-tokenizer`; Claude and Gemini estimates apply provider-specific calibration against the same canonical tokenization pass.
+Compress context:
 
-## x402 Flow
+```bash
+curl -X POST https://91.107.248.223.sslip.io/api/compress-context \
+  -H "Authorization: Bearer ck_live_replace_me" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "messages": [
+      {
+        "role": "user",
+        "content": "Project Atlas is a transit analytics platform. Stack: Next.js, Postgres, Redis. Completed: auth and dashboards. Issues: slow reports and missing onboarding. Deadline: beta in six weeks."
+      }
+    ]
+  }'
+```
 
-Recommended Bankr-hosted flow:
+Handoff:
 
-1. Agent calls the ContextKit service on `x402.bankr.bot`.
-2. Bankr handles the x402 payment requirement and settles USDC on Base.
-3. Bankr forwards the paid request to a private ContextKit internal endpoint.
-4. ContextKit calls Bankr LLM Gateway, records analytics/payment metadata, and emits signed webhooks.
-5. Agent receives typed JSON context output.
+```bash
+curl -X POST https://91.107.248.223.sslip.io/api/handoff \
+  -H "Authorization: Bearer ck_live_replace_me" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "messages": [
+      {
+        "role": "user",
+        "content": "ContextKit is live with Hetzner, Postgres, dashboard auth, API credits, Bankr-hosted x402, SDK, webhooks, and crypto credit top-up. Next agent should test payment verification and polish docs."
+      }
+    ]
+  }'
+```
 
-Advanced self-hosted flow:
+Extract profile:
 
-1. Agent calls a direct `/api/*` paid endpoint without `X-Payment`.
-2. ContextKit returns HTTP 402 with accepted price, network, asset, resource, and payee metadata.
-3. Agent settles using an x402-compatible client.
-4. Agent retries with `X-Payment` or `X402-Payment`.
+```bash
+curl -X POST https://91.107.248.223.sslip.io/api/extract-profile \
+  -H "Authorization: Bearer ck_live_replace_me" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "messages": [
+      {
+        "role": "user",
+        "content": "I prefer short technical updates, direct debugging, clear risks, and command-by-command deployment instructions."
+      }
+    ]
+  }'
+```
+
+Memory enrichment:
+
+```bash
+curl -X POST https://91.107.248.223.sslip.io/api/memory-enrichment \
+  -H "Authorization: Bearer ck_live_replace_me" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "messages": [
+      {
+        "role": "user",
+        "content": "I used to want long weekly reports, but now I prefer short risk-focused updates with clear next actions."
+      }
+    ]
+  }'
+```
+
+Token estimate:
+
+```bash
+curl -X POST https://91.107.248.223.sslip.io/api/tokens/estimate \
+  -H "Authorization: Bearer ck_live_replace_me" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "modelFamily": "openai",
+    "input": [{"role":"user","content":"Long context to estimate."}],
+    "compressed": "Compressed context."
+  }'
+```
+
+## SDK
+
+Install:
+
+```bash
+npm install @basedchef/contextkit
+```
+
+Smoke test:
+
+```bash
+node --input-type=module -e 'import { ContextKit } from "@basedchef/contextkit"; console.log(typeof ContextKit)'
+```
+
+Call summarize with credits:
+
+```bash
+cat > summarize-sdk.mjs <<'EOF'
+import { ContextKit } from "@basedchef/contextkit";
+
+const client = new ContextKit({
+  apiKey: "ck_live_replace_me",
+  baseUrl: "https://91.107.248.223.sslip.io"
+});
+
+const result = await client.summarize({
+  mode: "micro",
+  messages: [
+    {
+      role: "user",
+      content: "We are planning a night-bus pilot. Summarize current goal, blockers, and next steps."
+    }
+  ]
+});
+
+console.log(JSON.stringify(result, null, 2));
+EOF
+
+node summarize-sdk.mjs
+```
+
+Check credits with SDK:
+
+```bash
+cat > credits-sdk.mjs <<'EOF'
+import { ContextKit } from "@basedchef/contextkit";
+
+const client = new ContextKit({
+  apiKey: "ck_live_replace_me",
+  baseUrl: "https://91.107.248.223.sslip.io"
+});
+
+console.log(JSON.stringify(await client.credits(), null, 2));
+EOF
+
+node credits-sdk.mjs
+```
+
+SDK methods:
+
+```ts
+await client.summarize({ messages, mode: "micro" });
+await client.compressContext({ messages });
+await client.handoff({ messages });
+await client.extractProfile({ messages });
+await client.memoryEnrichment({ messages });
+await client.estimateTokens({ modelFamily: "openai", input: messages });
+await client.credits();
+```
+
+Build SDK locally:
+
+```bash
+npm --workspace @basedchef/contextkit run typecheck
+npm --workspace @basedchef/contextkit run build
+```
+
+Publish SDK:
+
+```bash
+cd packages/sdk
+npm version patch --no-git-tag-version
+npm run build
+npm publish --access public
+npm view @basedchef/contextkit version
+```
+
+If npm says the version already exists, bump the version. If OTP fails, use a fresh authenticator code and make sure system time is synced.
 
 ## Webhooks
 
-Events:
+Register webhook:
 
-- `payment.received`
-- `request.completed`
-- `summarization.completed`
-- `context.compressed`
-- `handoff.generated`
-- `profile.extracted`
+```bash
+curl -X POST https://91.107.248.223.sslip.io/api/webhooks/register \
+  -H "Authorization: Bearer ck_live_replace_me" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "url": "https://example.com/contextkit/webhook",
+    "events": ["request.completed", "summarization.completed", "context.compressed", "handoff.generated", "profile.extracted"]
+  }'
+```
 
-Headers:
+List webhook events:
+
+```bash
+curl https://91.107.248.223.sslip.io/api/webhooks/events \
+  -H "Authorization: Bearer ck_live_replace_me"
+```
+
+List deliveries:
+
+```bash
+curl https://91.107.248.223.sslip.io/api/webhooks/deliveries \
+  -H "Authorization: Bearer ck_live_replace_me"
+```
+
+Replay a webhook event:
+
+```bash
+curl -X POST https://91.107.248.223.sslip.io/api/webhooks/replay \
+  -H "Authorization: Bearer ck_live_replace_me" \
+  -H "Content-Type: application/json" \
+  -d '{"eventId":"evt_replace_me"}'
+```
+
+Webhook headers:
 
 ```txt
 ContextKit-Signature: <hmac-sha256>
@@ -168,205 +422,186 @@ ContextKit-Event: handoff.generated
 ContextKit-Request-Id: req_...
 ```
 
-Verify signatures with `POST /api/webhooks/verify` or by computing HMAC-SHA256 over the raw payload with `CONTEXTKIT_WEBHOOK_SECRET`.
-
-Webhook management:
-
-```txt
-POST /api/webhooks/register
-POST /api/webhooks/replay
-GET  /api/webhooks/events
-GET  /api/webhooks/deliveries
-POST /api/webhooks/:id/rotate-secret
-```
-
-## OpenAPI
-
-- JSON spec: `/openapi.json`
-- Swagger UI: `/docs/api`
-- Redoc: `/docs/redoc`
-
-The spec is generated from Zod request/response schemas and documents API-key auth, x402 payment headers, webhook payloads, and error envelopes.
-
-## TypeScript SDK
-
-```ts
-import { ContextKit } from "@basedchef/contextkit";
-
-const client = new ContextKit({
-  apiKey: process.env.CONTEXTKIT_API_KEY!,
-  baseUrl: "https://91.107.248.223.sslip.io"
-});
-
-const response = await client.handoff({ messages });
-```
-
-Build the publish-ready package:
+## Analytics
 
 ```bash
-npm --workspace packages/sdk run build
+curl https://91.107.248.223.sslip.io/api/analytics/overview \
+  -H "Authorization: Bearer ck_live_replace_me"
+
+curl https://91.107.248.223.sslip.io/api/analytics/tokens \
+  -H "Authorization: Bearer ck_live_replace_me"
+
+curl https://91.107.248.223.sslip.io/api/analytics/payments \
+  -H "Authorization: Bearer ck_live_replace_me"
+
+curl https://91.107.248.223.sslip.io/api/analytics/usage \
+  -H "Authorization: Bearer ck_live_replace_me"
+
+curl https://91.107.248.223.sslip.io/api/public/metrics
 ```
 
-## Deployment
-
-### Hetzner Self-Hosted Postgres
-
-ContextKit supports a self-hosted Hetzner setup where the Next.js app and Postgres run on the same server with Docker Compose. Postgres becomes the source of truth for API keys, usage analytics, request logs, payments, webhook metadata, dashboard sessions, and rate-limit counters.
-
-Create a `.env` on the server:
+## Local Development
 
 ```bash
+npm install
+npm run typecheck
+npm run build
+npm run dev
+```
+
+Run migrations:
+
+```bash
+npm run db:migrate
+```
+
+Start only Postgres with Docker:
+
+```bash
+docker compose -p contextkit up -d postgres
+npm run db:migrate
+npm run dev
+```
+
+## Environment
+
+Example production `.env`:
+
+```env
 POSTGRES_PASSWORD=replace_with_strong_password
 DATABASE_URL=postgres://contextkit:replace_with_strong_password@postgres:5432/contextkit
+
 CONTEXTKIT_ADMIN_TOKEN=replace_with_admin_token
 CONTEXTKIT_INTERNAL_TOKEN=replace_with_internal_forwarder_token
 CONTEXTKIT_WEBHOOK_SECRET=replace_with_webhook_secret
 CONTEXTKIT_BASE_URL=https://your-domain.com
 CONTEXTKIT_BACKEND_URL=https://your-domain.com
+
+RESEND_API_KEY=re_replace_me
+CONTEXTKIT_EMAIL_FROM=ContextKit <security@your-domain.com>
+
 BANKR_LLM_KEY=bk_replace_me
 BANKR_LLM_BASE_URL=https://llm.bankr.bot/v1
 BANKR_LLM_MODEL=claude-sonnet-4.5
+
 X402_PAY_TO=0x_your_wallet
 X402_NETWORK=base
 X402_FACILITATOR_URL=https://facilitator.x402.org
+
+CREDIT_BASE_RPC_URL=https://mainnet.base.org
+CREDIT_USDC_CONTRACT=0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913
 ```
 
-Deploy:
+## Hetzner Docker Deploy
 
 ```bash
-docker compose up -d --build
+cd ~/contextkit
+git pull
+docker compose -p contextkit up -d --build --force-recreate
+docker compose -p contextkit ps
+docker compose -p contextkit logs app --tail=120
 ```
 
-The app container runs:
+Check env inside container:
 
 ```bash
-npm run db:migrate
-npm run start
+docker compose -p contextkit exec app printenv CONTEXTKIT_INTERNAL_TOKEN
+docker compose -p contextkit exec app printenv BANKR_LLM_KEY
+docker compose -p contextkit exec app printenv X402_PAY_TO
+docker compose -p contextkit exec app printenv CREDIT_BASE_RPC_URL
 ```
 
-Useful checks:
+Internal endpoint test:
 
 ```bash
-docker compose ps
-docker compose logs -f app
-docker compose exec postgres psql -U contextkit -d contextkit -c '\dt'
+curl -i -X POST https://91.107.248.223.sslip.io/api/internal/summarize \
+  -H "Authorization: Bearer Arsalang" \
+  -H "Content-Type: application/json" \
+  -d '{"messages":[{"role":"user","content":"Summarize ContextKit production state."}],"mode":"micro"}'
 ```
 
-Local Postgres without Docker app:
+## Bankr x402 Cloud Deploy
+
+Set Bankr x402 environment:
 
 ```bash
-docker compose up -d postgres
-npm run db:migrate
-npm run dev
+bankr x402 env set CONTEXTKIT_BACKEND_URL=https://91.107.248.223.sslip.io
+bankr x402 env set CONTEXTKIT_INTERNAL_TOKEN=Arsalang
 ```
 
-### Bankr-Hosted x402 Cloud
-
-For Bankr-native x402 distribution, deploy the lightweight handlers in `x402/` to Bankr x402 Cloud. Bankr hosts the paid public URL, handles the x402 payment challenge/settlement, and forwards paid requests to your ContextKit backend through private internal endpoints:
-
-```mermaid
-flowchart LR
-  A[Agent or developer] --> B[Bankr x402 Cloud]
-  B --> C[USDC payment on Base]
-  B --> D[ContextKit internal endpoint]
-  D --> E[Bankr LLM Gateway]
-  D --> F[Postgres analytics and logs]
-```
-
-Set encrypted Bankr x402 Cloud environment variables:
-
-```bash
-bankr x402 env set CONTEXTKIT_BACKEND_URL=https://your-domain.com
-bankr x402 env set CONTEXTKIT_INTERNAL_TOKEN=replace_with_internal_forwarder_token
-```
-
-Deploy every paid service from `bankr.x402.json`:
+Deploy hosted services:
 
 ```bash
 bankr x402 deploy
 bankr x402 list
 ```
 
-Bankr will return URLs like:
-
-```txt
-https://x402.bankr.bot/<your-wallet>/contextkit-summarize
-https://x402.bankr.bot/<your-wallet>/contextkit-compress
-https://x402.bankr.bot/<your-wallet>/contextkit-handoff
-https://x402.bankr.bot/<your-wallet>/contextkit-profile
-```
-
-Call a Bankr-hosted endpoint with automatic x402 payment:
+Test hosted summarize:
 
 ```bash
-bankr x402 call https://x402.bankr.bot/<your-wallet>/contextkit-summarize \
+bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-summarize \
   -X POST \
-  -d '{"messages":[{"role":"user","content":"Summarize this context for an AI agent."}]}'
+  -d '{"messages":[{"role":"user","content":"Summarize ContextKit production status for a new AI agent."}],"mode":"micro"}'
 ```
 
-Interactive mode works on Bankr-hosted endpoints because the CLI can read the schema from `bankr.x402.json`:
-
-```bash
-bankr x402 schema https://x402.bankr.bot/<your-wallet>/contextkit-summarize
-bankr x402 call https://x402.bankr.bot/<your-wallet>/contextkit-summarize -i
-```
-
-Use the direct self-hosted x402 routes only when testing your own x402-compatible client:
+## OpenAPI And Docs
 
 ```txt
-POST /api/x402/summarize
-POST /api/x402/compress-context
-POST /api/x402/handoff
-POST /api/x402/extract-profile
+/openapi.json
+/docs
+/docs/api
+/docs/redoc
+/api-reference
+/playground
+/demo
+/pricing
+/x402
 ```
 
-### Vercel
+## Nginx / HTTPS Notes
+
+For the current Hetzner test deployment, HTTPS is served at:
+
+```txt
+https://91.107.248.223.sslip.io
+```
+
+Nginx terminates TLS and forwards to the Next.js app on port `3000`.
+
+## Troubleshooting
+
+`402 Payment Required` on direct `/api/summarize`
+
+The API key has no credits. Top up credits or use Bankr-hosted x402.
+
+`internal_not_configured`
+
+`CONTEXTKIT_INTERNAL_TOKEN` is missing inside the app container.
+
+`Bankr deploy 403`
+
+Usually Bankr account/service limit or config issue. Keep `bankr.x402.json` to supported services and run `bankr whoami`, `bankr x402 list`, then retry.
+
+`Bankr call status 503`
+
+Check direct internal endpoint first, then app logs:
 
 ```bash
-npm run build
-npm run deploy:vercel
+docker compose -p contextkit logs app --tail=200
 ```
 
-### Cloudflare Pages
+`Credit top-up payment_not_verified`
 
-```bash
-npm run build
-npm run deploy:cloudflare
-```
+Make sure the tx is on Base, uses USDC contract `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913`, sends at least the invoice amount, and sends to `X402_PAY_TO`.
 
-Bind `CONTEXTKIT_KV` to appKV-compatible storage and `CONTEXTKIT_FILES` to ctx.files/R2-compatible audit storage.
+`npm publish version already exists`
 
-## Bankr Compatibility
+Bump `packages/sdk/package.json` version.
 
-ContextKit uses the Bankr LLM Gateway through an OpenAI-compatible API:
+`npm publish OTP failed`
 
-```ts
-fetch("https://llm.bankr.bot/v1/chat/completions", {
-  method: "POST",
-  headers: {
-    Authorization: `Bearer ${process.env.BANKR_LLM_KEY}`,
-    "Content-Type": "application/json"
-  },
-  body: JSON.stringify({
-    model: "claude-sonnet-4.5",
-    temperature: 0,
-    response_format: { type: "json_object" },
-    messages
-  })
-});
-```
+Use a fresh authenticator code. If rate-limited, wait and retry later.
 
-## Screenshots
+## License
 
-- Landing page: `/`
-- Docs portal: `/docs`
-- API playground: `/playground`
-- Webhook dashboard: `/dashboard`
-
-## Roadmap
-
-- Multiple x402 facilitator adapters and settlement reconciliation.
-- Durable semantic cache and vector-backed deduplication.
-- Tenant-scoped API keys and usage dashboards.
-- Webhook endpoint management UI.
-- Bankr Terminal onboarding flow for agent operators.
+MIT
