@@ -318,7 +318,14 @@ dashboardSessionRoutes.post("/dashboard/credits/top-up", async (c) => {
   const invoice = await new CryptoTopUpService(c.env ?? {}).createInvoice({
     ownerId: session.accountId,
     amountUsd: body.amountUsd
+  }).catch((error) => {
+    if (error instanceof Error && error.message === "topup_wallet_not_configured") return null;
+    if (error instanceof Error && error.message === "topup_token_not_configured") return null;
+    throw error;
   });
+  if (!invoice) {
+    return c.json({ error: { code: "topup_not_configured", message: "Credit top-up wallet or token contract is not configured.", requestId: c.get("requestId") } }, 503);
+  }
   return c.json({
     invoice,
     instructions: {
@@ -347,9 +354,43 @@ dashboardSessionRoutes.post("/dashboard/credits/verify", async (c) => {
     ownerId: session.accountId,
     invoiceId: body.invoiceId,
     txHash: body.txHash
+  }).catch((error) => {
+    if (!(error instanceof Error)) throw error;
+    const status = topUpErrorStatus(error.message);
+    if (!status) throw error;
+    return c.json({
+      error: {
+        code: error.message,
+        message: topUpErrorMessage(error.message),
+        requestId: c.get("requestId")
+      }
+    }, status);
   });
+  if (invoice instanceof Response) return invoice;
   return c.json({ ok: true, invoice });
 });
+
+function topUpErrorStatus(code: string) {
+  if (code === "invalid_transaction_hash") return 400;
+  if (code === "payment_not_verified") return 402;
+  if (code === "invoice_not_found") return 404;
+  if (code === "transaction_already_used") return 409;
+  if (code === "invoice_expired") return 410;
+  if (code === "rpc_request_failed") return 503;
+  return null;
+}
+
+function topUpErrorMessage(code: string) {
+  const messages: Record<string, string> = {
+    invalid_transaction_hash: "Transaction hash must be a valid 0x hash.",
+    invoice_not_found: "Credit invoice was not found for this account.",
+    invoice_expired: "Credit invoice expired. Create a new invoice and try again.",
+    transaction_already_used: "This transaction hash has already been used for a credit top-up.",
+    payment_not_verified: "No matching Base USDC transfer was found for this invoice.",
+    rpc_request_failed: "Base RPC verification failed. Please try again shortly."
+  };
+  return messages[code] ?? "Credit top-up verification failed.";
+}
 
 async function consumeDailyQuota(c: Context<AppBindings>, namespace: string, ownerId: string, limit: number) {
   const day = new Date().toISOString().slice(0, 10);

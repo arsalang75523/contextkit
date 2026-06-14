@@ -18,6 +18,7 @@ export type CreditTopUpInvoice = {
   tokenContract: string;
   status: "pending" | "paid";
   createdAt: string;
+  expiresAt: string;
   paidAt?: string;
   txHash?: string;
 };
@@ -33,6 +34,10 @@ export class CryptoTopUpService {
     const env = readEnv({ env: this.env });
     const amountUsd = normalizeAmount(input.amountUsd);
     if (amountUsd < 1) throw new Error("minimum_topup_is_1_usd");
+    if (!isAddress(env.x402PayTo) || /^0x0{40}$/i.test(env.x402PayTo)) {
+      throw new Error("topup_wallet_not_configured");
+    }
+    if (!isAddress(env.creditUsdcContract)) throw new Error("topup_token_not_configured");
 
     const invoice: CreditTopUpInvoice = {
       id: createId("inv"),
@@ -45,7 +50,8 @@ export class CryptoTopUpService {
       payTo: env.x402PayTo,
       tokenContract: env.creditUsdcContract,
       status: "pending",
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      expiresAt: new Date(Date.now() + 60 * 60 * 24 * 1000).toISOString()
     };
 
     await this.kv.set(invoiceKey(invoice.id), invoice, 60 * 60 * 24);
@@ -56,12 +62,15 @@ export class CryptoTopUpService {
     const invoice = await this.kv.get<CreditTopUpInvoice>(invoiceKey(input.invoiceId));
     if (!invoice || invoice.ownerId !== input.ownerId) throw new Error("invoice_not_found");
     if (invoice.status === "paid") return invoice;
+    if (new Date(invoice.expiresAt).getTime() < Date.now()) throw new Error("invoice_expired");
 
-    const used = await this.kv.get<{ invoiceId: string }>(txKey(input.txHash));
+    const txHash = normalizeTxHash(input.txHash);
+
+    const used = await this.kv.get<{ invoiceId: string }>(txKey(txHash));
     if (used) throw new Error("transaction_already_used");
 
     const verified = await this.verifyUsdcTransfer({
-      txHash: input.txHash,
+      txHash,
       payTo: invoice.payTo,
       tokenContract: invoice.tokenContract,
       minimumUnits: BigInt(invoice.amountUnits)
@@ -71,17 +80,17 @@ export class CryptoTopUpService {
     const paid: CreditTopUpInvoice = {
       ...invoice,
       status: "paid",
-      txHash: input.txHash,
+      txHash,
       paidAt: new Date().toISOString()
     };
     await Promise.all([
       this.kv.set(invoiceKey(invoice.id), paid),
-      this.kv.set(txKey(input.txHash), { invoiceId: invoice.id })
+      this.kv.set(txKey(txHash), { invoiceId: invoice.id })
     ]);
     await new CreditService(this.env).grant({
       ownerId: invoice.ownerId,
       amountUsd: invoice.amountUsd,
-      note: `Crypto top-up ${invoice.id} ${input.txHash}`
+      note: `Crypto top-up ${invoice.id} ${txHash}`
     });
     return paid;
   }
@@ -120,6 +129,16 @@ async function rpc<T>(url: string, method: string, params: unknown[]) {
 
 function addressTopic(address: string) {
   return `0x${address.toLowerCase().replace(/^0x/, "").padStart(64, "0")}`;
+}
+
+function isAddress(value: string) {
+  return /^0x[a-fA-F0-9]{40}$/.test(value);
+}
+
+function normalizeTxHash(value: string) {
+  const txHash = value.trim().toLowerCase();
+  if (!/^0x[a-f0-9]{64}$/.test(txHash)) throw new Error("invalid_transaction_hash");
+  return txHash;
 }
 
 function invoiceKey(id: string) {
