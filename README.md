@@ -116,18 +116,13 @@ API keys identify dashboard accounts and direct API integrations. They are used 
 
 API keys do **not** make paid generation free by themselves. Direct paid routes first try account credits. If credits are insufficient, the route returns an x402 payment challenge.
 
-Create an API key with admin token:
+Create API keys from the dashboard:
 
-```bash
-curl -X POST https://91.107.248.223.sslip.io/api/auth/create-key \
-  -H "Authorization: Bearer Arsalang" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "Production SDK key",
-    "environment": "live",
-    "scopes": ["context:write", "analytics:read", "webhooks:write", "keys:read"]
-  }'
+```txt
+/dashboard/keys
 ```
+
+New keys are shown once when created. Store the key safely, because ContextKit only keeps the hashed record after creation.
 
 List keys:
 
@@ -161,15 +156,6 @@ Check credits:
 ```bash
 curl https://91.107.248.223.sslip.io/api/auth/credits \
   -H "Authorization: Bearer ck_live_replace_me"
-```
-
-Admin grant for testing:
-
-```bash
-curl -X POST https://91.107.248.223.sslip.io/api/auth/credits/grant \
-  -H "Authorization: Bearer Arsalang" \
-  -H "Content-Type: application/json" \
-  -d '{"ownerId":"acct_replace_me","amountUsd":1,"note":"Test credit grant"}'
 ```
 
 Self-serve crypto top-up:
@@ -358,25 +344,6 @@ await client.estimateTokens({ modelFamily: "openai", input: messages });
 await client.credits();
 ```
 
-Build SDK locally:
-
-```bash
-npm --workspace @basedchef/contextkit run typecheck
-npm --workspace @basedchef/contextkit run build
-```
-
-Publish SDK:
-
-```bash
-cd packages/sdk
-npm version patch --no-git-tag-version
-npm run build
-npm publish --access public
-npm view @basedchef/contextkit version
-```
-
-If npm says the version already exists, bump the version. If OTP fails, use a fresh authenticator code and make sure system time is synced.
-
 ## Webhooks
 
 Register webhook:
@@ -515,33 +482,9 @@ Internal endpoint test:
 
 ```bash
 curl -i -X POST https://91.107.248.223.sslip.io/api/internal/summarize \
-  -H "Authorization: Bearer Arsalang" \
+  -H "Authorization: Bearer replace_with_internal_forwarder_token" \
   -H "Content-Type: application/json" \
   -d '{"messages":[{"role":"user","content":"Summarize ContextKit production state."}],"mode":"micro"}'
-```
-
-## Bankr x402 Cloud Deploy
-
-Set Bankr x402 environment:
-
-```bash
-bankr x402 env set CONTEXTKIT_BACKEND_URL=https://91.107.248.223.sslip.io
-bankr x402 env set CONTEXTKIT_INTERNAL_TOKEN=Arsalang
-```
-
-Deploy hosted services:
-
-```bash
-bankr x402 deploy
-bankr x402 list
-```
-
-Test hosted summarize:
-
-```bash
-bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-summarize \
-  -X POST \
-  -d '{"messages":[{"role":"user","content":"Summarize ContextKit production status for a new AI agent."}],"mode":"micro"}'
 ```
 
 ## OpenAPI And Docs
@@ -593,14 +536,6 @@ docker compose -p contextkit logs app --tail=200
 `Credit top-up payment_not_verified`
 
 Make sure the tx is on Base, uses USDC contract `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913`, sends at least the invoice amount, and sends to `X402_PAY_TO`.
-
-`npm publish version already exists`
-
-Bump `packages/sdk/package.json` version.
-
-`npm publish OTP failed`
-
-Use a fresh authenticator code. If rate-limited, wait and retry later.
 
 ## License
 
