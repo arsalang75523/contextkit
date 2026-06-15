@@ -22,8 +22,8 @@ export function LiveMetrics() {
 
   const items = [
     ["Requests processed", metrics?.totalRequests ?? 0],
-    ["Avg token reduction", `${metrics?.averageTokenReduction ?? 0}%`],
-    ["Saved tokens", metrics?.compressionSavings ?? 0],
+    ["Paid endpoints", 4],
+    ["Starting price", "$0.002"],
     ["x402 revenue", `$${(metrics?.paymentTotal ?? 0).toFixed(3)}`]
   ];
 

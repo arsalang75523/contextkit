@@ -24,7 +24,7 @@ The product supports three usage paths:
 This is the main public path for simple users and agents.
 
 ```bash
-bankr x402 call https://x402.bankr.bot/YOUR_WALLET/contextkit-summarize \
+bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-summarize \
   -X POST \
   -d '{"messages":[{"role":"user","content":"Summarize this context for another AI agent."}]}'
 ```
@@ -36,7 +36,7 @@ No ContextKit API key, npm package, or SDK is required. The user only needs Bank
 Summarize:
 
 ```bash
-bankr x402 call https://x402.bankr.bot/YOUR_WALLET/contextkit-summarize \
+bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-summarize \
   -X POST \
   -d '{"messages":[{"role":"user","content":"Summarize the deployment state, blockers, and next actions."}],"mode":"compact"}'
 ```
@@ -44,7 +44,7 @@ bankr x402 call https://x402.bankr.bot/YOUR_WALLET/contextkit-summarize \
 Compress context:
 
 ```bash
-bankr x402 call https://x402.bankr.bot/YOUR_WALLET/contextkit-compress \
+bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-compress \
   -X POST \
   -d '{"messages":[{"role":"user","content":"Project Atlas uses Next.js, Postgres, and Redis. Auth is complete. Slow report generation and enterprise onboarding remain. Beta is due in six weeks."}]}'
 ```
@@ -52,7 +52,7 @@ bankr x402 call https://x402.bankr.bot/YOUR_WALLET/contextkit-compress \
 Handoff:
 
 ```bash
-bankr x402 call https://x402.bankr.bot/YOUR_WALLET/contextkit-handoff \
+bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-handoff \
   -X POST \
   -d '{"messages":[{"role":"user","content":"ContextKit is live on Hetzner with Postgres, dashboard auth, API credits, Bankr-hosted x402, webhooks, and SDK publishing. Next work is docs, demo polish, and credit top-up testing."}]}'
 ```
@@ -60,7 +60,7 @@ bankr x402 call https://x402.bankr.bot/YOUR_WALLET/contextkit-handoff \
 Extract profile:
 
 ```bash
-bankr x402 call https://x402.bankr.bot/YOUR_WALLET/contextkit-profile \
+bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-profile \
   -X POST \
   -d '{"messages":[{"role":"user","content":"I prefer short technical explanations, direct debugging help, clear risks, and step-by-step deployment commands."}]}'
 ```
@@ -68,8 +68,8 @@ bankr x402 call https://x402.bankr.bot/YOUR_WALLET/contextkit-profile \
 Schema and interactive mode:
 
 ```bash
-bankr x402 schema https://x402.bankr.bot/YOUR_WALLET/contextkit-summarize
-bankr x402 call https://x402.bankr.bot/YOUR_WALLET/contextkit-summarize -i
+bankr x402 schema https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-summarize
+bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-summarize -i
 bankr x402 list
 ```
 
