@@ -51,7 +51,7 @@ export default function DemoPage() {
     ["Compress context", bankrX402Command("compress-context", { messages })],
     ["Agent handoff", bankrX402Command("handoff", { messages })],
     ["Profile + hosted memory", bankrX402Command("extract-profile", { messages })],
-    ["Memory enrichment ($0.04 API credits)", `curl -X POST https://YOUR_CONTEXTKIT_URL/api/memory-enrichment \\
+    ["Memory enrichment ($0.04 API credits)", `curl -X POST https://contextkit.pro/api/memory-enrichment \\
   -H "Authorization: Bearer ck_live_..." \\
   -H "Content-Type: application/json" \\
   -d '${JSON.stringify({ messages }).replaceAll("'", "'\\''")}'`]

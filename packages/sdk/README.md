@@ -46,7 +46,7 @@ import { ContextKit } from "@basedchef/contextkit";
 
 const client = new ContextKit({
   apiKey: "<CONTEXTKIT_API_KEY>",
-  baseUrl: "https://your-domain.com"
+  baseUrl: "https://contextkit.pro"
 });
 ```
 
@@ -58,7 +58,7 @@ import { ContextKit } from "@basedchef/contextkit";
 
 const client = new ContextKit({
   apiKey: "<CONTEXTKIT_API_KEY>",
-  baseUrl: "https://your-domain.com"
+  baseUrl: "https://contextkit.pro"
 });
 
 const result = await client.summarize({
@@ -92,7 +92,7 @@ import { ContextKit } from "@basedchef/contextkit";
 
 const client = new ContextKit({
   apiKey: "<CONTEXTKIT_API_KEY>",
-  baseUrl: "https://your-domain.com"
+  baseUrl: "https://contextkit.pro"
 });
 
 const result = await client.compressContext({
@@ -118,7 +118,7 @@ import { ContextKit } from "@basedchef/contextkit";
 
 const client = new ContextKit({
   apiKey: "<CONTEXTKIT_API_KEY>",
-  baseUrl: "https://your-domain.com"
+  baseUrl: "https://contextkit.pro"
 });
 
 const result = await client.handoff({
@@ -144,7 +144,7 @@ import { ContextKit } from "@basedchef/contextkit";
 
 const client = new ContextKit({
   apiKey: "<CONTEXTKIT_API_KEY>",
-  baseUrl: "https://your-domain.com"
+  baseUrl: "https://contextkit.pro"
 });
 
 const result = await client.extractProfile({
@@ -172,7 +172,7 @@ import { ContextKit } from "@basedchef/contextkit";
 
 const client = new ContextKit({
   apiKey: "<CONTEXTKIT_API_KEY>",
-  baseUrl: "https://your-domain.com"
+  baseUrl: "https://contextkit.pro"
 });
 
 const result = await client.memoryEnrichment({
@@ -198,7 +198,7 @@ import { ContextKit } from "@basedchef/contextkit";
 
 const client = new ContextKit({
   apiKey: "<CONTEXTKIT_API_KEY>",
-  baseUrl: "https://your-domain.com"
+  baseUrl: "https://contextkit.pro"
 });
 
 const result = await client.estimateTokens({
@@ -225,7 +225,7 @@ If an API key has no credits, ContextKit direct paid routes return HTTP 402. Adv
 ```ts
 const client = new ContextKit({
   apiKey: "<CONTEXTKIT_API_KEY>",
-  baseUrl: "https://your-domain.com",
+  baseUrl: "https://contextkit.pro",
   x402: async (challenge, request) => {
     return wallet.pay(challenge, request);
   }
@@ -310,7 +310,7 @@ import { ContextKit } from "@basedchef/contextkit";
 
 const client = new ContextKit({
   apiKey: "<CONTEXTKIT_API_KEY>",
-  baseUrl: "https://your-domain.com"
+  baseUrl: "https://contextkit.pro"
 });
 
 const result = await client.credits();

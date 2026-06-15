@@ -324,7 +324,7 @@ export function createOpenApiDocument() {
       version: "0.1.0",
       description: "Context Infrastructure for AI Agents. Bankr-native context compression, handoff, and profile APIs with x402 payments."
     },
-    servers: [{ url: "https://contextkit.dev" }, { url: "http://localhost:3000" }],
+    servers: [{ url: "https://contextkit.pro" }, { url: "http://localhost:3000" }],
     tags: [
       { name: "Context" },
       { name: "Authentication" },
@@ -334,7 +334,7 @@ export function createOpenApiDocument() {
     ],
     externalDocs: {
       description: "ContextKit developer documentation",
-      url: "https://contextkit.dev/docs"
+      url: "https://contextkit.pro/docs"
     }
   });
 }

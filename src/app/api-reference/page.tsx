@@ -97,7 +97,7 @@ export default function ApiReferencePage() {
 
 function directApiCurl(path: string, payload: unknown) {
   const body = JSON.stringify(payload).replaceAll("'", "'\\''");
-  return `curl -X POST https://your-domain.com${path} \\
+  return `curl -X POST https://contextkit.pro${path} \\
   -H "Authorization: Bearer <CONTEXTKIT_API_KEY>" \\
   -H "Content-Type: application/json" \\
   -d '${body}'`;

@@ -78,7 +78,7 @@ bankr x402 list
 Create an account:
 
 ```bash
-curl -X POST https://your-domain.com/api/dashboard/signup \
+curl -X POST https://contextkit.pro/api/dashboard/signup \
   -H "Content-Type: application/json" \
   -d '{
     "name": "Autonomous Agent Operator",
@@ -91,7 +91,7 @@ curl -X POST https://your-domain.com/api/dashboard/signup \
 Login:
 
 ```bash
-curl -i -X POST https://your-domain.com/api/dashboard/login \
+curl -i -X POST https://contextkit.pro/api/dashboard/login \
   -H "Content-Type: application/json" \
   -d '{
     "email": "agent-owner@example.com",
@@ -127,14 +127,14 @@ New keys are shown once when created. Store the key safely, because ContextKit o
 List keys:
 
 ```bash
-curl https://your-domain.com/api/auth/keys \
+curl https://contextkit.pro/api/auth/keys \
   -H "Authorization: Bearer <CONTEXTKIT_API_KEY>"
 ```
 
 Revoke a key:
 
 ```bash
-curl -X POST https://your-domain.com/api/auth/revoke-key \
+curl -X POST https://contextkit.pro/api/auth/revoke-key \
   -H "Authorization: Bearer <CONTEXTKIT_API_KEY>" \
   -H "Content-Type: application/json" \
   -d '{"keyId":"key_replace_me"}'
@@ -143,7 +143,7 @@ curl -X POST https://your-domain.com/api/auth/revoke-key \
 Check usage:
 
 ```bash
-curl https://your-domain.com/api/auth/usage \
+curl https://contextkit.pro/api/auth/usage \
   -H "Authorization: Bearer <CONTEXTKIT_API_KEY>"
 ```
 
@@ -154,7 +154,7 @@ Credits let SDK/API-key users call paid endpoints without Bankr per request.
 Check credits:
 
 ```bash
-curl https://your-domain.com/api/auth/credits \
+curl https://contextkit.pro/api/auth/credits \
   -H "Authorization: Bearer <CONTEXTKIT_API_KEY>"
 ```
 
@@ -183,7 +183,7 @@ These commands use API key credits. If credits are missing, paid generation rout
 Summarize:
 
 ```bash
-curl -X POST https://your-domain.com/api/summarize \
+curl -X POST https://contextkit.pro/api/summarize \
   -H "Authorization: Bearer <CONTEXTKIT_API_KEY>" \
   -H "Content-Type: application/json" \
   -d '{
@@ -200,7 +200,7 @@ curl -X POST https://your-domain.com/api/summarize \
 Compress context:
 
 ```bash
-curl -X POST https://your-domain.com/api/compress-context \
+curl -X POST https://contextkit.pro/api/compress-context \
   -H "Authorization: Bearer <CONTEXTKIT_API_KEY>" \
   -H "Content-Type: application/json" \
   -d '{
@@ -216,7 +216,7 @@ curl -X POST https://your-domain.com/api/compress-context \
 Handoff:
 
 ```bash
-curl -X POST https://your-domain.com/api/handoff \
+curl -X POST https://contextkit.pro/api/handoff \
   -H "Authorization: Bearer <CONTEXTKIT_API_KEY>" \
   -H "Content-Type: application/json" \
   -d '{
@@ -232,7 +232,7 @@ curl -X POST https://your-domain.com/api/handoff \
 Extract profile:
 
 ```bash
-curl -X POST https://your-domain.com/api/extract-profile \
+curl -X POST https://contextkit.pro/api/extract-profile \
   -H "Authorization: Bearer <CONTEXTKIT_API_KEY>" \
   -H "Content-Type: application/json" \
   -d '{
@@ -248,7 +248,7 @@ curl -X POST https://your-domain.com/api/extract-profile \
 Memory enrichment:
 
 ```bash
-curl -X POST https://your-domain.com/api/memory-enrichment \
+curl -X POST https://contextkit.pro/api/memory-enrichment \
   -H "Authorization: Bearer <CONTEXTKIT_API_KEY>" \
   -H "Content-Type: application/json" \
   -d '{
@@ -264,7 +264,7 @@ curl -X POST https://your-domain.com/api/memory-enrichment \
 Token estimate:
 
 ```bash
-curl -X POST https://your-domain.com/api/tokens/estimate \
+curl -X POST https://contextkit.pro/api/tokens/estimate \
   -H "Authorization: Bearer <CONTEXTKIT_API_KEY>" \
   -H "Content-Type: application/json" \
   -d '{
@@ -296,7 +296,7 @@ import { ContextKit } from "@basedchef/contextkit";
 
 const client = new ContextKit({
   apiKey: "<CONTEXTKIT_API_KEY>",
-  baseUrl: "https://your-domain.com"
+  baseUrl: "https://contextkit.pro"
 });
 
 const result = await client.summarize({
@@ -323,7 +323,7 @@ import { ContextKit } from "@basedchef/contextkit";
 
 const client = new ContextKit({
   apiKey: "<CONTEXTKIT_API_KEY>",
-  baseUrl: "https://your-domain.com"
+  baseUrl: "https://contextkit.pro"
 });
 
 console.log(JSON.stringify(await client.credits(), null, 2));
@@ -349,7 +349,7 @@ await client.credits();
 Register webhook:
 
 ```bash
-curl -X POST https://your-domain.com/api/webhooks/register \
+curl -X POST https://contextkit.pro/api/webhooks/register \
   -H "Authorization: Bearer <CONTEXTKIT_API_KEY>" \
   -H "Content-Type: application/json" \
   -d '{
@@ -361,21 +361,21 @@ curl -X POST https://your-domain.com/api/webhooks/register \
 List webhook events:
 
 ```bash
-curl https://your-domain.com/api/webhooks/events \
+curl https://contextkit.pro/api/webhooks/events \
   -H "Authorization: Bearer <CONTEXTKIT_API_KEY>"
 ```
 
 List deliveries:
 
 ```bash
-curl https://your-domain.com/api/webhooks/deliveries \
+curl https://contextkit.pro/api/webhooks/deliveries \
   -H "Authorization: Bearer <CONTEXTKIT_API_KEY>"
 ```
 
 Replay a webhook event:
 
 ```bash
-curl -X POST https://your-domain.com/api/webhooks/replay \
+curl -X POST https://contextkit.pro/api/webhooks/replay \
   -H "Authorization: Bearer <CONTEXTKIT_API_KEY>" \
   -H "Content-Type: application/json" \
   -d '{"eventId":"evt_replace_me"}'
@@ -392,19 +392,19 @@ ContextKit-Request-Id: req_...
 ## Analytics
 
 ```bash
-curl https://your-domain.com/api/analytics/overview \
+curl https://contextkit.pro/api/analytics/overview \
   -H "Authorization: Bearer <CONTEXTKIT_API_KEY>"
 
-curl https://your-domain.com/api/analytics/tokens \
+curl https://contextkit.pro/api/analytics/tokens \
   -H "Authorization: Bearer <CONTEXTKIT_API_KEY>"
 
-curl https://your-domain.com/api/analytics/payments \
+curl https://contextkit.pro/api/analytics/payments \
   -H "Authorization: Bearer <CONTEXTKIT_API_KEY>"
 
-curl https://your-domain.com/api/analytics/usage \
+curl https://contextkit.pro/api/analytics/usage \
   -H "Authorization: Bearer <CONTEXTKIT_API_KEY>"
 
-curl https://your-domain.com/api/public/metrics
+curl https://contextkit.pro/api/public/metrics
 ```
 
 ## Local Development
@@ -441,11 +441,11 @@ DATABASE_URL=postgres://contextkit:replace_with_strong_password@postgres:5432/co
 CONTEXTKIT_ADMIN_TOKEN=replace_with_admin_token
 CONTEXTKIT_INTERNAL_TOKEN=replace_with_internal_forwarder_token
 CONTEXTKIT_WEBHOOK_SECRET=replace_with_webhook_secret
-CONTEXTKIT_BASE_URL=https://your-domain.com
-CONTEXTKIT_BACKEND_URL=https://your-domain.com
+CONTEXTKIT_BASE_URL=https://contextkit.pro
+CONTEXTKIT_BACKEND_URL=https://contextkit.pro
 
 RESEND_API_KEY=re_replace_me
-CONTEXTKIT_EMAIL_FROM=ContextKit <security@your-domain.com>
+CONTEXTKIT_EMAIL_FROM=ContextKit <security@contextkit.pro>
 
 BANKR_LLM_KEY=bk_replace_me
 BANKR_LLM_BASE_URL=https://llm.bankr.bot/v1
@@ -478,7 +478,7 @@ CREDIT_USDC_CONTRACT=0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913
 For the current Hetzner test deployment, HTTPS is served at:
 
 ```txt
-https://your-domain.com
+https://contextkit.pro
 ```
 
 Nginx terminates TLS and forwards to the Next.js app on port `3000`.

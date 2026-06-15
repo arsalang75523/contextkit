@@ -25,7 +25,7 @@ const sdkClient = `import { ContextKit } from "@basedchef/contextkit";
 
 const client = new ContextKit({
   apiKey: process.env.CONTEXTKIT_API_KEY!,
-  baseUrl: "https://your-domain.com"
+  baseUrl: "https://contextkit.pro"
 });`;
 
 const sdkMethods = `${sdkClient}
@@ -45,13 +45,13 @@ console.log(credits.balanceUsd);`;
 
 const optionalX402 = `const client = new ContextKit({
   apiKey: process.env.CONTEXTKIT_API_KEY!,
-  baseUrl: "https://your-domain.com",
+  baseUrl: "https://contextkit.pro",
   x402: async (challenge, request) => {
     return wallet.pay(challenge, request);
   }
 });`;
 
-const dashboardSignup = `curl -X POST https://your-domain.com/api/dashboard/signup \\
+const dashboardSignup = `curl -X POST https://contextkit.pro/api/dashboard/signup \\
   -H "Content-Type: application/json" \\
   -d '{
     "name": "Autonomous Agent Operator",
@@ -60,7 +60,7 @@ const dashboardSignup = `curl -X POST https://your-domain.com/api/dashboard/sign
     "company": "Agent Lab"
   }'`;
 
-const dashboardLogin = `curl -i -X POST https://your-domain.com/api/dashboard/login \\
+const dashboardLogin = `curl -i -X POST https://contextkit.pro/api/dashboard/login \\
   -H "Content-Type: application/json" \\
   -d '{
     "email": "agent-owner@example.com",
@@ -73,10 +73,10 @@ const tokenEstimate = directApiCurl("/api/tokens/estimate", {
   compressed: "Compressed context."
 });
 
-const creditsCurl = `curl https://your-domain.com/api/auth/credits \\
+const creditsCurl = `curl https://contextkit.pro/api/auth/credits \\
   -H "Authorization: Bearer <CONTEXTKIT_API_KEY>"`;
 
-const webhookRegister = `curl -X POST https://your-domain.com/api/webhooks/register \\
+const webhookRegister = `curl -X POST https://contextkit.pro/api/webhooks/register \\
   -H "Authorization: Bearer <CONTEXTKIT_API_KEY>" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -92,8 +92,8 @@ const valid = await verifyContextKitWebhook({
   secret: process.env.CONTEXTKIT_WEBHOOK_SECRET!
 });`;
 
-const productionEnv = `CONTEXTKIT_BASE_URL=https://your-domain.com
-CONTEXTKIT_BACKEND_URL=https://your-domain.com
+const productionEnv = `CONTEXTKIT_BASE_URL=https://contextkit.pro
+CONTEXTKIT_BACKEND_URL=https://contextkit.pro
 CONTEXTKIT_ADMIN_TOKEN=replace_with_admin_token
 CONTEXTKIT_INTERNAL_TOKEN=replace_with_internal_forwarder_token
 CONTEXTKIT_WEBHOOK_SECRET=replace_with_webhook_secret
@@ -304,13 +304,13 @@ export default function DocsPage() {
               <p>
                 API-key users can inspect usage, tokens, payments, request history, webhook deliveries, and credits from the dashboard. Public aggregate metrics are available for lightweight status displays.
               </p>
-              <CodeBlock code={`curl https://your-domain.com/api/analytics/overview \\
+              <CodeBlock code={`curl https://contextkit.pro/api/analytics/overview \\
   -H "Authorization: Bearer <CONTEXTKIT_API_KEY>"
 
-curl https://your-domain.com/api/analytics/usage \\
+curl https://contextkit.pro/api/analytics/usage \\
   -H "Authorization: Bearer <CONTEXTKIT_API_KEY>"
 
-curl https://your-domain.com/api/public/metrics`} />
+curl https://contextkit.pro/api/public/metrics`} />
             </DocSection>
 
             <DocSection id="deployment" title="Deployment">
@@ -369,7 +369,7 @@ curl https://your-domain.com/api/public/metrics`} />
 
 function directApiCurl(path: string, payload: unknown) {
   const body = JSON.stringify(payload).replaceAll("'", "'\\''");
-  return `curl -X POST https://your-domain.com${path} \\
+  return `curl -X POST https://contextkit.pro${path} \\
   -H "Authorization: Bearer <CONTEXTKIT_API_KEY>" \\
   -H "Content-Type: application/json" \\
   -d '${body}'`;

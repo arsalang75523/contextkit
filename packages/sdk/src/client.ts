@@ -24,7 +24,7 @@ export class ContextKit {
   private readonly x402?: X402PaymentHandler;
 
   constructor(private readonly options: ContextKitOptions) {
-    this.baseUrl = options.baseUrl ?? "https://contextkit.dev";
+    this.baseUrl = options.baseUrl ?? "https://contextkit.pro";
     this.fetcher = options.fetch ?? fetch;
     this.retries = options.retries ?? 2;
     this.x402 = options.x402;
