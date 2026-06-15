@@ -32,16 +32,35 @@ const taskInstructions: Record<ContextEndpoint, string> = {
     "Create canonical memory records for retrieval systems. Return activeMemories for stable valid memories, evolvingMemories for likely-changing memories, conflicts for genuine superseded/contradictory memories, longTermGoals for durable goals, and confidence. Every memory must include fact, category, stability, and confidence. Deduplicate across stable/evolving/deprecated/superseded/conflict fields. Merge semantic equivalents such as async communication/dislikes meetings. Omit memories below 0.60 confidence. Avoid narrative and redundant arrays."
 };
 
-export function buildContextPrompt(endpoint: ContextEndpoint, messages: ConversationMessage[]) {
+export function buildContextPrompt(endpoint: ContextEndpoint, messages: ConversationMessage[], mode?: string) {
+  const responseSchema = endpoint === "summarize" ? summarizeSchema(mode) : schemas[endpoint];
+  const task = endpoint === "summarize" ? summarizeTask(mode) : taskInstructions[endpoint];
+
   return [
     { role: "system", content: guardrails },
     {
       role: "user",
       content: JSON.stringify({
-        task: taskInstructions[endpoint],
-        responseSchema: schemas[endpoint],
+        task,
+        responseSchema,
         conversation: messages
       })
     }
   ] as const;
+}
+
+function summarizeSchema(mode?: string) {
+  if (mode === "debug") return schemas.summarize;
+  const state = { goal: "string", status: "string", blockers: ["string"], decisions: ["string"], priorities: ["string"], nextSteps: ["string"] };
+  if (mode === "extended") return `{"extended":"string","state":${JSON.stringify(state)}}`;
+  if (mode === "compact") return `{"compact":"string","state":${JSON.stringify(state)}}`;
+  return `{"micro":"string","state":${JSON.stringify(state)}}`;
+}
+
+function summarizeTask(mode?: string) {
+  const base = taskInstructions.summarize;
+  if (mode === "debug") return `${base} Return full debug-compatible summarize fields.`;
+  if (mode === "extended") return `${base} Generate only extended and state. Do not generate micro, compact, summary, metrics, token counts, debug fields, keyDecisions, actionItems, openQuestions, or risks.`;
+  if (mode === "compact") return `${base} Generate only compact and state. Do not generate micro, extended, summary, metrics, token counts, debug fields, keyDecisions, actionItems, openQuestions, or risks.`;
+  return `${base} Generate only micro and state. micro must be the smallest useful output. Do not generate compact, extended, summary, metrics, token counts, debug fields, keyDecisions, actionItems, openQuestions, or risks.`;
 }

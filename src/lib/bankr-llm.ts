@@ -8,8 +8,8 @@ type JsonObject = Record<string, unknown>;
 export class BankrLlmClient {
   constructor(private readonly context?: { env?: Record<string, unknown> }) {}
 
-  async generateJson(endpoint: ContextEndpoint, messages: ConversationMessage[]): Promise<JsonObject> {
-    return this.generateJsonFromPrompt(endpoint, buildContextPrompt(endpoint, messages));
+  async generateJson(endpoint: ContextEndpoint, messages: ConversationMessage[], mode?: string): Promise<JsonObject> {
+    return this.generateJsonFromPrompt(endpoint, buildContextPrompt(endpoint, messages, mode));
   }
 
   async generateJsonFromPrompt(endpoint: ContextEndpoint, promptMessages: readonly { role: string; content: string }[]): Promise<JsonObject> {
