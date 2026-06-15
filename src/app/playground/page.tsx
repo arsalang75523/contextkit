@@ -137,7 +137,7 @@ export default function PlaygroundPage() {
               </p>
               {active.slug === "memory-enrichment" ? (
                 <p className="mt-3 rounded border border-aqua/25 bg-aqua/10 p-3 text-sm leading-6 text-aqua">
-                  Hosted x402 note: memory enrichment is currently paid through <code>contextkit-profile</code>. Direct API-key usage still calls <code>/api/memory-enrichment</code>.
+                  Memory enrichment is priced at <code>$0.04</code>. Direct API-key usage calls <code>/api/memory-enrichment</code>; hosted memory extraction can also run through <code>contextkit-profile</code>.
                 </p>
               ) : null}
             </div>

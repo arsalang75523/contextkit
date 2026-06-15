@@ -70,11 +70,11 @@ contextRoutes.post(
   }
 );
 
-contextRoutes.post("/memory-enrichment", requireApiKey("context:write"), apiKeyRateLimit(), zValidator("json", conversationRequestSchema), async (c) => {
+contextRoutes.post("/memory-enrichment", requireApiKey("context:write"), apiKeyRateLimit(), apiCreditOrX402PaymentRequired("memory-enrichment"), zValidator("json", conversationRequestSchema), async (c) => {
   const request = { ...c.req.valid("json"), messages: sanitizeMessages(c.req.valid("json").messages) };
   const service = new ContextService({ env: c.env ?? {}, requestId: c.get("requestId") });
   const result = await service.memoryEnrichment(request);
-  await complete(c, "/memory-enrichment", request, JSON.stringify(result));
+  await complete(c, "/memory-enrichment", request, JSON.stringify(result), c.get("payment")?.paymentId);
   return c.json(result);
 });
 

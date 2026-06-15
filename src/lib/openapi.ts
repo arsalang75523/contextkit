@@ -199,7 +199,7 @@ routes.forEach(([path, summary, responseSchema, price]) => {
     method: "post",
     path,
     summary,
-    description: `Requires Bearer API key with context:write scope and x402 payment of $${price.toFixed(3)}.`,
+    description: `Requires Bearer API key with context:write scope and x402 payment of ${formatUsd(price)}.`,
     security: [{ ApiKeyAuth: [], X402Payment: [] }],
     request: {
       body: {
@@ -221,6 +221,10 @@ routes.forEach(([path, summary, responseSchema, price]) => {
     }
   });
 });
+
+function formatUsd(price: number) {
+  return `$${price.toFixed(3).replace(/0+$/, "").replace(/\.$/, "")}`;
+}
 
 registry.registerPath({
   method: "post",

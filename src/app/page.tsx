@@ -16,7 +16,7 @@ const features = [
   ["Context Compression", Gauge, "/api/compress-context", "{ compressedContext, state, entities, metrics }"],
   ["Agent Handoff Engine", Bot, "/api/handoff", "{ project, completed, priorities, startHere }"],
   ["User Profile Extraction", FileJson, "/api/extract-profile", "{ micro, compact, full, memoryFacts }"],
-  ["x402 Payments", CircleDollarSign, "per request", "$0.002 - $0.004"],
+  ["x402 Payments", CircleDollarSign, "per request", "$0.03 - $0.05"],
   ["Webhook Automation", Webhook, "signed events", "replayable delivery logs"],
   ["Bankr-native Integration", Cable, "LLM gateway", "claude-sonnet-4.5 via Bankr"]
 ] as const;
@@ -61,7 +61,7 @@ export default function HomePage() {
           >
             <div className="mb-4 grid grid-cols-3 gap-2 text-xs text-white/60">
               <span className="rounded bg-mint/10 px-3 py-2 text-mint">live metrics below</span>
-              <span className="rounded bg-aqua/10 px-3 py-2 text-aqua">$0.003 handoff</span>
+              <span className="rounded bg-aqua/10 px-3 py-2 text-aqua">$0.03 handoff</span>
               <span className="rounded bg-coral/10 px-3 py-2 text-coral">signed webhooks</span>
             </div>
             <CodeBlock code={sample} />

@@ -12,11 +12,11 @@ The product supports three usage paths:
 
 | Endpoint | Purpose | Price |
 | --- | --- | ---: |
-| `POST /api/summarize` | Micro/compact/extended context reduction | `$0.002` |
-| `POST /api/compress-context` | Machine-optimized context packet | `$0.003` |
-| `POST /api/handoff` | Agent-to-agent project transfer | `$0.003` |
-| `POST /api/extract-profile` | Durable user profile memory | `$0.004` |
-| `POST /api/memory-enrichment` | Evolve long-term memory | API key credits/direct |
+| `POST /api/summarize` | Micro/compact/extended context reduction | `$0.05` |
+| `POST /api/compress-context` | Machine-optimized context packet | `$0.03` |
+| `POST /api/handoff` | Agent-to-agent project transfer | `$0.03` |
+| `POST /api/extract-profile` | Durable user profile memory | `$0.04` |
+| `POST /api/memory-enrichment` | Evolve long-term memory | `$0.04` API key credits/direct |
 | `POST /api/tokens/estimate` | Token estimate for API-key workflows | API key |
 
 ## Fastest User Path: Bankr-Hosted x402

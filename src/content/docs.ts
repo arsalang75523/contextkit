@@ -3,7 +3,7 @@ export const endpoints = [
     slug: "summarize",
     method: "POST",
     path: "/api/summarize",
-    price: "$0.002",
+    price: "$0.05",
     event: "summarization.completed",
     description: "Summarize long conversations into concise optimized context with micro, compact, extended, or debug modes.",
     response: {
@@ -22,7 +22,7 @@ export const endpoints = [
     slug: "compress-context",
     method: "POST",
     path: "/api/compress-context",
-    price: "$0.003",
+    price: "$0.03",
     event: "context.compressed",
     description: "Compress context into compact structured memory.",
     response: {
@@ -43,7 +43,7 @@ export const endpoints = [
     slug: "handoff",
     method: "POST",
     path: "/api/handoff",
-    price: "$0.003",
+    price: "$0.03",
     event: "handoff.generated",
     description: "Generate a structured agent-to-agent continuation payload.",
     response: {
@@ -72,7 +72,7 @@ export const endpoints = [
     slug: "extract-profile",
     method: "POST",
     path: "/api/extract-profile",
-    price: "$0.004",
+    price: "$0.04",
     event: "profile.extracted",
     description: "Extract durable user preferences for reusable agent memory.",
     response: {
@@ -111,9 +111,9 @@ export const endpoints = [
     slug: "memory-enrichment",
     method: "POST",
     path: "/api/memory-enrichment",
-    price: "$0.003 API key / $0.004 hosted profile",
+    price: "$0.04",
     event: "request.completed",
-    description: "Evolve long-term memory without duplicating stale preferences. Bankr-hosted paid memory extraction is served through contextkit-profile while the direct API-key endpoint remains /api/memory-enrichment.",
+    description: "Evolve long-term memory without duplicating stale preferences. Direct API-key usage calls /api/memory-enrichment; hosted memory extraction can also run through the profile endpoint.",
     response: {
       activeMemories: [{ fact: "Prefers concise weekly updates", category: "preference", stability: "stable", confidence: 0.96 }],
       evolvingMemories: [{ fact: "Preparing a night-bus pilot", category: "project", stability: "evolving", confidence: 0.92 }],

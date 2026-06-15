@@ -420,7 +420,7 @@ function CreditsData({
         <Metric label="SDK mode" value="API key credits" />
       </div>
       <div className="mt-5 rounded-md border border-aqua/25 bg-aqua/10 p-4 text-sm leading-6 text-white/65">
-        SDK users can call summarize, compress, handoff, and profile without Bankr when this balance covers the endpoint price. If credits are insufficient, direct routes fall back to the normal x402 payment challenge.
+        SDK users can call summarize, compress, handoff, profile, and memory enrichment without Bankr when this balance covers the endpoint price. If credits are insufficient, direct routes fall back to the normal x402 payment challenge.
       </div>
       <div className="mt-5 rounded-md border border-mint/25 bg-mint/10 p-4">
         <h2 className="font-semibold text-white">Buy credits with crypto</h2>

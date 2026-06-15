@@ -4,7 +4,7 @@
   "services": {
     "contextkit-summarize": {
       "description": "Summarize long AI conversations into concise reusable context for autonomous agents.",
-      "price": "0.002",
+      "price": "0.05",
       "methods": ["POST"],
       "category": "ai-infrastructure",
       "tags": ["ai-agents", "context", "summarization", "bankr", "token-optimization"],
@@ -55,7 +55,7 @@
     },
     "contextkit-compress": {
       "description": "Compress agent conversation context into compact structured memory.",
-      "price": "0.003",
+      "price": "0.03",
       "methods": ["POST"],
       "category": "ai-infrastructure",
       "tags": ["ai-agents", "context-compression", "memory", "bankr"],
@@ -89,7 +89,7 @@
     },
     "contextkit-handoff": {
       "description": "Generate structured agent-to-agent handoff payloads.",
-      "price": "0.003",
+      "price": "0.03",
       "methods": ["POST"],
       "category": "ai-infrastructure",
       "tags": ["multi-agent", "handoff", "workflow", "bankr"],
@@ -127,7 +127,7 @@
     },
     "contextkit-profile": {
       "description": "Extract reusable user profile and durable memory for autonomous AI agents.",
-      "price": "0.004",
+      "price": "0.04",
       "methods": ["POST"],
       "category": "ai-infrastructure",
       "tags": ["profile", "memory", "personalization", "ai-agents"],

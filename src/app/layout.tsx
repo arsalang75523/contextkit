@@ -48,7 +48,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     name: "ContextKit",
     applicationCategory: "DeveloperApplication",
     description: site.description,
-    offers: { "@type": "Offer", price: "0.002", priceCurrency: "USD" }
+    offers: { "@type": "Offer", price: "0.03", priceCurrency: "USD" }
   };
 
   return (

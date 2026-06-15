@@ -51,7 +51,7 @@ export default function DemoPage() {
     ["Compress context", bankrX402Command("compress-context", { messages })],
     ["Agent handoff", bankrX402Command("handoff", { messages })],
     ["Profile + hosted memory", bankrX402Command("extract-profile", { messages })],
-    ["Direct memory enrichment", `curl -X POST https://YOUR_CONTEXTKIT_URL/api/memory-enrichment \\
+    ["Memory enrichment ($0.04 API credits)", `curl -X POST https://YOUR_CONTEXTKIT_URL/api/memory-enrichment \\
   -H "Authorization: Bearer ck_live_..." \\
   -H "Content-Type: application/json" \\
   -d '${JSON.stringify({ messages }).replaceAll("'", "'\\''")}'`]
@@ -143,7 +143,7 @@ export default function DemoPage() {
               <div>
                 <h2 className="mb-3 text-sm uppercase tracking-[0.18em] text-white/45">Run every endpoint</h2>
                 <p className="mb-3 text-sm leading-6 text-white/55">
-                  Bankr-hosted x402 commands are paid one endpoint at a time. Memory enrichment remains available through the direct API-key route; hosted memory extraction is included in profile output.
+                  Bankr-hosted x402 commands are paid one endpoint at a time. Memory enrichment is $0.04 through API-key credits; hosted memory extraction can also run through profile output.
                 </p>
                 <Panel title="Full pipeline command" value={allEndpointsCommand} />
                 <p className="mt-3 text-xs leading-5 text-white/40">

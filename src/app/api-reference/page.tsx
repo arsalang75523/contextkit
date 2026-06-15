@@ -57,7 +57,7 @@ export default function ApiReferencePage() {
                     ) : null}
                     {endpoint.slug === "memory-enrichment" ? (
                       <p className="mt-3 max-w-3xl rounded border border-aqua/25 bg-aqua/10 p-3 text-sm leading-6 text-aqua">
-                        Memory enrichment is operational: use <code>/api/memory-enrichment</code> with an API key, or use hosted <code>contextkit-profile</code> when you want paid profile + memory extraction through Bankr.
+                        Memory enrichment is priced at <code>$0.04</code>: use <code>/api/memory-enrichment</code> with an API key and credits, or use hosted <code>contextkit-profile</code> when you want profile + memory extraction through Bankr.
                       </p>
                     ) : null}
                   </div>
