@@ -40,12 +40,21 @@ export function GetStartedCard() {
           </div>
         </div>
       </div>
-      <div className="rounded-md border border-line bg-carbon/72 p-4 shadow-glow">
-        <div className="mb-4 flex items-center gap-2 text-sm text-aqua">
-          <Terminal className="h-4 w-4" />
-          Bankr command + optional SDK/API bootstrap
+      <div className="grid gap-4">
+        <div className="rounded-md border border-mint/20 bg-carbon/72 p-4 shadow-glow">
+          <div className="mb-4 flex items-center gap-2 text-sm text-mint">
+            <Terminal className="h-4 w-4" />
+            Bankr-hosted x402 command
+          </div>
+          <CodeBlock code={hostedSample} />
         </div>
-        <CodeBlock code={`${installSample}\n\n${hostedSample}`} />
+        <div className="rounded-md border border-aqua/20 bg-carbon/72 p-4 shadow-glow">
+          <div className="mb-4 flex items-center gap-2 text-sm text-aqua">
+            <Package className="h-4 w-4" />
+            SDK/API bootstrap
+          </div>
+          <CodeBlock code={installSample} />
+        </div>
       </div>
     </div>
   );

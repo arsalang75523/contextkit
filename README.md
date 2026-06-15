@@ -459,34 +459,6 @@ CREDIT_BASE_RPC_URL=https://mainnet.base.org
 CREDIT_USDC_CONTRACT=0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913
 ```
 
-## Hetzner Docker Deploy
-
-```bash
-cd ~/contextkit
-git pull
-docker compose -p contextkit up -d --build --force-recreate
-docker compose -p contextkit ps
-docker compose -p contextkit logs app --tail=120
-```
-
-Check env inside container:
-
-```bash
-docker compose -p contextkit exec app printenv CONTEXTKIT_INTERNAL_TOKEN
-docker compose -p contextkit exec app printenv BANKR_LLM_KEY
-docker compose -p contextkit exec app printenv X402_PAY_TO
-docker compose -p contextkit exec app printenv CREDIT_BASE_RPC_URL
-```
-
-Internal endpoint test:
-
-```bash
-curl -i -X POST https://your-domain.com/api/internal/summarize \
-  -H "Authorization: Bearer replace_with_internal_forwarder_token" \
-  -H "Content-Type: application/json" \
-  -d '{"messages":[{"role":"user","content":"Summarize ContextKit production state."}],"mode":"micro"}'
-```
-
 ## OpenAPI And Docs
 
 ```txt

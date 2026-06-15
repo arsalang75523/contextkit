@@ -8,19 +8,15 @@ export default function ApiReferencePage() {
   return (
     <main>
       <Section eyebrow="Get Started" title="Choose the right ContextKit access path.">
-        <div className="mb-6 grid gap-4 md:grid-cols-3">
+        <div className="mb-6 grid gap-4 md:grid-cols-2">
           <div className="rounded-md border border-mint/25 bg-mint/10 p-5">
             <h2 className="font-semibold text-white">Main path: Bankr-hosted x402</h2>
             <p className="mt-2 text-sm leading-6 text-white/62">Best for new users, operators, and autonomous agents. Run a Bankr x402 command, approve USDC payment in Bankr, and receive JSON. No ContextKit API key, npm install, or SDK required.</p>
           </div>
-          <a href="/dashboard/login" className="rounded-md border border-mint/25 bg-mint/10 p-5 transition hover:border-mint/60">
-            <h2 className="font-semibold text-white">Operations: API key</h2>
-            <p className="mt-2 text-sm leading-6 text-white/62">API keys identify dashboard accounts and server integrations. Use them for analytics, webhooks, token estimates, direct memory enrichment, key management, and credit-backed direct API calls. Users can buy credits with USDC on Base from the dashboard.</p>
+          <a href="/dashboard/login" className="rounded-md border border-aqua/25 bg-aqua/10 p-5 transition hover:border-aqua/60">
+            <h2 className="font-semibold text-white">Developer path: SDK + API key</h2>
+            <p className="mt-2 text-sm leading-6 text-white/62">Use the TypeScript SDK or direct curl with a dashboard API key. API keys connect accounts to credits, analytics, webhooks, token estimates, memory enrichment, and key management. If credits exist, paid endpoints run without Bankr; otherwise direct routes return an x402 payment challenge.</p>
           </a>
-          <div className="rounded-md border border-aqua/25 bg-aqua/10 p-5">
-            <h2 className="font-semibold text-white">Advanced: SDK</h2>
-            <p className="mt-2 text-sm leading-6 text-white/62">The SDK is a TypeScript wrapper around direct API routes. It attaches your API key, sends typed requests, checks credits, returns typed JSON, verifies webhooks, and can optionally handle x402 fallback when credits run out.</p>
-          </div>
         </div>
         <GetStartedCard />
       </Section>
@@ -31,7 +27,7 @@ export default function ApiReferencePage() {
             <p className="mt-2 text-sm leading-6 text-white/60">Use these URLs for public paid calls. Bankr handles payment, then forwards the request to ContextKit. No ContextKit API key is required.</p>
           </div>
           <div className="rounded-md border border-aqua/20 bg-aqua/10 p-5">
-            <h2 className="font-semibold text-white">Advanced: direct API routes</h2>
+            <h2 className="font-semibold text-white">Advanced: SDK/API-key direct routes</h2>
             <p className="mt-2 text-sm leading-6 text-white/60">Direct <code>/api/*</code> routes are for SDK and backend integrations. Send <code>Authorization: Bearer &lt;CONTEXTKIT_API_KEY&gt;</code>. If the account has credits, paid endpoints run without Bankr; otherwise the route returns an x402 payment challenge.</p>
           </div>
         </div>
