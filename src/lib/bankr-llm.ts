@@ -9,12 +9,15 @@ export class BankrLlmClient {
   constructor(private readonly context?: { env?: Record<string, unknown> }) {}
 
   async generateJson(endpoint: ContextEndpoint, messages: ConversationMessage[]): Promise<JsonObject> {
+    return this.generateJsonFromPrompt(endpoint, buildContextPrompt(endpoint, messages));
+  }
+
+  async generateJsonFromPrompt(endpoint: ContextEndpoint, promptMessages: readonly { role: string; content: string }[]): Promise<JsonObject> {
     const env = readEnv(this.context);
     if (!env.bankrLlmKey) {
       throw new Error("BANKR_LLM_KEY is required for ContextKit generation.");
     }
 
-    const promptMessages = buildContextPrompt(endpoint, messages);
     let lastError: unknown;
 
     for (let attempt = 1; attempt <= 2; attempt += 1) {

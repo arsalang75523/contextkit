@@ -24,7 +24,7 @@ export class ContextService {
 
   async summarize(request: ConversationRequest): Promise<SummarizeResponse> {
     const startedAt = Date.now();
-    const output = await this.generate("summarize", request);
+    const output = await this.generateSummarizeOutput(request);
     const mode = request.mode ?? "micro";
     const inputTokens = estimateTokens(request.messages);
     const stateValue = dedupeSummaryState(summarizeState(output.state));
@@ -280,10 +280,52 @@ export class ContextService {
   private async generate(endpoint: ContextEndpoint, request: ConversationRequest) {
     return new BankrLlmClient({ env: this.serviceContext.env ?? {} }).generateJson(endpoint, request.messages);
   }
+
+  private async generateSummarizeOutput(request: ConversationRequest) {
+    const client = new BankrLlmClient({ env: this.serviceContext.env ?? {} });
+    const output = await client.generateJson("summarize", request.messages);
+    const stateValue = summarizeState(output.state);
+    if (completeStateText(stateValue.goal)) return output;
+
+    const repairedState = await client.generateJsonFromPrompt("summarize", buildSummarizeStateRepairPrompt(request.messages));
+    return {
+      ...output,
+      state: {
+        ...stateValue,
+        ...summarizeState(repairedState.state ?? repairedState)
+      }
+    };
+  }
 }
 
 function arrayOfStrings(value: unknown): string[] {
   return Array.isArray(value) ? value.map(cleanMemoryText).filter(Boolean) : [];
+}
+
+function buildSummarizeStateRepairPrompt(messages: ConversationRequest["messages"]) {
+  return [
+    {
+      role: "system",
+      content: "You are ContextKit state extractor. Return only valid minified JSON. Extract state directly from the conversation. Do not summarize. Do not add metrics. Use unknown only if the conversation truly has no goal/objective/purpose/requested outcome."
+    },
+    {
+      role: "user",
+      content: JSON.stringify({
+        task: "Re-extract summarize state because the previous output returned an invalid or unknown goal. The goal must come from the conversation itself. If the text contains phrases like 'the goal is', 'objective', 'aim', 'purpose', 'need to', or an explicit requested outcome, put that in state.goal. Keep fields concise but complete.",
+        responseSchema: {
+          state: {
+            goal: "string",
+            status: "string",
+            blockers: ["string"],
+            decisions: ["string"],
+            priorities: ["string"],
+            nextSteps: ["string"]
+          }
+        },
+        conversation: messages
+      })
+    }
+  ] as const;
 }
 
 function confidence(value: unknown) {
