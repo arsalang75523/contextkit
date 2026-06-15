@@ -27,7 +27,7 @@ export class ContextService {
     const output = await new BankrLlmClient({ env: this.serviceContext.env ?? {} }).generateJson("summarize", request.messages, request.mode ?? "micro");
     const mode = request.mode ?? "micro";
     const inputTokens = estimateTokens(request.messages);
-    const stateValue = dedupeSummaryState(summarizeState(output.state));
+    const stateValue = dedupeSummaryState(withLlmGoalFallback(summarizeState(output.state), output));
     const responseState = extractedContinuityState(stateValue);
     const keyDecisions = arrayOfStrings(output.keyDecisions);
     const actionItems = arrayOfStrings(output.actionItems);
@@ -304,9 +304,26 @@ function summarizeState(value: unknown) {
   };
 }
 
+function withLlmGoalFallback(stateValue: ReturnType<typeof summarizeState>, output: Record<string, unknown>) {
+  if (completeGoalText(stateValue.goal)) return stateValue;
+  return {
+    ...stateValue,
+    goal: llmGeneratedGoal(output) || stateValue.goal
+  };
+}
+
+function llmGeneratedGoal(output: Record<string, unknown>) {
+  const candidates = [output.micro, output.compact, output.extended, output.summary];
+  for (const candidate of candidates) {
+    const goal = completeGoalText(String(candidate ?? ""));
+    if (goal) return goal;
+  }
+  return "";
+}
+
 function extractedContinuityState(stateValue: ReturnType<typeof summarizeState>) {
   return {
-    goal: completeStateText(stateValue.goal) || "unknown",
+    goal: completeGoalText(stateValue.goal) || "unknown",
     status: completeStateText(stateValue.status) || "unknown",
     blockers: completeStateList(stateValue.blockers),
     next: completeStateList(stateValue.nextSteps)
@@ -525,6 +542,20 @@ function completeStateText(value: string) {
   const cleaned = conciseStateText(value);
   if (!cleaned || cleaned === "unknown" || hasInvalidStateEnding(cleaned)) return "";
   return cleaned;
+}
+
+function completeGoalText(value: string) {
+  const cleaned = normalizeSummary(value)
+    .replace(/\b(because|since|therefore|so that|in order to)\b.*?(?=\.|;|$)/gi, "")
+    .replace(/\s*[,;:([–-]\s*$/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!cleaned || /^unknown$/i.test(cleaned) || hasInvalidStateEnding(cleaned)) return "";
+  if (wordCount(cleaned) <= 36) return cleaned.replace(/[.!?]$/, "");
+
+  const completeParts = splitCompleteThoughts(cleaned);
+  const compact = completeParts.find((part) => wordCount(part) >= 3 && wordCount(part) <= 36);
+  return compact ? compact.replace(/[.!?]$/, "") : cleaned.replace(/[.!?]$/, "");
 }
 
 function conciseStateText(value: string) {
