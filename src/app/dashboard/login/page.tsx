@@ -165,7 +165,7 @@ export default function DashboardLoginPage() {
           <div className="mt-4 rounded border border-aqua/30 bg-aqua/10 p-4">
             <p className="text-sm text-aqua">Paste the 6-digit verification code sent to {unverifiedEmail}.</p>
             <div className="mt-3 flex flex-col gap-3 sm:flex-row">
-              <input value={verificationCode} onChange={(event) => setVerificationCode(event.target.value.replace(/\D/g, "").slice(0, 6))} placeholder="111111" className="h-10 flex-1 rounded-md border border-line bg-ink/80 px-3 font-mono text-sm tracking-[0.35em] text-white outline-none focus:border-aqua" />
+              <input value={verificationCode} onChange={(event) => setVerificationCode(event.target.value.replace(/\D/g, "").slice(0, 6))} placeholder="6-digit code" className="h-10 flex-1 rounded-md border border-line bg-ink/80 px-3 font-mono text-sm tracking-[0.35em] text-white outline-none focus:border-aqua" />
               <button type="button" onClick={verifyCode} className="h-10 rounded-md bg-aqua px-4 text-sm font-medium text-ink">
                 Verify code
               </button>
@@ -173,7 +173,6 @@ export default function DashboardLoginPage() {
                 Resend
               </button>
             </div>
-            <p className="mt-3 text-xs text-white/45">Temporary test code: 111111. Remove before launch.</p>
           </div>
         ) : null}
         {result ? (

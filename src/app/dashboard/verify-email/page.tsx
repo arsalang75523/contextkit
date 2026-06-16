@@ -62,7 +62,7 @@ function VerifyEmailForm() {
         <h1 className="mt-4 text-3xl font-semibold text-white">{status || "Verification failed"}</h1>
         <div className="mt-6 grid gap-3">
           <input value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@company.com" className="h-11 rounded-md border border-line bg-ink/80 px-3 text-sm text-white outline-none focus:border-mint" />
-          <input value={code} onChange={(event) => setCode(event.target.value.replace(/\D/g, "").slice(0, 6))} placeholder="111111" className="h-11 rounded-md border border-line bg-ink/80 px-3 font-mono text-sm tracking-[0.35em] text-white outline-none focus:border-mint" />
+          <input value={code} onChange={(event) => setCode(event.target.value.replace(/\D/g, "").slice(0, 6))} placeholder="6-digit code" className="h-11 rounded-md border border-line bg-ink/80 px-3 font-mono text-sm tracking-[0.35em] text-white outline-none focus:border-mint" />
           <button type="button" onClick={submitCode} className="h-11 rounded-md bg-mint px-5 text-sm font-medium text-ink">
             Verify code
           </button>

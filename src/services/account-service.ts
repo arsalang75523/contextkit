@@ -116,12 +116,10 @@ export class AccountService {
     const account = await this.kv.get<AccountRecord>(`account:${accountId}`);
     if (!account) return null;
 
-    // Temporary testing override. Remove before public launch.
-    const testOverride = code === "111111";
     const verification = await this.kv.get<{ accountId: string; codeHash: string; attempts?: number }>(`email-verification-code:${email}`);
     const validStoredCode = verification?.accountId === accountId && verification.codeHash === await sha256(`contextkit-email-code-v1:${email}:${code}`);
 
-    if (!testOverride && !validStoredCode) {
+    if (!validStoredCode) {
       if (verification) {
         await this.kv.set(`email-verification-code:${email}`, { ...verification, attempts: (verification.attempts ?? 0) + 1 }, 15 * 60);
       }
