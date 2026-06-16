@@ -155,7 +155,7 @@ export class AccountService {
     const token = `ck_reset_${randomSecret(32)}`;
     const tokenHash = await sha256(token);
     const resetId = createId("rst");
-    const baseUrl = this.env.CONTEXTKIT_BASE_URL || this.env.CONTEXTKIT_BACKEND_URL || "http://localhost:3000";
+    const baseUrl = readBinding(this.env, "CONTEXTKIT_BASE_URL") || readBinding(this.env, "CONTEXTKIT_BACKEND_URL") || "http://localhost:3000";
     const resetUrl = `${baseUrl.replace(/\/$/, "")}/dashboard/reset-password?token=${encodeURIComponent(token)}`;
 
     await this.kv.set(`password-reset:${tokenHash}`, {
@@ -321,12 +321,15 @@ async function sendTransactionalEmail(input: {
   actionText?: string;
 }) {
   const { env } = input;
-  if (!env.RESEND_API_KEY || !env.CONTEXTKIT_EMAIL_FROM) {
+  const resendApiKey = readBinding(env, "RESEND_API_KEY");
+  const emailFrom = readBinding(env, "CONTEXTKIT_EMAIL_FROM");
+
+  if (!resendApiKey || !emailFrom) {
     console.warn(JSON.stringify({
       level: "warn",
       message: "Transactional email skipped because Resend env is missing",
-      hasResendApiKey: Boolean(env.RESEND_API_KEY),
-      hasEmailFrom: Boolean(env.CONTEXTKIT_EMAIL_FROM),
+      hasResendApiKey: Boolean(resendApiKey),
+      hasEmailFrom: Boolean(emailFrom),
       to: input.to,
       subject: input.subject
     }));
@@ -336,11 +339,11 @@ async function sendTransactionalEmail(input: {
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${env.RESEND_API_KEY}`,
+      Authorization: `Bearer ${resendApiKey}`,
       "Content-Type": "application/json"
     },
     body: JSON.stringify({
-      from: env.CONTEXTKIT_EMAIL_FROM,
+      from: emailFrom,
       to: input.to,
       subject: input.subject,
       html: `
@@ -369,10 +372,15 @@ async function sendTransactionalEmail(input: {
     level: "info",
     message: "Resend transactional email accepted",
     to: input.to,
-    from: env.CONTEXTKIT_EMAIL_FROM,
+    from: emailFrom,
     subject: input.subject,
     body
   }));
+}
+
+function readBinding(env: AppBindings["Bindings"], key: keyof AppBindings["Bindings"]) {
+  const processEnv: Record<string, string | undefined> = typeof process !== "undefined" ? process.env : {};
+  return String(env[key] ?? processEnv[key] ?? "");
 }
 
 function escapeHtml(value: string) {
