@@ -322,6 +322,14 @@ async function sendTransactionalEmail(input: {
 }) {
   const { env } = input;
   if (!env.RESEND_API_KEY || !env.CONTEXTKIT_EMAIL_FROM) {
+    console.warn(JSON.stringify({
+      level: "warn",
+      message: "Transactional email skipped because Resend env is missing",
+      hasResendApiKey: Boolean(env.RESEND_API_KEY),
+      hasEmailFrom: Boolean(env.CONTEXTKIT_EMAIL_FROM),
+      to: input.to,
+      subject: input.subject
+    }));
     return;
   }
 
@@ -353,7 +361,18 @@ async function sendTransactionalEmail(input: {
       status: response.status,
       body
     }));
+    return;
   }
+
+  const body = await response.text().catch(() => "");
+  console.log(JSON.stringify({
+    level: "info",
+    message: "Resend transactional email accepted",
+    to: input.to,
+    from: env.CONTEXTKIT_EMAIL_FROM,
+    subject: input.subject,
+    body
+  }));
 }
 
 function escapeHtml(value: string) {
