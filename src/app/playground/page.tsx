@@ -169,7 +169,7 @@ curl -X POST "https://contextkit.pro/api/context/upload-text?${params.toString()
               <div className="mb-4 rounded-md border border-mint/20 bg-mint/10 p-4">
                 <h2 className="font-semibold text-white">Profile modes</h2>
                 <p className="mt-1 text-sm leading-6 text-white/60">
-                  Bankr uses <code>contextkit-profile</code> for both. Default is extract-profile; memory enrichment runs with <code>mode:"memory-enrichment"</code>.
+                  Bankr uses <code>contextkit-profile</code> for both. Default is extract-profile; memory enrichment runs with <code>{'mode:"memory-enrichment"'}</code>.
                 </p>
                 <div className="mt-4 grid w-full grid-cols-2 gap-2">
                   {(["extract-profile", "memory-enrichment"] as const).map((mode) => (
@@ -210,7 +210,7 @@ curl -X POST "https://contextkit.pro/api/context/upload-text?${params.toString()
               </p>
               {active.slug === "memory-enrichment" ? (
                 <p className="mt-3 rounded border border-aqua/25 bg-aqua/10 p-3 text-sm leading-6 text-aqua">
-                  Memory enrichment is priced at <code>$0.04</code>. Hosted Bankr calls use <code>contextkit-profile</code> with <code>mode:"memory-enrichment"</code>; direct API-key usage can still call <code>/api/memory-enrichment</code>.
+                  Memory enrichment is priced at <code>$0.04</code>. Hosted Bankr calls use <code>contextkit-profile</code> with <code>{'mode:"memory-enrichment"'}</code>; direct API-key usage can still call <code>/api/memory-enrichment</code>.
                 </p>
               ) : null}
             </div>

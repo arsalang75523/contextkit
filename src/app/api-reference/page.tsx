@@ -59,7 +59,7 @@ export default function ApiReferencePage() {
                     ) : null}
                     {endpoint.slug === "memory-enrichment" ? (
                       <p className="mt-3 max-w-3xl rounded border border-aqua/25 bg-aqua/10 p-3 text-sm leading-6 text-aqua">
-                        Bankr memory enrichment is a mode of <code>contextkit-profile</code>: send <code>mode:"memory-enrichment"</code>. Direct API-key usage can still call <code>/api/memory-enrichment</code>.
+                        Bankr memory enrichment is a mode of <code>contextkit-profile</code>: send <code>{'mode:"memory-enrichment"'}</code>. Direct API-key usage can still call <code>/api/memory-enrichment</code>.
                       </p>
                     ) : null}
                   </div>
