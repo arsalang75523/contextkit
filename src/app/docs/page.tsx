@@ -92,14 +92,21 @@ const valid = await verifyContextKitWebhook({
   secret: process.env.CONTEXTKIT_WEBHOOK_SECRET!
 });`;
 
-const longContextUpload = `curl -X POST https://contextkit.pro/api/context/upload \\
+const longContextUpload = `cat > payload.json <<'EOF'
+{
+  "messages": [
+    {
+      "role": "user",
+      "content": "Paste the long conversation or document here."
+    }
+  ],
+  "precompute": {"endpoint":"summarize","mode":"micro"}
+}
+EOF
+
+curl -X POST https://contextkit.pro/api/context/upload \\
   -H "Content-Type: application/json" \\
-  -d '{
-    "messages": [
-      {"role":"user","content":"LONG_CONTEXT_HERE"}
-    ],
-    "precompute": {"endpoint":"summarize","mode":"micro"}
-  }'`;
+  --data-binary @payload.json`;
 
 const bankrContextIdCall = `bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-summarize \\
   -X POST \\
@@ -122,13 +129,13 @@ const navItems = [
   "Access Paths",
   "Bankr Hosted x402",
   "Dashboard And Keys",
+  "Long Context",
   "API Credits",
   "Direct API",
   "SDK",
   "Endpoint Reference",
   "Webhooks",
   "Analytics",
-  "Long Context",
   "Errors",
   "Checklist"
 ];
@@ -204,6 +211,27 @@ export default function DocsPage() {
               </div>
               <div className="mt-4 rounded-md border border-aqua/20 bg-aqua/10 p-4 text-sm leading-6 text-white/65">
                 Create and revoke API keys in <code>/dashboard/keys</code>. Use API keys with <code>Authorization: Bearer &lt;CONTEXTKIT_API_KEY&gt;</code>.
+              </div>
+            </DocSection>
+
+            <DocSection id="long-context" title="Long Context">
+              <p>
+                If your input is large, do not send the full payload through the Bankr x402 command. Upload it to ContextKit first with <code>precompute</code>, copy the returned <code>contextId</code>, then use that ID in the paid Bankr call. The final response keeps the normal endpoint schema.
+              </p>
+              <div className="mt-4 grid gap-3 md:grid-cols-3">
+                <InfoCard title="1. Upload" body="Send messages to /api/context/upload and choose the endpoint/mode to precompute. No Bankr command is needed for this step." />
+                <InfoCard title="2. Copy contextId" body="The upload response returns a temporary ctx_... ID plus expiry and token count." />
+                <InfoCard title="3. Pay with Bankr" body="Call the hosted x402 endpoint with contextId. Bankr payment happens here and ContextKit returns the cached endpoint response." />
+              </div>
+              <div className="mt-4 grid gap-4 lg:grid-cols-2">
+                <div>
+                  <h3 className="mb-2 font-semibold text-white">Upload and precompute</h3>
+                  <CodeBlock code={longContextUpload} />
+                </div>
+                <div>
+                  <h3 className="mb-2 font-semibold text-white">Call Bankr with contextId</h3>
+                  <CodeBlock code={bankrContextIdCall} />
+                </div>
               </div>
             </DocSection>
 
@@ -321,22 +349,6 @@ curl https://contextkit.pro/api/analytics/usage \\
   -H "Authorization: Bearer <CONTEXTKIT_API_KEY>"
 
 curl https://contextkit.pro/api/public/metrics`} />
-            </DocSection>
-
-            <DocSection id="long-context" title="Long Context">
-              <p>
-                For large source conversations, upload the payload once, precompute the target operation, then reuse the returned <code>contextId</code> with summarize, compress-context, handoff, extract-profile, or memory-enrichment. This keeps the paid Bankr call small and fast while preserving the normal endpoint response shape.
-              </p>
-              <div className="mt-4 grid gap-4 lg:grid-cols-2">
-                <div>
-                  <h3 className="mb-2 font-semibold text-white">Upload payload</h3>
-                  <CodeBlock code={longContextUpload} />
-                </div>
-                <div>
-                  <h3 className="mb-2 font-semibold text-white">Call Bankr with contextId</h3>
-                  <CodeBlock code={bankrContextIdCall} />
-                </div>
-              </div>
             </DocSection>
 
             <DocSection id="errors" title="Errors">
