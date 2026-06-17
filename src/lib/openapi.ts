@@ -1,6 +1,7 @@
 import { OpenAPIRegistry, OpenApiGeneratorV31, extendZodWithOpenApi } from "@asteasolutions/zod-to-openapi";
 import { z } from "zod";
 import {
+  contextUploadSchema,
   conversationRequestSchema,
   createApiKeySchema,
   loginSchema,
@@ -36,6 +37,13 @@ const errorSchema = z.object({
     requestId: z.string(),
     details: z.unknown().optional()
   })
+});
+
+const contextUploadResponse = z.object({
+  contextId: z.string(),
+  expiresAt: z.string(),
+  messageCount: z.number(),
+  inputTokens: z.number()
 });
 
 const summarizeResponse = z.object({
@@ -193,6 +201,29 @@ const routes = [
   ["/api/extract-profile", "Extract user profile", profileResponse, endpointPricing["extract-profile"]],
   ["/api/memory-enrichment", "Enrich long-term memory", memoryEnrichmentResponse, endpointPricing["memory-enrichment"]]
 ] as const;
+
+registry.registerPath({
+  method: "post",
+  path: "/api/context/upload",
+  summary: "Upload long context for contextId-based calls",
+  description: "Stores long message payloads temporarily and returns a small contextId that can be sent to paid endpoints, including Bankr-hosted x402 services.",
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: contextUploadSchema
+        }
+      }
+    }
+  },
+  responses: {
+    201: {
+      description: "Context uploaded.",
+      content: { "application/json": { schema: contextUploadResponse } }
+    },
+    422: response("Validation failed.", errorSchema)
+  }
+});
 
 routes.forEach(([path, summary, responseSchema, price]) => {
   registry.registerPath({

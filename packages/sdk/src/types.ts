@@ -6,10 +6,24 @@ export type ConversationMessage = {
 };
 
 export type ContextRequest = {
-  messages: ConversationMessage[];
+  messages?: ConversationMessage[];
+  contextId?: string;
   mode?: "micro" | "compact" | "extended" | "debug";
   metadata?: Record<string, unknown>;
   webhookUrl?: string;
+};
+
+export type ContextUploadRequest = {
+  messages: ConversationMessage[];
+  metadata?: Record<string, unknown>;
+  ttlSeconds?: number;
+};
+
+export type ContextUploadResponse = {
+  contextId: string;
+  expiresAt: string;
+  messageCount: number;
+  inputTokens: number;
 };
 
 export type SummarizeResponse = {

@@ -5,11 +5,22 @@ export const messageSchema = z.object({
   content: z.string().min(1).max(50_000)
 });
 
+export const contextIdSchema = z.string().regex(/^ctx_[a-f0-9]{24}$/);
+
 export const conversationRequestSchema = z.object({
-  messages: z.array(messageSchema).min(1).max(200),
+  messages: z.array(messageSchema).min(1).max(200).optional(),
+  contextId: contextIdSchema.optional(),
   mode: z.enum(["micro", "compact", "extended", "debug"]).optional(),
   metadata: z.record(z.string(), z.unknown()).optional(),
   webhookUrl: z.string().url().optional()
+}).refine((value) => Boolean(value.contextId) || Boolean(value.messages?.length), {
+  message: "Provide either messages or contextId."
+});
+
+export const contextUploadSchema = z.object({
+  messages: z.array(messageSchema).min(1).max(200),
+  metadata: z.record(z.string(), z.unknown()).optional(),
+  ttlSeconds: z.number().int().min(300).max(86_400).default(3600)
 });
 
 export const webhookRegistrationSchema = z.object({
@@ -78,8 +89,10 @@ export const webhookReplaySchema = z.object({
   url: z.string().url().optional()
 });
 
-export type ConversationRequest = z.infer<typeof conversationRequestSchema>;
 export type ConversationMessage = z.infer<typeof messageSchema>;
+export type ConversationRequestInput = z.infer<typeof conversationRequestSchema>;
+export type ConversationRequest = Omit<ConversationRequestInput, "messages"> & { messages: ConversationMessage[] };
+export type ContextUploadInput = z.infer<typeof contextUploadSchema>;
 export type CreateApiKeyInput = z.infer<typeof createApiKeySchema>;
 export type SignupInput = z.infer<typeof signupSchema>;
 export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;

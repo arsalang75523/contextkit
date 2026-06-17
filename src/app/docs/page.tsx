@@ -92,27 +92,21 @@ const valid = await verifyContextKitWebhook({
   secret: process.env.CONTEXTKIT_WEBHOOK_SECRET!
 });`;
 
-const productionEnv = `CONTEXTKIT_BASE_URL=https://contextkit.pro
-CONTEXTKIT_BACKEND_URL=https://contextkit.pro
-CONTEXTKIT_ADMIN_TOKEN=replace_with_admin_token
-CONTEXTKIT_INTERNAL_TOKEN=replace_with_internal_forwarder_token
-CONTEXTKIT_WEBHOOK_SECRET=replace_with_webhook_secret
+const longContextUpload = `curl -X POST https://contextkit.pro/api/context/upload \\
+  -H "Content-Type: application/json" \\
+  --data-binary @payload.json`;
 
-BANKR_LLM_KEY=bk_replace_me
-BANKR_LLM_BASE_URL=https://llm.bankr.bot/v1
-BANKR_LLM_MODEL=claude-sonnet-4.5
+const bankrContextIdCall = `bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-summarize \\
+  -X POST \\
+  -d '{"contextId":"ctx_REPLACE_ME","mode":"micro"}'`;
 
-X402_PAY_TO=0x_your_wallet
-X402_NETWORK=base
-X402_FACILITATOR_URL=https://facilitator.x402.org
+const sdkContextId = `${sdkClient}
 
-CREDIT_BASE_RPC_URL=https://mainnet.base.org
-CREDIT_USDC_CONTRACT=0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913`;
-
-const deployCommands = `git pull
-docker compose -p contextkit up -d --build --force-recreate
-docker compose -p contextkit ps
-docker compose -p contextkit logs app --tail=120`;
+const uploaded = await client.uploadContext({ messages, ttlSeconds: 3600 });
+const summary = await client.summarize({
+  contextId: uploaded.contextId,
+  mode: "micro"
+});`;
 
 const navItems = [
   "Introduction",
@@ -125,7 +119,7 @@ const navItems = [
   "Endpoint Reference",
   "Webhooks",
   "Analytics",
-  "Deployment",
+  "Long Context",
   "Errors",
   "Checklist"
 ];
@@ -179,6 +173,9 @@ export default function DocsPage() {
                     {item}
                   </div>
                 ))}
+              </div>
+              <div className="mt-4 rounded-md border border-aqua/20 bg-aqua/10 p-4 text-sm leading-6 text-white/65">
+                For large contexts, upload the message payload first and call Bankr-hosted x402 with the returned <code>contextId</code>. This keeps the paid x402 request small while ContextKit loads the full context server-side.
               </div>
             </DocSection>
 
@@ -243,6 +240,10 @@ export default function DocsPage() {
                 <div>
                   <h3 className="mb-2 font-semibold text-white">Methods</h3>
                   <CodeBlock code={sdkMethods} />
+                </div>
+                <div>
+                  <h3 className="mb-2 font-semibold text-white">Long context with contextId</h3>
+                  <CodeBlock code={sdkContextId} />
                 </div>
                 <div>
                   <h3 className="mb-2 font-semibold text-white">Credits</h3>
@@ -313,18 +314,18 @@ curl https://contextkit.pro/api/analytics/usage \\
 curl https://contextkit.pro/api/public/metrics`} />
             </DocSection>
 
-            <DocSection id="deployment" title="Deployment">
+            <DocSection id="long-context" title="Long Context">
               <p>
-                Production needs a configured LLM key, webhook secret, x402 wallet, internal forwarding token, database, and credit verification RPC.
+                For large source conversations, upload the payload once and reuse the returned <code>contextId</code> with summarize, compress-context, handoff, extract-profile, or memory-enrichment. This avoids sending large request bodies through hosted x402 gateways.
               </p>
               <div className="mt-4 grid gap-4 lg:grid-cols-2">
                 <div>
-                  <h3 className="mb-2 font-semibold text-white">Environment</h3>
-                  <CodeBlock code={productionEnv} />
+                  <h3 className="mb-2 font-semibold text-white">Upload payload</h3>
+                  <CodeBlock code={longContextUpload} />
                 </div>
                 <div>
-                  <h3 className="mb-2 font-semibold text-white">Hetzner Docker deploy</h3>
-                  <CodeBlock code={deployCommands} />
+                  <h3 className="mb-2 font-semibold text-white">Call Bankr with contextId</h3>
+                  <CodeBlock code={bankrContextIdCall} />
                 </div>
               </div>
             </DocSection>
@@ -351,7 +352,6 @@ curl https://contextkit.pro/api/public/metrics`} />
                   "Use /dashboard/credits for USDC credit purchases.",
                   "Use SDK only when building a TypeScript integration.",
                   "Configure webhook secrets before production webhooks.",
-                  "Set CREDIT_BASE_RPC_URL for crypto credit verification.",
                   "Never commit .env, real API keys, Bankr keys, or GitHub tokens."
                 ].map((item) => (
                   <div key={item} className="rounded-md border border-line bg-white/[0.035] p-3 text-sm text-white/65">

@@ -1,6 +1,8 @@
 import type {
   CompressContextResponse,
   ContextRequest,
+  ContextUploadRequest,
+  ContextUploadResponse,
   CreditsResponse,
   HandoffResponse,
   MemoryEnrichmentResponse,
@@ -28,6 +30,10 @@ export class ContextKit {
     this.fetcher = options.fetch ?? fetch;
     this.retries = options.retries ?? 2;
     this.x402 = options.x402;
+  }
+
+  uploadContext(request: ContextUploadRequest) {
+    return this.post<ContextUploadResponse>("/api/context/upload", request);
   }
 
   summarize(request: ContextRequest) {

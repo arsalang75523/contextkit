@@ -28,9 +28,13 @@
               "type": "string",
               "description": "Summary mode: micro, compact, extended, or debug. Defaults to micro.",
               "enum": ["micro", "compact", "extended", "debug"]
+            },
+            "contextId": {
+              "type": "string",
+              "description": "Optional uploaded ContextKit context ID for large payloads. Use /api/context/upload first."
             }
           },
-          "required": ["messages"]
+          "required": []
         },
         "output": {
           "type": "object",
@@ -74,9 +78,13 @@
                 },
                 "required": ["role", "content"]
               }
+            },
+            "contextId": {
+              "type": "string",
+              "description": "Optional uploaded ContextKit context ID for large payloads. Use /api/context/upload first."
             }
           },
-          "required": ["messages"]
+          "required": []
         },
         "output": {
           "type": "object",
@@ -108,9 +116,13 @@
                 },
                 "required": ["role", "content"]
               }
+            },
+            "contextId": {
+              "type": "string",
+              "description": "Optional uploaded ContextKit context ID for large payloads. Use /api/context/upload first."
             }
           },
-          "required": ["messages"]
+          "required": []
         },
         "output": {
           "type": "object",
@@ -146,9 +158,13 @@
                 },
                 "required": ["role", "content"]
               }
+            },
+            "contextId": {
+              "type": "string",
+              "description": "Optional uploaded ContextKit context ID for large payloads. Use /api/context/upload first."
             }
           },
-          "required": ["messages"]
+          "required": []
         },
         "output": {
           "type": "object",
