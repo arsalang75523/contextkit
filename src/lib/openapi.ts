@@ -229,6 +229,29 @@ registry.registerPath({
   }
 });
 
+registry.registerPath({
+  method: "post",
+  path: "/api/context/upload-text",
+  summary: "Upload plain-text long context",
+  description: "Accepts a plain text body, precomputes the requested endpoint, and returns a contextId for hosted Bankr x402 calls. Query params: endpoint=summarize|compress-context|handoff|extract-profile|memory-enrichment and mode=micro|compact|extended|debug.",
+  request: {
+    body: {
+      content: {
+        "text/plain": {
+          schema: z.string()
+        }
+      }
+    }
+  },
+  responses: {
+    201: {
+      description: "Plain-text context uploaded.",
+      content: { "application/json": { schema: contextUploadResponse } }
+    },
+    422: response("Validation failed.", errorSchema)
+  }
+});
+
 routes.forEach(([path, summary, responseSchema, price]) => {
   registry.registerPath({
     method: "post",

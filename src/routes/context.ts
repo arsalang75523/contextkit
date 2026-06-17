@@ -42,8 +42,37 @@ type StoredContext = {
   expiresAt: string;
 };
 
+contextRoutes.post("/context/upload-text", async (c) => {
+  const text = (await c.req.text()).trim();
+  if (!text) {
+    throw new HTTPException(422, { message: "Text body is required." });
+  }
+
+  const endpoint = parseContextEndpoint(c.req.query("endpoint") ?? "summarize");
+  const mode = parseSummaryMode(c.req.query("mode"));
+  return createUploadedContext(c, {
+    messages: [{ role: "user", content: text }],
+    precompute: { endpoint, mode },
+    ttlSeconds: 3600
+  });
+});
+
 contextRoutes.post("/context/upload", zValidator("json", contextUploadSchema), async (c) => {
-  const body = c.req.valid("json");
+  return createUploadedContext(c, c.req.valid("json"));
+});
+
+async function createUploadedContext(
+  c: Context<AppBindings>,
+  body: {
+    messages: ConversationMessage[];
+    metadata?: Record<string, unknown>;
+    precompute?: {
+      endpoint: ContextEndpoint;
+      mode?: ConversationRequestInput["mode"];
+    };
+    ttlSeconds: number;
+  }
+) {
   const contextId = createId("ctx");
   const ttlSeconds = body.ttlSeconds;
   const createdAt = new Date();
@@ -90,7 +119,7 @@ contextRoutes.post("/context/upload", zValidator("json", contextUploadSchema), a
     },
     201
   );
-});
+}
 
 contextRoutes.post("/summarize", requireApiKey("context:write"), apiKeyRateLimit(), apiCreditOrX402PaymentRequired("summarize"), zValidator("json", conversationRequestSchema), async (c) => {
   const request = await resolveConversationRequest(c, c.req.valid("json"));
@@ -284,6 +313,21 @@ function resultCacheKey(endpoint: ContextEndpoint, mode?: ConversationRequestInp
 
 function cachedResult<T>(request: ResolvedConversationRequest, endpoint: ContextEndpoint): T | undefined {
   return request.cachedResults?.[resultCacheKey(endpoint, request.mode)] as T | undefined;
+}
+
+function parseContextEndpoint(value: string): ContextEndpoint {
+  const endpoints: ContextEndpoint[] = ["summarize", "compress-context", "handoff", "extract-profile", "memory-enrichment"];
+  if (endpoints.includes(value as ContextEndpoint)) return value as ContextEndpoint;
+  throw new HTTPException(422, { message: "Invalid endpoint query parameter." });
+}
+
+function parseSummaryMode(value?: string): ConversationRequestInput["mode"] {
+  if (!value) return undefined;
+  const modes: Array<NonNullable<ConversationRequestInput["mode"]>> = ["micro", "compact", "extended", "debug"];
+  if (modes.includes(value as NonNullable<ConversationRequestInput["mode"]>)) {
+    return value as ConversationRequestInput["mode"];
+  }
+  throw new HTTPException(422, { message: "Invalid mode query parameter." });
 }
 
 async function generateEndpointResult(

@@ -92,21 +92,13 @@ const valid = await verifyContextKitWebhook({
   secret: process.env.CONTEXTKIT_WEBHOOK_SECRET!
 });`;
 
-const longContextUpload = `cat > payload.json <<'EOF'
-{
-  "messages": [
-    {
-      "role": "user",
-      "content": "Paste the long conversation or document here."
-    }
-  ],
-  "precompute": {"endpoint":"summarize","mode":"micro"}
-}
+const longContextUpload = `cat > long-context.txt <<'EOF'
+Paste the long conversation or document here.
 EOF
 
-curl -X POST https://contextkit.pro/api/context/upload \\
-  -H "Content-Type: application/json" \\
-  --data-binary @payload.json`;
+curl -X POST "https://contextkit.pro/api/context/upload-text?endpoint=summarize&mode=micro" \\
+  -H "Content-Type: text/plain" \\
+  --data-binary @long-context.txt`;
 
 const bankrContextIdCall = `bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-summarize \\
   -X POST \\
@@ -216,10 +208,10 @@ export default function DocsPage() {
 
             <DocSection id="long-context" title="Long Context">
               <p>
-                If your input is large, do not send the full payload through the Bankr x402 command. Upload it to ContextKit first with <code>precompute</code>, copy the returned <code>contextId</code>, then use that ID in the paid Bankr call. The final response keeps the normal endpoint schema.
+                If your input is large, do not build JSON by hand. Paste the text into a file, upload it to ContextKit, copy the returned <code>contextId</code>, then use that ID in the paid Bankr call. The final response keeps the normal endpoint schema.
               </p>
               <div className="mt-4 grid gap-3 md:grid-cols-3">
-                <InfoCard title="1. Upload" body="Send messages to /api/context/upload and choose the endpoint/mode to precompute. No Bankr command is needed for this step." />
+                <InfoCard title="1. Paste text" body="Put the long conversation or document into long-context.txt. No escaping, JSON formatting, or quote fixing required." />
                 <InfoCard title="2. Copy contextId" body="The upload response returns a temporary ctx_... ID plus expiry and token count." />
                 <InfoCard title="3. Pay with Bankr" body="Call the hosted x402 endpoint with contextId. Bankr payment happens here and ContextKit returns the cached endpoint response." />
               </div>
