@@ -637,7 +637,7 @@ function compactSentence(value: string) {
 
 function microCapsule(value: string) {
   const cleaned = normalizeSummary(value)
-    .replace(/\b(Blocker|Decision|Priority|Next|Status|Goal):\s*/gi, "")
+    .replace(/\b(Blocker|Decision|Priority|Status):\s*/gi, "")
     .replace(/\b(because|since|therefore|so that|in order to)\b.*?(?=\.|;|$)/gi, "")
     .replace(/\b(initial instruction received|core capabilities are in place|awaiting execution|work is active|execution is moving through active refinement|progress depends on resolving active issues)\b\.?/gi, "")
     .replace(/\s*;\s*/g, "; ")
@@ -710,12 +710,12 @@ function strategicMicroFacts(stateValue: ReturnType<typeof summarizeState>, outp
   const goal = microFragment(stateValue.goal, 7);
   const goalLike = [goal, stateValue.goal].filter(Boolean);
   const status = selectMicroStatusFragments([stateValue.status], 1, 5);
-  const blockers = selectOperationalFragments(stateValue.blockers, 2, 6, goalLike);
+  const blockers = selectOperationalFragments(stateValue.blockers, 2, 5, goalLike);
   const dependencies = selectOperationalFragments([
     ...stateValue.priorities,
     ...stateValue.decisions,
     ...stateValue.nextSteps
-  ], 1, 6, [...goalLike, ...blockers]);
+  ], 1, 5, [...goalLike, ...blockers]);
   const worldview = selectWorldviewFragments([
     stateValue.status,
     ...stateValue.blockers,
@@ -725,15 +725,39 @@ function strategicMicroFacts(stateValue: ReturnType<typeof summarizeState>, outp
   ].filter((item) => !containsEquivalent([...goalLike, ...blockers, ...dependencies], item)), 1, 5);
   const next = microFragment(stateValue.nextSteps.find((item) => !containsEquivalent([...goalLike, ...blockers, ...dependencies], item)) ?? "", 5);
   const llmMicro = usefulMicroCandidate(String(output.micro ?? ""), stateValue);
-  return uniqueMicroFacts([
-    ...blockers,
-    ...status.map((item) => `state:${item}`),
-    ...dependencies.map((item) => `dep:${item}`),
-    ...worldview.map((item) => `ctx:${item}`),
-    next ? `next:${next}` : "",
-    goal ? `goal:${goal}` : "",
+  return canonicalMicroFacts({
+    state: status[0] ?? worldview[0] ?? blockers[0] ?? "",
+    dep: dependencies[0] ?? blockers[1] ?? blockers[0] ?? "",
+    next,
+    goal,
     llmMicro
-  ]).filter((item) => item && item !== "unknown");
+  });
+}
+
+function canonicalMicroFacts(parts: { state: string; dep: string; next: string; goal: string; llmMicro: string }) {
+  const values = [
+    ["state", parts.state],
+    ["dep", parts.dep],
+    ["next", parts.next],
+    ["goal", parts.goal]
+  ] as const;
+  const facts = values
+    .map(([label, value]) => {
+      const fragment = microFragment(value, label === "goal" ? 5 : 4);
+      return fragment ? `${label}:${fragment}` : "";
+    })
+    .filter(Boolean);
+
+  return uniqueMicroFacts([
+    ...facts,
+    ...prefixedMicroFacts(parts.llmMicro)
+  ]).filter((item) => item && item !== "unknown").slice(0, 4);
+}
+
+function prefixedMicroFacts(value: string) {
+  return sanitizeMicroParts(value)
+    .split(/\s*;\s*/)
+    .filter((part) => /^(state|dep|next|goal):/i.test(part));
 }
 
 function selectMicroStatusFragments(items: string[], limit: number, maxWords: number) {
@@ -809,10 +833,10 @@ function microFragment(value: string, maxWords: number) {
 function semanticallyBrokenMicroFragment(value: string) {
   const text = normalizeSummary(value);
   if (!text || wordCount(text) < 2) return true;
-  if (/^(unless|because|since|while|after|before|without|within|into|between|from|to|for|and|or)\b/i.test(text)) return true;
+  if (/^(unless|because|since|while|after|before|without|within|into|between|across|around|through|throughout|under|over|from|to|for|and|or)\b/i.test(text)) return true;
   if (endsWithDanglingWord(text)) return true;
   if (/,\s*(decrease|increase|reduce|improve|optimi[sz]e|minimi[sz]e|maximi[sz]e|stabili[sz]e|resolve|finali[sz]e|implement|define|confirm|verify)$/i.test(text)) return true;
-  return /\b(unless|because|since|while|after|before|without|within|into|between|from|to|for|and|or)\s*$/i.test(text);
+  return /\b(unless|because|since|while|after|before|without|within|into|between|across|around|through|throughout|under|over|from|to|for|and|or)\s*$/i.test(text);
 }
 
 function uniqueMicroFacts(items: string[]) {
@@ -956,7 +980,7 @@ function splitCompleteThoughts(value: string) {
 }
 
 function endsWithDanglingWord(value: string) {
-  return /\b(and|or|with|for|to|from|by|using|including|because|while|after|before|without|within|into|between|of|the|a|an)$/i.test(value);
+  return /\b(and|or|with|for|to|from|by|using|including|because|while|after|before|without|within|into|between|across|around|through|throughout|under|over|near|among|against|of|the|a|an)$/i.test(value);
 }
 
 function compressedState(value: unknown) {
