@@ -308,7 +308,7 @@ async function resolveConversationRequest(
 }
 
 function resultCacheKey(endpoint: ContextEndpoint, mode?: ConversationRequestInput["mode"]) {
-  return endpoint === "summarize" ? `${endpoint}:${mode ?? "micro"}` : endpoint;
+  return endpoint === "summarize" ? `${endpoint}:${mode ?? "compact"}` : endpoint;
 }
 
 function cachedResult<T>(request: ResolvedConversationRequest, endpoint: ContextEndpoint): T | undefined {

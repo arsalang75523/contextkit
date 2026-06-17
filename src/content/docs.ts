@@ -7,15 +7,15 @@ export const endpoints = [
     event: "summarization.completed",
     description: "Summarize long conversations into concise optimized context with micro, compact, extended, or debug modes.",
     response: {
-      mode: "micro",
-      micro: "Night-bus pilot. Charging and weekend coverage unresolved. Next: finalize schedules and airport terms.",
+      mode: "compact",
+      compact: "Night-bus pilot is preparing for launch. Route planning and staffing work are mostly complete, but charging limits and weekend coverage remain unresolved. Current focus is finalizing operations and airport access terms.",
       state: {
         goal: "Reduce overnight transit wait times",
         status: "Pilot planning in progress",
         blockers: ["Limited depot charging capacity", "Weekend driver coverage unresolved"],
         next: ["Finalize charger schedule", "Confirm weekend coverage", "Negotiate airport windows"]
       },
-      metrics: { inputTokens: 190, compactTokens: 17, stateTokens: 45, totalOutputTokens: 62, reductionPercent: 67, latencyMs: 4200 }
+      metrics: { inputTokens: 190, compactTokens: 31, stateTokens: 45, totalOutputTokens: 76, reductionPercent: 60, latencyMs: 4200 }
     }
   },
   {

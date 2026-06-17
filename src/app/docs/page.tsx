@@ -30,7 +30,7 @@ const client = new ContextKit({
 
 const sdkMethods = `${sdkClient}
 
-await client.summarize({ messages, mode: "micro" });
+await client.summarize({ messages, mode: "compact" });
 await client.compressContext({ messages });
 await client.handoff({ messages });
 await client.extractProfile({ messages });
@@ -96,19 +96,19 @@ const longContextUpload = `cat > long-context.txt <<'EOF'
 Paste the long conversation or document here.
 EOF
 
-curl -X POST "https://contextkit.pro/api/context/upload-text?endpoint=summarize&mode=micro" \\
+curl -X POST "https://contextkit.pro/api/context/upload-text?endpoint=summarize&mode=compact" \\
   -H "Content-Type: text/plain" \\
   --data-binary @long-context.txt`;
 
 const bankrContextIdCall = `bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-summarize \\
   -X POST \\
-  -d '{"contextId":"ctx_REPLACE_ME","mode":"micro"}'`;
+  -d '{"contextId":"ctx_REPLACE_ME","mode":"compact"}'`;
 
 const longContextExamples = [
   {
     title: "Summarize",
-    upload: uploadTextCommand("summarize", "micro"),
-    call: bankrContextCommand("summarize", '{"contextId":"ctx_REPLACE_ME","mode":"micro"}')
+    upload: uploadTextCommand("summarize", "compact"),
+    call: bankrContextCommand("summarize", '{"contextId":"ctx_REPLACE_ME","mode":"compact"}')
   },
   {
     title: "Compress context",
@@ -141,11 +141,11 @@ const sdkContextId = `${sdkClient}
 const uploaded = await client.uploadContext({
   messages,
   ttlSeconds: 3600,
-  precompute: { endpoint: "summarize", mode: "micro" }
+  precompute: { endpoint: "summarize", mode: "compact" }
 });
 const summary = await client.summarize({
   contextId: uploaded.contextId,
-  mode: "micro"
+  mode: "compact"
 });`;
 
 const navItems = [
@@ -440,7 +440,7 @@ function directApiCurl(path: string, payload: unknown) {
 
 function hostedExamples() {
   return [
-    ["Summarize", "summarize", { ...samplePayload, mode: "micro" }],
+    ["Summarize", "summarize", { ...samplePayload, mode: "compact" }],
     ["Compress context", "compress-context", samplePayload],
     ["Agent handoff", "handoff", samplePayload],
     ["Extract profile", "extract-profile", samplePayload]

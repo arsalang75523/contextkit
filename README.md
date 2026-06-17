@@ -300,7 +300,7 @@ const client = new ContextKit({
 });
 
 const result = await client.summarize({
-  mode: "micro",
+  mode: "compact",
   messages: [
     {
       role: "user",
@@ -335,7 +335,7 @@ node credits-sdk.mjs
 SDK methods:
 
 ```ts
-await client.summarize({ messages, mode: "micro" });
+await client.summarize({ messages, mode: "compact" });
 await client.compressContext({ messages });
 await client.handoff({ messages });
 await client.extractProfile({ messages });

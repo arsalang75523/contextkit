@@ -35,7 +35,7 @@ export default function ApiReferencePage() {
           {endpoints.map((endpoint) => {
             const request = JSON.stringify({
               messages: [{ role: "user", content: "Long-running agent conversation..." }],
-              ...(endpoint.slug === "summarize" ? { mode: "micro" } : {})
+              ...(endpoint.slug === "summarize" ? { mode: "compact" } : {})
             }, null, 2);
             const response = JSON.stringify(endpoint.response, null, 2);
             const payload = JSON.parse(request);

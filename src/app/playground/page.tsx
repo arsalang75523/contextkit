@@ -20,7 +20,7 @@ Turn this into a concise state update for the next planning agent, preserving go
 
 export default function PlaygroundPage() {
   const [endpoint, setEndpoint] = useState("summarize");
-  const [summaryMode, setSummaryMode] = useState<"micro" | "compact" | "extended" | "debug">("micro");
+  const [summaryMode, setSummaryMode] = useState<"micro" | "compact" | "extended" | "debug">("compact");
   const [input, setInput] = useState(seed);
   const [runResult, setRunResult] = useState<object | null>(null);
   const [isRunning, setIsRunning] = useState(false);

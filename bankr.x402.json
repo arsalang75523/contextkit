@@ -26,7 +26,7 @@
             },
             "mode": {
               "type": "string",
-              "description": "Summary mode: micro, compact, extended, or debug. Defaults to micro.",
+              "description": "Summary mode: micro, compact, extended, or debug. Defaults to compact.",
               "enum": ["micro", "compact", "extended", "debug"]
             },
             "contextId": {
