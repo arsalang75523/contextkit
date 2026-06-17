@@ -45,14 +45,11 @@
             "micro": { "type": "string", "description": "Maximum-compression summary." },
             "compact": { "type": "string", "description": "Default continuation summary." },
             "extended": { "type": "string", "description": "Human-readable compressed summary." },
-            "state": { "type": "object", "description": "Goal, status, blockers, decisions, priorities, and next steps." },
-            "inputTokens": { "type": "number" },
-            "microTokens": { "type": "number" },
-            "compactTokens": { "type": "number" },
-            "extendedTokens": { "type": "number" },
-            "microReductionPercent": { "type": "number" },
-            "compactReductionPercent": { "type": "number" },
-            "extendedReductionPercent": { "type": "number" }
+            "state": { "type": "object", "description": "Goal, status, blockers, and next steps. Omitted in micro mode." },
+            "metrics": {
+              "type": "object",
+              "description": "Micro metrics include inputTokens, microTokens, reductionPercent only. Compact/extended/debug include full token and latency metrics."
+            }
           }
         }
       }

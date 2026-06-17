@@ -6,6 +6,8 @@ import { CodeBlock } from "@/components/code-block";
 import { endpoints } from "@/content/docs";
 import { bankrHostedUrl, bankrX402Command } from "@/lib/bankr-x402";
 
+const playgroundEndpoints = endpoints.filter((item) => item.slug !== "memory-enrichment");
+
 const seed = `City operations team is preparing a continuation handoff for a six-month night-bus pilot across three neighborhoods.
 
 Late-shift hospital workers and airport staff currently wait 35-50 minutes after midnight. The goal is to reduce average wait time below 18 minutes without increasing the annual operating budget.
@@ -26,7 +28,7 @@ export default function PlaygroundPage() {
   const [runResult, setRunResult] = useState<object | null>(null);
   const [isRunning, setIsRunning] = useState(false);
 
-  const active = useMemo(() => endpoints.find((item) => item.slug === endpoint) ?? endpoints[0], [endpoint]);
+  const active = useMemo(() => playgroundEndpoints.find((item) => item.slug === endpoint) ?? playgroundEndpoints[0], [endpoint]);
   const inputText = input.trim() || "Summarize this context.";
   const messages = useMemo(() => playgroundMessages(endpoint, inputText), [endpoint, inputText]);
   const selectedProfileMode = endpoint === "memory-enrichment" ? "memory-enrichment" : profileMode;
@@ -134,7 +136,7 @@ curl -X POST "https://contextkit.pro/api/context/upload-text?${params.toString()
               Pick one service below. <span className="text-aqua">Summarize</span> is selected by default because it is the easiest first test. The other services are here too; clicking them changes the paid endpoint and command.
             </div>
             <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
-              {endpoints.map((item) => (
+              {playgroundEndpoints.map((item) => (
                 <button
                   key={item.slug}
                   type="button"

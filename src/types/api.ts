@@ -116,30 +116,46 @@ export type ApiError = {
   };
 };
 
-export type SummarizeResponse = {
-  mode: "micro" | "compact" | "extended" | "debug";
+type SummarizeState = {
+  goal: string;
+  status: string;
+  blockers: string[];
+  next: string[];
+};
+
+type FullSummarizeMetrics = {
+  inputTokens: number;
+  compactTokens: number;
+  stateTokens: number;
+  totalOutputTokens: number;
+  reductionPercent: number;
+  latencyMs: number;
+};
+
+type MicroSummarizeMetrics = {
+  inputTokens: number;
+  microTokens: number;
+  reductionPercent: number;
+};
+
+export type SummarizeResponse =
+  | {
+    mode: "micro";
+    micro: string;
+    metrics: MicroSummarizeMetrics;
+  }
+  | {
+  mode: "compact" | "extended" | "debug";
   summary?: string;
   micro?: string;
   compact?: string;
   extended?: string;
-  state: {
-    goal: string;
-    status: string;
-    blockers: string[];
-    next: string[];
-  };
+  state: SummarizeState;
   keyDecisions?: string[];
   actionItems?: string[];
   openQuestions?: string[];
   risks?: string[];
-  metrics: {
-    inputTokens: number;
-    compactTokens: number;
-    stateTokens: number;
-    totalOutputTokens: number;
-    reductionPercent: number;
-    latencyMs: number;
-  };
+  metrics: FullSummarizeMetrics;
   confidence?: number;
 };
 

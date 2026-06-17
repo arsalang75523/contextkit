@@ -17,4 +17,8 @@ const response = await client.summarize({
   ]
 });
 
-console.log(response.summary);
+console.log(
+  response.mode === "micro"
+    ? response.micro
+    : response.summary ?? response.compact ?? response.extended
+);

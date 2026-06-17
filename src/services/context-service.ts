@@ -40,11 +40,11 @@ export class ContextService {
       ...openQuestions.map((item) => `Open: ${item}`),
       ...risks.map((item) => `Risk: ${item}`)
     ];
-    const micro = microCapsule(enforceBudget(usefulMicroCandidate(String(output.micro ?? ""), stateValue), microFacts, inputTokens, 0.16, 28));
+    let micro = microCapsule(enforceBudget(usefulMicroCandidate(String(output.micro ?? ""), stateValue), microFacts, inputTokens, 0.16, 28));
     const compact = compactSummaryParagraph(enforceBudget("", compactFacts, inputTokens, 0.4, 50));
     const extended = extendedParagraph(enforceBudget(String(output.extended ?? output.summary ?? compact), extendedFacts, inputTokens, 0.6, 180));
     const summary = compact || micro || extended;
-    const microTokens = estimateTokens(micro);
+    let microTokens = estimateTokens(micro);
     const compactTokens = estimateTokens(compact);
     const extendedTokens = estimateTokens(extended);
     const stateTokens = estimateTokens(JSON.stringify(responseState));
@@ -59,7 +59,7 @@ export class ContextService {
       latencyMs: Date.now() - startedAt
     };
     const debugResponse = {
-      mode,
+      mode: "debug" as const,
       summary,
       micro,
       compact,
@@ -75,7 +75,21 @@ export class ContextService {
     if (mode === "debug") return debugResponse;
     if (mode === "extended") return { mode, extended, state: responseState, metrics };
     if (mode === "compact") return { mode, compact, state: responseState, metrics };
-    return { mode: "micro", micro, state: responseState, metrics };
+    const compactResponseTokens = estimateTokens(JSON.stringify({ mode: "compact", compact, state: responseState, metrics }));
+    micro = optimizedMicroCheckpoint(micro, microFacts, inputTokens, compactResponseTokens);
+    microTokens = estimateTokens(micro);
+    if (microResponseTokens(micro, inputTokens) >= compactResponseTokens) {
+      throw new Error("micro_optimization_check_failed");
+    }
+    return {
+      mode: "micro",
+      micro,
+      metrics: {
+        inputTokens,
+        microTokens,
+        reductionPercent: estimateReduction(inputTokens, microTokens)
+      }
+    };
   }
 
   async compress(request: ConversationRequest): Promise<CompressContextResponse> {
@@ -323,11 +337,13 @@ function llmGeneratedGoal(output: Record<string, unknown>) {
 }
 
 function extractedContinuityState(stateValue: ReturnType<typeof summarizeState>) {
+  const blockers = conciseStateList(stateValue.blockers, 3, 14);
+  const next = conciseStateList(stateValue.nextSteps, 3, 12, blockers);
   return {
-    goal: completeGoalText(stateValue.goal) || "unknown",
-    status: completeStateText(stateValue.status) || "unknown",
-    blockers: completeStateList(stateValue.blockers),
-    next: completeStateList(stateValue.nextSteps)
+    goal: conciseGoalText(stateValue.goal) || "unknown",
+    status: conciseSingleStateText(stateValue.status, 14) || "unknown",
+    blockers,
+    next
   };
 }
 
@@ -533,10 +549,37 @@ function shortStateValue(value: string, maxTokens: number) {
   return completeTextWithinBudget(normalized, maxTokens) || normalized;
 }
 
-function completeStateList(items: string[]) {
+function conciseStateList(items: string[], limit: number, maxWords: number, exclude: string[] = []) {
   return uniqueStrings(items)
-    .map(completeStateText)
-    .filter((item): item is string => Boolean(item));
+    .filter((item) => !containsEquivalent(exclude, item))
+    .sort((a, b) => statePriorityScore(b) - statePriorityScore(a))
+    .map((item) => conciseSingleStateText(item, maxWords))
+    .filter((item): item is string => Boolean(item))
+    .filter((item, index, values) => values.findIndex((value) => containsEquivalent([value], item)) === index)
+    .slice(0, limit);
+}
+
+function conciseSingleStateText(value: string, maxWords: number) {
+  const cleaned = completeStateText(value);
+  if (!cleaned) return "";
+  if (wordCount(cleaned) <= maxWords) return cleaned.replace(/[.!?]$/, "");
+  return microFragment(cleaned, maxWords) || completeTextWithinBudget(cleaned, maxWords).replace(/[.!?]$/, "");
+}
+
+function conciseGoalText(value: string) {
+  const cleaned = completeGoalText(value);
+  if (!cleaned) return "";
+  if (wordCount(cleaned) <= 18) return cleaned;
+  return microFragment(cleaned, 18) || completeTextWithinBudget(cleaned, 18).replace(/[.!?]$/, "");
+}
+
+function statePriorityScore(value: string) {
+  const text = normalizeSummary(value);
+  let score = 0;
+  if (/\b(block|risk|limit|constraint|unresolved|missing|delay|fail|cannot|can't|must|require|only|without|deadline|budget|capacity|security|privacy|compliance|payment|charger|staff|coverage)\b/i.test(text)) score += 3;
+  if (/\b(next|fix|finalize|decide|implement|verify|deploy|confirm|resolve|define|test|ship|launch)\b/i.test(text)) score += 2;
+  if (wordCount(text) <= 16) score += 1;
+  return score;
 }
 
 function completeStateText(value: string) {
@@ -604,6 +647,34 @@ function microCapsule(value: string) {
   const trimmed = completeTextWithinBudget(cleaned, 28);
   if (!trimmed) return "";
   return /[.!?]$/.test(trimmed) ? trimmed : `${trimmed}.`;
+}
+
+function optimizedMicroCheckpoint(candidate: string, facts: string[], inputTokens: number, compactOutputTokens: number) {
+  const candidates = [
+    microCapsule(candidate),
+    ...[24, 20, 16, 12, 8].map((maxTokens) => microCapsule(enforceBudget("", facts, inputTokens, 0.16, maxTokens)))
+  ].filter(Boolean);
+
+  for (const value of uniqueStrings(candidates)) {
+    if (microResponseTokens(value, inputTokens) < compactOutputTokens) return value;
+  }
+
+  const shortest = microCapsule(completeTextWithinBudget(normalizeSummary(facts.filter(Boolean).join("; ")), 8));
+  if (shortest && microResponseTokens(shortest, inputTokens) < compactOutputTokens) return shortest;
+  return uniqueStrings(candidates).sort((a, b) => estimateTokens(a) - estimateTokens(b))[0] ?? "";
+}
+
+function microResponseTokens(micro: string, inputTokens: number) {
+  const microTokens = estimateTokens(micro);
+  return estimateTokens(JSON.stringify({
+    mode: "micro",
+    micro,
+    metrics: {
+      inputTokens,
+      microTokens,
+      reductionPercent: estimateReduction(inputTokens, microTokens)
+    }
+  }));
 }
 
 function usefulMicroCandidate(value: string, stateValue: ReturnType<typeof summarizeState>) {

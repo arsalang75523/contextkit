@@ -50,32 +50,45 @@ const contextUploadResponse = z.object({
   }).nullable().optional()
 });
 
-const summarizeResponse = z.object({
-  mode: z.enum(["micro", "compact", "extended", "debug"]),
-  summary: z.string().optional(),
-  micro: z.string().optional(),
-  compact: z.string().optional(),
-  extended: z.string().optional(),
-  state: z.object({
-    goal: z.string(),
-    status: z.string(),
-    blockers: z.array(z.string()),
-    next: z.array(z.string())
-  }),
-  keyDecisions: z.array(z.string()).optional(),
-  actionItems: z.array(z.string()).optional(),
-  openQuestions: z.array(z.string()).optional(),
-  risks: z.array(z.string()).optional(),
-  metrics: z.object({
-    inputTokens: z.number(),
-    compactTokens: z.number(),
-    stateTokens: z.number(),
-    totalOutputTokens: z.number(),
-    reductionPercent: z.number(),
-    latencyMs: z.number()
-  }),
-  confidence: z.number().optional()
+const summarizeStateResponse = z.object({
+  goal: z.string(),
+  status: z.string(),
+  blockers: z.array(z.string()),
+  next: z.array(z.string())
 });
+
+const summarizeResponse = z.union([
+  z.object({
+    mode: z.literal("micro"),
+    micro: z.string(),
+    metrics: z.object({
+      inputTokens: z.number(),
+      microTokens: z.number(),
+      reductionPercent: z.number()
+    })
+  }),
+  z.object({
+    mode: z.enum(["compact", "extended", "debug"]),
+    summary: z.string().optional(),
+    micro: z.string().optional(),
+    compact: z.string().optional(),
+    extended: z.string().optional(),
+    state: summarizeStateResponse,
+    keyDecisions: z.array(z.string()).optional(),
+    actionItems: z.array(z.string()).optional(),
+    openQuestions: z.array(z.string()).optional(),
+    risks: z.array(z.string()).optional(),
+    metrics: z.object({
+      inputTokens: z.number(),
+      compactTokens: z.number(),
+      stateTokens: z.number(),
+      totalOutputTokens: z.number(),
+      reductionPercent: z.number(),
+      latencyMs: z.number()
+    }),
+    confidence: z.number().optional()
+  })
+]);
 
 const compressResponse = z.object({
   compressedContext: z.string(),
