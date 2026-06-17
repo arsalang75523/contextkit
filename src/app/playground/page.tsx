@@ -26,7 +26,8 @@ export default function PlaygroundPage() {
   const [isRunning, setIsRunning] = useState(false);
 
   const active = useMemo(() => endpoints.find((item) => item.slug === endpoint) ?? endpoints[0], [endpoint]);
-  const messages = useMemo(() => [{ role: "user" as const, content: input.trim() || "Summarize this context." }], [input]);
+  const inputText = input.trim() || "Summarize this context.";
+  const messages = useMemo(() => playgroundMessages(endpoint, inputText), [endpoint, inputText]);
   const payload = useMemo(() => {
     return endpoint === "summarize" ? { messages, mode: summaryMode } : { messages };
   }, [endpoint, messages, summaryMode]);
@@ -38,8 +39,22 @@ export default function PlaygroundPage() {
       ? `{"contextId":"ctx_REPLACE_ME","mode":"${summaryMode}"}`
       : '{"contextId":"ctx_REPLACE_ME"}';
     const marker = heredocMarker(input);
+    const jsonUpload = needsJsonWrappedInput(active.slug);
+    const jsonPayload = JSON.stringify({
+      messages,
+      precompute: {
+        endpoint: active.slug,
+        ...(active.slug === "summarize" ? { mode: summaryMode } : {})
+      }
+    }, null, 2).replaceAll("'", "'\\''");
     return {
-      upload: `cat > long-context.txt <<'${marker}'
+      upload: jsonUpload ? `cat > context-payload.json <<'${marker}'
+${jsonPayload}
+${marker}
+
+curl -X POST "https://contextkit.pro/api/context/upload" \\
+  -H "Content-Type: application/json" \\
+  --data-binary @context-payload.json` : `cat > long-context.txt <<'${marker}'
 ${input.trim() || "Paste the long conversation or document here."}
 ${marker}
 
@@ -50,7 +65,7 @@ curl -X POST "https://contextkit.pro/api/context/upload-text?${params.toString()
   -X POST \\
   -d '${callPayload}'`
     };
-  }, [active.slug, input, summaryMode]);
+  }, [active.slug, input, messages, summaryMode]);
 
   function runLivePlayground() {
     setRunResult(null);
@@ -174,6 +189,11 @@ curl -X POST "https://contextkit.pro/api/context/upload-text?${params.toString()
               <p className="mb-3 text-sm leading-6 text-white/55">
                 Copy this command into a terminal where <code>bankr login</code> is already configured. Bankr will ask for payment approval, then return the ContextKit JSON response.
               </p>
+              {needsJsonWrappedInput(active.slug) ? (
+                <p className="mb-3 rounded-md border border-aqua/20 bg-aqua/10 p-3 text-sm leading-6 text-aqua">
+                  This endpoint receives your text as a JSON message payload so extraction does not return empty results.
+                </p>
+              ) : null}
               <CodeBlock code={command} />
             </div>
             <div>
@@ -211,4 +231,26 @@ function Spinner() {
 function heredocMarker(value: string) {
   const markers = ["CONTEXTKIT_LONG_CONTEXT", "CONTEXTKIT_INPUT", "CONTEXTKIT_TEXT"];
   return markers.find((marker) => !value.includes(marker)) ?? `CONTEXTKIT_${Date.now()}`;
+}
+
+function needsJsonWrappedInput(endpoint: string) {
+  return endpoint === "compress-context" || endpoint === "extract-profile";
+}
+
+function playgroundMessages(endpoint: string, inputText: string) {
+  if (!needsJsonWrappedInput(endpoint)) {
+    return [{ role: "user" as const, content: inputText }];
+  }
+
+  return [
+    {
+      role: "user" as const,
+      content: JSON.stringify([
+        {
+          role: "user",
+          content: inputText
+        }
+      ])
+    }
+  ];
 }
