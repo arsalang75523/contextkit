@@ -37,18 +37,20 @@ export default function PlaygroundPage() {
     const callPayload = active.slug === "summarize"
       ? `{"contextId":"ctx_REPLACE_ME","mode":"${summaryMode}"}`
       : '{"contextId":"ctx_REPLACE_ME"}';
-    return `cat > long-context.txt <<'EOF'
-Paste the long conversation or document here.
-EOF
+    const marker = heredocMarker(input);
+    return `cat > long-context.txt <<'${marker}'
+${input.trim() || "Paste the long conversation or document here."}
+${marker}
 
 curl -X POST "https://contextkit.pro/api/context/upload-text?${params.toString()}" \\
   -H "Content-Type: text/plain" \\
   --data-binary @long-context.txt
 
+# Copy the contextId from the upload response and replace ctx_REPLACE_ME below.
 bankr x402 call ${bankrHostedUrl(active.slug)} \\
   -X POST \\
   -d '${callPayload}'`;
-  }, [active.slug, summaryMode]);
+  }, [active.slug, input, summaryMode]);
 
   function runLivePlayground() {
     setRunResult(null);
@@ -192,4 +194,9 @@ bankr x402 call ${bankrHostedUrl(active.slug)} \\
 
 function Spinner() {
   return <span className="h-4 w-4 animate-spin rounded-full border-2 border-ink/30 border-t-ink" aria-hidden="true" />;
+}
+
+function heredocMarker(value: string) {
+  const markers = ["CONTEXTKIT_LONG_CONTEXT", "CONTEXTKIT_INPUT", "CONTEXTKIT_TEXT"];
+  return markers.find((marker) => !value.includes(marker)) ?? `CONTEXTKIT_${Date.now()}`;
 }
