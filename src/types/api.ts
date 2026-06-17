@@ -6,11 +6,12 @@ export const messageSchema = z.object({
 });
 
 export const contextIdSchema = z.string().regex(/^ctx_[a-f0-9]{24}$/);
+export const operationModeSchema = z.enum(["micro", "compact", "extended", "debug", "extract-profile", "memory-enrichment"]);
 
 export const conversationRequestSchema = z.object({
   messages: z.array(messageSchema).min(1).max(200).optional(),
   contextId: contextIdSchema.optional(),
-  mode: z.enum(["micro", "compact", "extended", "debug"]).optional(),
+  mode: operationModeSchema.optional(),
   metadata: z.record(z.string(), z.unknown()).optional(),
   webhookUrl: z.string().url().optional()
 }).refine((value) => Boolean(value.contextId) || Boolean(value.messages?.length), {
@@ -22,7 +23,7 @@ export const contextUploadSchema = z.object({
   metadata: z.record(z.string(), z.unknown()).optional(),
   precompute: z.object({
     endpoint: z.enum(["summarize", "compress-context", "handoff", "extract-profile", "memory-enrichment"]),
-    mode: z.enum(["micro", "compact", "extended", "debug"]).optional()
+    mode: operationModeSchema.optional()
   }).optional(),
   ttlSeconds: z.number().int().min(300).max(86_400).default(3600)
 });
@@ -80,7 +81,7 @@ export const tokenEstimateSchema = z.object({
 
 export const playgroundRunSchema = z.object({
   endpoint: z.enum(["summarize", "compress-context", "handoff", "extract-profile", "memory-enrichment"]).default("summarize"),
-  mode: z.enum(["micro", "compact", "extended", "debug"]).optional(),
+  mode: operationModeSchema.optional(),
   messages: z.array(messageSchema).min(1).max(50)
 });
 

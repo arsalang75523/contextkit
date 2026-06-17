@@ -8,7 +8,7 @@ export type ConversationMessage = {
 export type ContextRequest = {
   messages?: ConversationMessage[];
   contextId?: string;
-  mode?: "micro" | "compact" | "extended" | "debug";
+  mode?: "micro" | "compact" | "extended" | "debug" | "extract-profile" | "memory-enrichment";
   metadata?: Record<string, unknown>;
   webhookUrl?: string;
 };
@@ -18,7 +18,7 @@ export type ContextUploadRequest = {
   metadata?: Record<string, unknown>;
   precompute?: {
     endpoint: "summarize" | "compress-context" | "handoff" | "extract-profile" | "memory-enrichment";
-    mode?: "micro" | "compact" | "extended" | "debug";
+    mode?: "micro" | "compact" | "extended" | "debug" | "extract-profile" | "memory-enrichment";
   };
   ttlSeconds?: number;
 };
@@ -30,7 +30,7 @@ export type ContextUploadResponse = {
   inputTokens: number;
   precomputed?: {
     endpoint: "summarize" | "compress-context" | "handoff" | "extract-profile" | "memory-enrichment";
-    mode: "micro" | "compact" | "extended" | "debug" | null;
+    mode: "micro" | "compact" | "extended" | "debug" | "extract-profile" | "memory-enrichment" | null;
   } | null;
 };
 

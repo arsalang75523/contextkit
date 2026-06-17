@@ -21,6 +21,7 @@ Turn this into a concise state update for the next planning agent, preserving go
 export default function PlaygroundPage() {
   const [endpoint, setEndpoint] = useState("summarize");
   const [summaryMode, setSummaryMode] = useState<"micro" | "compact" | "extended" | "debug">("compact");
+  const [profileMode, setProfileMode] = useState<"extract-profile" | "memory-enrichment">("extract-profile");
   const [input, setInput] = useState(seed);
   const [runResult, setRunResult] = useState<object | null>(null);
   const [isRunning, setIsRunning] = useState(false);
@@ -28,23 +29,33 @@ export default function PlaygroundPage() {
   const active = useMemo(() => endpoints.find((item) => item.slug === endpoint) ?? endpoints[0], [endpoint]);
   const inputText = input.trim() || "Summarize this context.";
   const messages = useMemo(() => playgroundMessages(endpoint, inputText), [endpoint, inputText]);
+  const selectedProfileMode = endpoint === "memory-enrichment" ? "memory-enrichment" : profileMode;
   const payload = useMemo(() => {
-    return endpoint === "summarize" ? { messages, mode: summaryMode } : { messages };
-  }, [endpoint, messages, summaryMode]);
+    if (endpoint === "summarize") return { messages, mode: summaryMode };
+    if (endpoint === "extract-profile" || endpoint === "memory-enrichment") return { messages, mode: selectedProfileMode };
+    return { messages };
+  }, [endpoint, messages, selectedProfileMode, summaryMode]);
   const command = useMemo(() => bankrX402Command(active.slug, payload), [active.slug, payload]);
   const longContextCommands = useMemo(() => {
     const params = new URLSearchParams({ endpoint: active.slug });
     if (active.slug === "summarize") params.set("mode", summaryMode);
+    if (active.slug === "extract-profile" || active.slug === "memory-enrichment") {
+      params.set("endpoint", "extract-profile");
+      params.set("mode", selectedProfileMode);
+    }
     const callPayload = active.slug === "summarize"
       ? `{"contextId":"ctx_REPLACE_ME","mode":"${summaryMode}"}`
+      : active.slug === "extract-profile" || active.slug === "memory-enrichment"
+        ? `{"contextId":"ctx_REPLACE_ME","mode":"${selectedProfileMode}"}`
       : '{"contextId":"ctx_REPLACE_ME"}';
     const marker = heredocMarker(input);
     const jsonUpload = needsJsonWrappedInput(active.slug);
     const jsonPayload = JSON.stringify({
       messages,
       precompute: {
-        endpoint: active.slug,
-        ...(active.slug === "summarize" ? { mode: summaryMode } : {})
+        endpoint: active.slug === "memory-enrichment" ? "extract-profile" : active.slug,
+        ...(active.slug === "summarize" ? { mode: summaryMode } : {}),
+        ...(active.slug === "extract-profile" || active.slug === "memory-enrichment" ? { mode: selectedProfileMode } : {})
       }
     }, null, 2).replaceAll("'", "'\\''");
     return {
@@ -65,7 +76,7 @@ curl -X POST "https://contextkit.pro/api/context/upload-text?${params.toString()
   -X POST \\
   -d '${callPayload}'`
     };
-  }, [active.slug, input, messages, summaryMode]);
+  }, [active.slug, input, messages, selectedProfileMode, summaryMode]);
 
   function runLivePlayground() {
     setRunResult(null);
@@ -75,7 +86,15 @@ curl -X POST "https://contextkit.pro/api/context/upload-text?${params.toString()
         const response = await fetch("/api/playground/run", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ endpoint: active.slug, messages, mode: active.slug === "summarize" ? summaryMode : undefined })
+          body: JSON.stringify({
+            endpoint: active.slug,
+            messages,
+            mode: active.slug === "summarize"
+              ? summaryMode
+              : active.slug === "extract-profile" || active.slug === "memory-enrichment"
+                ? selectedProfileMode
+                : undefined
+          })
         });
         const result = (await response.json()) as Record<string, unknown>;
         setRunResult(result);
@@ -146,6 +165,26 @@ curl -X POST "https://contextkit.pro/api/context/upload-text?${params.toString()
                 </div>
               </div>
             ) : null}
+            {endpoint === "extract-profile" || endpoint === "memory-enrichment" ? (
+              <div className="mb-4 rounded-md border border-mint/20 bg-mint/10 p-4">
+                <h2 className="font-semibold text-white">Profile modes</h2>
+                <p className="mt-1 text-sm leading-6 text-white/60">
+                  Bankr uses <code>contextkit-profile</code> for both. Default is extract-profile; memory enrichment runs with <code>mode:"memory-enrichment"</code>.
+                </p>
+                <div className="mt-4 grid w-full grid-cols-2 gap-2">
+                  {(["extract-profile", "memory-enrichment"] as const).map((mode) => (
+                    <button
+                      key={mode}
+                      type="button"
+                      onClick={() => setProfileMode(mode)}
+                      className={`min-w-0 rounded-md border px-3 py-2 text-xs transition sm:text-sm ${selectedProfileMode === mode ? "border-mint bg-mint/20 text-mint" : "border-line text-white/60 hover:text-white"}`}
+                    >
+                      {mode}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : null}
             <textarea
               value={input}
               onChange={(event) => setInput(event.target.value)}
@@ -171,7 +210,7 @@ curl -X POST "https://contextkit.pro/api/context/upload-text?${params.toString()
               </p>
               {active.slug === "memory-enrichment" ? (
                 <p className="mt-3 rounded border border-aqua/25 bg-aqua/10 p-3 text-sm leading-6 text-aqua">
-                  Memory enrichment is priced at <code>$0.04</code>. Direct API-key usage calls <code>/api/memory-enrichment</code>; hosted memory extraction can also run through <code>contextkit-profile</code>.
+                  Memory enrichment is priced at <code>$0.04</code>. Hosted Bankr calls use <code>contextkit-profile</code> with <code>mode:"memory-enrichment"</code>; direct API-key usage can still call <code>/api/memory-enrichment</code>.
                 </p>
               ) : null}
             </div>
@@ -234,7 +273,7 @@ function heredocMarker(value: string) {
 }
 
 function needsJsonWrappedInput(endpoint: string) {
-  return endpoint === "compress-context" || endpoint === "extract-profile";
+  return endpoint === "compress-context" || endpoint === "extract-profile" || endpoint === "memory-enrichment";
 }
 
 function playgroundMessages(endpoint: string, inputText: string) {

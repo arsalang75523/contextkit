@@ -24,8 +24,8 @@ export class ContextService {
 
   async summarize(request: ConversationRequest): Promise<SummarizeResponse> {
     const startedAt = Date.now();
-    const output = await new BankrLlmClient({ env: this.serviceContext.env ?? {} }).generateJson("summarize", request.messages, request.mode ?? "compact");
-    const mode = request.mode ?? "compact";
+    const mode = summarizeMode(request.mode);
+    const output = await new BankrLlmClient({ env: this.serviceContext.env ?? {} }).generateJson("summarize", request.messages, mode);
     const inputTokens = estimateTokens(request.messages);
     const stateValue = dedupeSummaryState(withLlmGoalFallback(summarizeState(output.state), output));
     const responseState = extractedContinuityState(stateValue);
@@ -277,6 +277,11 @@ export class ContextService {
     return new BankrLlmClient({ env: this.serviceContext.env ?? {} }).generateJson(endpoint, request.messages);
   }
 
+}
+
+function summarizeMode(mode: ConversationRequest["mode"]): SummarizeResponse["mode"] {
+  if (mode === "micro" || mode === "compact" || mode === "extended" || mode === "debug") return mode;
+  return "compact";
 }
 
 function arrayOfStrings(value: unknown): string[] {

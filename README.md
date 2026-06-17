@@ -15,8 +15,8 @@ The product supports three usage paths:
 | `POST /api/summarize` | Micro/compact/extended context reduction | `$0.05` |
 | `POST /api/compress-context` | Machine-optimized context packet | `$0.03` |
 | `POST /api/handoff` | Agent-to-agent project transfer | `$0.03` |
-| `POST /api/extract-profile` | Durable user profile memory | `$0.04` |
-| `POST /api/memory-enrichment` | Evolve long-term memory | `$0.04` API key credits/direct |
+| `POST /api/extract-profile` | Durable user profile; `mode:"memory-enrichment"` also returns memory enrichment | `$0.04` |
+| `POST /api/memory-enrichment` | Direct API-key memory enrichment compatibility route | `$0.04` API key credits/direct |
 | `POST /api/tokens/estimate` | Token estimate for API-key workflows | API key |
 
 ## Fastest User Path: Bankr-Hosted x402
@@ -62,7 +62,15 @@ Extract profile:
 ```bash
 bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-profile \
   -X POST \
-  -d '{"messages":[{"role":"user","content":"I prefer short technical explanations, direct debugging help, clear risks, and step-by-step deployment commands."}]}'
+  -d '{"messages":[{"role":"user","content":"I prefer short technical explanations, direct debugging help, clear risks, and step-by-step deployment commands."}],"mode":"extract-profile"}'
+```
+
+Memory enrichment through the same Bankr profile endpoint:
+
+```bash
+bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-profile \
+  -X POST \
+  -d '{"messages":[{"role":"user","content":"I used to want long weekly reports, but now I prefer short risk-focused updates with clear next actions."}],"mode":"memory-enrichment"}'
 ```
 
 Schema and interactive mode:
@@ -236,6 +244,7 @@ curl -X POST https://contextkit.pro/api/extract-profile \
   -H "Authorization: Bearer <CONTEXTKIT_API_KEY>" \
   -H "Content-Type: application/json" \
   -d '{
+    "mode": "extract-profile",
     "messages": [
       {
         "role": "user",
@@ -246,6 +255,23 @@ curl -X POST https://contextkit.pro/api/extract-profile \
 ```
 
 Memory enrichment:
+
+```bash
+curl -X POST https://contextkit.pro/api/extract-profile \
+  -H "Authorization: Bearer <CONTEXTKIT_API_KEY>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "mode": "memory-enrichment",
+    "messages": [
+      {
+        "role": "user",
+        "content": "I used to want long weekly reports, but now I prefer short risk-focused updates with clear next actions."
+      }
+    ]
+  }'
+```
+
+Compatibility direct route:
 
 ```bash
 curl -X POST https://contextkit.pro/api/memory-enrichment \

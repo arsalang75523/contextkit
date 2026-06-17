@@ -138,7 +138,7 @@
       }
     },
     "contextkit-profile": {
-      "description": "Extract reusable user profile and durable memory for autonomous AI agents.",
+      "description": "Extract reusable user profile or memory enrichment for autonomous AI agents.",
       "price": "0.04",
       "methods": ["POST"],
       "category": "ai-infrastructure",
@@ -162,6 +162,11 @@
             "contextId": {
               "type": "string",
               "description": "Optional uploaded ContextKit context ID for large payloads. Use /api/context/upload first."
+            },
+            "mode": {
+              "type": "string",
+              "description": "Profile mode: extract-profile or memory-enrichment. Defaults to extract-profile.",
+              "enum": ["extract-profile", "memory-enrichment"]
             }
           },
           "required": []

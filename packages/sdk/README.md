@@ -267,7 +267,15 @@ Extract profile:
 ```bash
 bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-profile \
   -X POST \
-  -d '{"messages":[{"role":"user","content":"Extract durable user preferences and profile memory."}]}'
+  -d '{"messages":[{"role":"user","content":"Extract durable user preferences and profile memory."}],"mode":"extract-profile"}'
+```
+
+Memory enrichment through the same hosted profile endpoint:
+
+```bash
+bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-profile \
+  -X POST \
+  -d '{"messages":[{"role":"user","content":"Update stable and evolving memories from this conversation."}],"mode":"memory-enrichment"}'
 ```
 
 This path requires:

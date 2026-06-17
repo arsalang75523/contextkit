@@ -74,7 +74,7 @@ export const endpoints = [
     path: "/api/extract-profile",
     price: "$0.04",
     event: "profile.extracted",
-    description: "Extract durable user preferences for reusable agent memory.",
+    description: "Extract durable user preferences, or run memory enrichment with mode: memory-enrichment.",
     response: {
       mode: "compact",
       micro: { identity: { profession: "operations lead", location: "unknown", age: null }, preferences: ["concise weekly updates"], goals: ["launch night-bus pilot"] },
@@ -113,7 +113,7 @@ export const endpoints = [
     path: "/api/memory-enrichment",
     price: "$0.04",
     event: "request.completed",
-    description: "Evolve long-term memory without duplicating stale preferences. Direct API-key usage calls /api/memory-enrichment; hosted memory extraction can also run through the profile endpoint.",
+    description: "Evolve long-term memory. Bankr-hosted calls use contextkit-profile with mode: memory-enrichment; direct API-key usage can still call /api/memory-enrichment.",
     response: {
       activeMemories: [{ fact: "Prefers concise weekly updates", category: "preference", stability: "stable", confidence: 0.96 }],
       evolvingMemories: [{ fact: "Preparing a night-bus pilot", category: "project", stability: "evolving", confidence: 0.92 }],

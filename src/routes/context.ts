@@ -82,14 +82,15 @@ async function createUploadedContext(
 
   if (body.precompute) {
     const service = new ContextService({ env: c.env ?? {}, requestId: c.get("requestId") });
+    const precomputeEndpoint = profileModeEndpoint(body.precompute.endpoint, body.precompute.mode);
     const precomputeRequest = {
       messages,
       metadata: body.metadata,
       mode: body.precompute.mode
     } satisfies ResolvedConversationRequest;
-    results[resultCacheKey(body.precompute.endpoint, body.precompute.mode)] = await generateEndpointResult(
+    results[resultCacheKey(precomputeEndpoint, body.precompute.mode)] = await generateEndpointResult(
       service,
-      body.precompute.endpoint,
+      precomputeEndpoint,
       precomputeRequest
     );
   }
@@ -164,9 +165,9 @@ contextRoutes.post(
   async (c) => {
     const request = await resolveConversationRequest(c, c.req.valid("json"));
     const service = new ContextService({ env: c.env ?? {}, requestId: c.get("requestId") });
-    const result = cachedResult<ProfileResponse>(request, "extract-profile") ?? await service.profile(request);
+    const { result, eventType } = await runProfileMode(service, request);
     await complete(c, "/extract-profile", request, JSON.stringify(result), c.get("payment")?.paymentId);
-    await service.emitCompleted(request, "profile.extracted", result);
+    if (eventType) await service.emitCompleted(request, eventType, result);
     return c.json(result);
   }
 );
@@ -226,9 +227,9 @@ contextRoutes.post(
   async (c) => {
     const request = await resolveConversationRequest(c, c.req.valid("json"));
     const service = new ContextService({ env: c.env ?? {}, requestId: c.get("requestId") });
-    const result = cachedResult<ProfileResponse>(request, "extract-profile") ?? await service.profile(request);
+    const { result, eventType } = await runProfileMode(service, request);
     await complete(c, "/x402/extract-profile", request, JSON.stringify(result), c.get("payment")?.paymentId);
-    await service.emitCompleted(request, "profile.extracted", result);
+    if (eventType) await service.emitCompleted(request, eventType, result);
     return c.json(result);
   }
 );
@@ -267,9 +268,9 @@ contextRoutes.post("/internal/extract-profile", requireInternalToken(), zValidat
   const request = await resolveConversationRequest(c, c.req.valid("json"));
   await markHostedPayment(c, "extract-profile", "/internal/extract-profile");
   const service = new ContextService({ env: c.env ?? {}, requestId: c.get("requestId") });
-  const result = cachedResult<ProfileResponse>(request, "extract-profile") ?? await service.profile(request);
+  const { result, eventType } = await runProfileMode(service, request);
   await complete(c, "/internal/extract-profile", request, JSON.stringify(result));
-  await service.emitCompleted(request, "profile.extracted", result);
+  if (eventType) await service.emitCompleted(request, eventType, result);
   return c.json(result);
 });
 
@@ -311,8 +312,22 @@ function resultCacheKey(endpoint: ContextEndpoint, mode?: ConversationRequestInp
   return endpoint === "summarize" ? `${endpoint}:${mode ?? "compact"}` : endpoint;
 }
 
+function profileModeEndpoint(endpoint: ContextEndpoint, mode?: ConversationRequestInput["mode"]): ContextEndpoint {
+  return endpoint === "extract-profile" && mode === "memory-enrichment" ? "memory-enrichment" : endpoint;
+}
+
 function cachedResult<T>(request: ResolvedConversationRequest, endpoint: ContextEndpoint): T | undefined {
   return request.cachedResults?.[resultCacheKey(endpoint, request.mode)] as T | undefined;
+}
+
+async function runProfileMode(service: ContextService, request: ResolvedConversationRequest) {
+  if (request.mode === "memory-enrichment") {
+    const result = cachedResult<MemoryEnrichmentResponse>(request, "memory-enrichment") ?? await service.memoryEnrichment(request);
+    return { result, eventType: undefined };
+  }
+
+  const result = cachedResult<ProfileResponse>(request, "extract-profile") ?? await service.profile(request);
+  return { result, eventType: "profile.extracted" as const };
 }
 
 function parseContextEndpoint(value: string): ContextEndpoint {
@@ -323,7 +338,7 @@ function parseContextEndpoint(value: string): ContextEndpoint {
 
 function parseSummaryMode(value?: string): ConversationRequestInput["mode"] {
   if (!value) return undefined;
-  const modes: Array<NonNullable<ConversationRequestInput["mode"]>> = ["micro", "compact", "extended", "debug"];
+  const modes: Array<NonNullable<ConversationRequestInput["mode"]>> = ["micro", "compact", "extended", "debug", "extract-profile", "memory-enrichment"];
   if (modes.includes(value as NonNullable<ConversationRequestInput["mode"]>)) {
     return value as ConversationRequestInput["mode"];
   }

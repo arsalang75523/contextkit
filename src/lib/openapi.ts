@@ -46,7 +46,7 @@ const contextUploadResponse = z.object({
   inputTokens: z.number(),
   precomputed: z.object({
     endpoint: z.enum(["summarize", "compress-context", "handoff", "extract-profile", "memory-enrichment"]),
-    mode: z.enum(["micro", "compact", "extended", "debug"]).nullable()
+    mode: z.enum(["micro", "compact", "extended", "debug", "extract-profile", "memory-enrichment"]).nullable()
   }).nullable().optional()
 });
 
@@ -233,7 +233,7 @@ registry.registerPath({
   method: "post",
   path: "/api/context/upload-text",
   summary: "Upload plain-text long context",
-  description: "Accepts a plain text body, precomputes the requested endpoint, and returns a contextId for hosted Bankr x402 calls. Query params: endpoint=summarize|compress-context|handoff|extract-profile|memory-enrichment and mode=micro|compact|extended|debug.",
+  description: "Accepts a plain text body, precomputes the requested endpoint, and returns a contextId for hosted Bankr x402 calls. Query params: endpoint=summarize|compress-context|handoff|extract-profile|memory-enrichment and mode=micro|compact|extended|debug|extract-profile|memory-enrichment.",
   request: {
     body: {
       content: {

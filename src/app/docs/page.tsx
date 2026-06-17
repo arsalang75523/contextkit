@@ -34,6 +34,7 @@ await client.summarize({ messages, mode: "compact" });
 await client.compressContext({ messages });
 await client.handoff({ messages });
 await client.extractProfile({ messages });
+await client.extractProfile({ messages, mode: "memory-enrichment" });
 await client.memoryEnrichment({ messages });
 await client.estimateTokens({ modelFamily: "openai", input: messages });
 await client.credits();`;
@@ -122,17 +123,14 @@ const longContextExamples = [
   },
   {
     title: "Extract profile",
-    upload: uploadTextCommand("extract-profile"),
-    call: bankrContextCommand("extract-profile", '{"contextId":"ctx_REPLACE_ME"}')
+    upload: uploadTextCommand("extract-profile", "extract-profile"),
+    call: bankrContextCommand("extract-profile", '{"contextId":"ctx_REPLACE_ME","mode":"extract-profile"}')
   },
   {
     title: "Memory enrichment",
-    upload: uploadTextCommand("memory-enrichment"),
-    call: `curl -X POST https://contextkit.pro/api/memory-enrichment \\
-  -H "Authorization: Bearer <CONTEXTKIT_API_KEY>" \\
-  -H "Content-Type: application/json" \\
-  -d '{"contextId":"ctx_REPLACE_ME"}'`,
-    note: "Memory enrichment uses the direct API with credits. For Bankr-hosted profile + memory extraction, use contextkit-profile."
+    upload: uploadTextCommand("extract-profile", "memory-enrichment"),
+    call: bankrContextCommand("extract-profile", '{"contextId":"ctx_REPLACE_ME","mode":"memory-enrichment"}'),
+    note: "Bankr memory enrichment is a mode of contextkit-profile. Direct API-key usage can still call /api/memory-enrichment."
   }
 ];
 
@@ -443,7 +441,8 @@ function hostedExamples() {
     ["Summarize", "summarize", { ...samplePayload, mode: "compact" }],
     ["Compress context", "compress-context", samplePayload],
     ["Agent handoff", "handoff", samplePayload],
-    ["Extract profile", "extract-profile", samplePayload]
+    ["Extract profile", "extract-profile", { ...samplePayload, mode: "extract-profile" }],
+    ["Memory enrichment", "extract-profile", { ...samplePayload, mode: "memory-enrichment" }]
   ].map(([title, slug, payload]) => ({
     title: String(title),
     code: bankrX402Command(String(slug), payload)

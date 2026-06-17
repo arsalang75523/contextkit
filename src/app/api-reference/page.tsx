@@ -35,7 +35,9 @@ export default function ApiReferencePage() {
           {endpoints.map((endpoint) => {
             const request = JSON.stringify({
               messages: [{ role: "user", content: "Long-running agent conversation..." }],
-              ...(endpoint.slug === "summarize" ? { mode: "compact" } : {})
+              ...(endpoint.slug === "summarize" ? { mode: "compact" } : {}),
+              ...(endpoint.slug === "extract-profile" ? { mode: "extract-profile" } : {}),
+              ...(endpoint.slug === "memory-enrichment" ? { mode: "memory-enrichment" } : {})
             }, null, 2);
             const response = JSON.stringify(endpoint.response, null, 2);
             const payload = JSON.parse(request);
@@ -57,7 +59,7 @@ export default function ApiReferencePage() {
                     ) : null}
                     {endpoint.slug === "memory-enrichment" ? (
                       <p className="mt-3 max-w-3xl rounded border border-aqua/25 bg-aqua/10 p-3 text-sm leading-6 text-aqua">
-                        Memory enrichment is priced at <code>$0.04</code>: use <code>/api/memory-enrichment</code> with an API key and credits, or use hosted <code>contextkit-profile</code> when you want profile + memory extraction through Bankr.
+                        Bankr memory enrichment is a mode of <code>contextkit-profile</code>: send <code>mode:"memory-enrichment"</code>. Direct API-key usage can still call <code>/api/memory-enrichment</code>.
                       </p>
                     ) : null}
                   </div>

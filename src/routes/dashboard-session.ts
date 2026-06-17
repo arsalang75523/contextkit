@@ -408,7 +408,9 @@ async function consumeDailyQuota(c: Context<AppBindings>, namespace: string, own
 async function runPlaygroundEndpoint(service: ContextService, endpoint: string, request: ConversationRequest) {
   if (endpoint === "compress-context") return service.compress(request);
   if (endpoint === "handoff") return service.handoff(request);
-  if (endpoint === "extract-profile") return service.profile(request);
+  if (endpoint === "extract-profile") {
+    return request.mode === "memory-enrichment" ? service.memoryEnrichment(request) : service.profile(request);
+  }
   if (endpoint === "memory-enrichment") return service.memoryEnrichment(request);
   return service.summarize(request);
 }

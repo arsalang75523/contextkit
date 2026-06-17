@@ -50,11 +50,8 @@ export default function DemoPage() {
     ["Summarize", bankrX402Command("summarize", { messages })],
     ["Compress context", bankrX402Command("compress-context", { messages })],
     ["Agent handoff", bankrX402Command("handoff", { messages })],
-    ["Profile + hosted memory", bankrX402Command("extract-profile", { messages })],
-    ["Memory enrichment ($0.04 API credits)", `curl -X POST https://contextkit.pro/api/memory-enrichment \\
-  -H "Authorization: Bearer ck_live_..." \\
-  -H "Content-Type: application/json" \\
-  -d '${JSON.stringify({ messages }).replaceAll("'", "'\\''")}'`]
+    ["Extract profile", bankrX402Command("extract-profile", { messages, mode: "extract-profile" })],
+    ["Memory enrichment", bankrX402Command("extract-profile", { messages, mode: "memory-enrichment" })]
   ], [messages]);
   const allEndpointsCommand = useMemo(() => paidCommands.map(([label, command]) => `# ${label}\n${command}`).join("\n\n"), [paidCommands]);
   const inputTokens = result?.metrics?.inputTokens ?? 0;
@@ -143,7 +140,7 @@ export default function DemoPage() {
               <div>
                 <h2 className="mb-3 text-sm uppercase tracking-[0.18em] text-white/45">Run every endpoint</h2>
                 <p className="mb-3 text-sm leading-6 text-white/55">
-                  Bankr-hosted x402 commands are paid one endpoint at a time. Memory enrichment is $0.04 through API-key credits; hosted memory extraction can also run through profile output.
+                  Bankr-hosted x402 commands are paid one endpoint at a time. Memory enrichment uses the same <code>contextkit-profile</code> hosted endpoint with <code>mode:"memory-enrichment"</code>.
                 </p>
                 <Panel title="Full pipeline command" value={allEndpointsCommand} />
                 <p className="mt-3 text-xs leading-5 text-white/40">
