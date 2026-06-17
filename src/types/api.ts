@@ -20,6 +20,10 @@ export const conversationRequestSchema = z.object({
 export const contextUploadSchema = z.object({
   messages: z.array(messageSchema).min(1).max(200),
   metadata: z.record(z.string(), z.unknown()).optional(),
+  precompute: z.object({
+    endpoint: z.enum(["summarize", "compress-context", "handoff", "extract-profile", "memory-enrichment"]),
+    mode: z.enum(["micro", "compact", "extended", "debug"]).optional()
+  }).optional(),
   ttlSeconds: z.number().int().min(300).max(86_400).default(3600)
 });
 

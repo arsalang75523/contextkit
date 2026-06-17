@@ -16,6 +16,10 @@ export type ContextRequest = {
 export type ContextUploadRequest = {
   messages: ConversationMessage[];
   metadata?: Record<string, unknown>;
+  precompute?: {
+    endpoint: "summarize" | "compress-context" | "handoff" | "extract-profile" | "memory-enrichment";
+    mode?: "micro" | "compact" | "extended" | "debug";
+  };
   ttlSeconds?: number;
 };
 
@@ -24,6 +28,10 @@ export type ContextUploadResponse = {
   expiresAt: string;
   messageCount: number;
   inputTokens: number;
+  precomputed?: {
+    endpoint: "summarize" | "compress-context" | "handoff" | "extract-profile" | "memory-enrichment";
+    mode: "micro" | "compact" | "extended" | "debug" | null;
+  } | null;
 };
 
 export type SummarizeResponse = {

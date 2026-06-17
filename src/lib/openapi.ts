@@ -43,7 +43,11 @@ const contextUploadResponse = z.object({
   contextId: z.string(),
   expiresAt: z.string(),
   messageCount: z.number(),
-  inputTokens: z.number()
+  inputTokens: z.number(),
+  precomputed: z.object({
+    endpoint: z.enum(["summarize", "compress-context", "handoff", "extract-profile", "memory-enrichment"]),
+    mode: z.enum(["micro", "compact", "extended", "debug"]).nullable()
+  }).nullable().optional()
 });
 
 const summarizeResponse = z.object({

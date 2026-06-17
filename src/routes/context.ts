@@ -18,14 +18,26 @@ import { dispatchWebhook } from "@/webhooks/dispatcher";
 import { createId } from "@/utils/id";
 import { endpointPricing } from "@/lib/pricing";
 import type { AppBindings } from "@/types/bindings";
-import type { ConversationMessage, ConversationRequest, ConversationRequestInput } from "@/types/api";
+import type {
+  CompressContextResponse,
+  ContextEndpoint,
+  ConversationMessage,
+  ConversationRequest,
+  ConversationRequestInput,
+  HandoffResponse,
+  MemoryEnrichmentResponse,
+  ProfileResponse,
+  SummarizeResponse
+} from "@/types/api";
 
 export const contextRoutes = new Hono<AppBindings>();
 
-type ResolvedConversationRequest = ConversationRequest & { messages: ConversationMessage[] };
+type CachedResults = Record<string, unknown>;
+type ResolvedConversationRequest = ConversationRequest & { messages: ConversationMessage[]; cachedResults?: CachedResults };
 type StoredContext = {
   messages: ConversationMessage[];
   metadata?: Record<string, unknown>;
+  results?: CachedResults;
   createdAt: string;
   expiresAt: string;
 };
@@ -37,12 +49,28 @@ contextRoutes.post("/context/upload", zValidator("json", contextUploadSchema), a
   const createdAt = new Date();
   const expiresAt = new Date(createdAt.getTime() + ttlSeconds * 1000);
   const messages = sanitizeMessages(body.messages);
+  const results: CachedResults = {};
+
+  if (body.precompute) {
+    const service = new ContextService({ env: c.env ?? {}, requestId: c.get("requestId") });
+    const precomputeRequest = {
+      messages,
+      metadata: body.metadata,
+      mode: body.precompute.mode
+    } satisfies ResolvedConversationRequest;
+    results[resultCacheKey(body.precompute.endpoint, body.precompute.mode)] = await generateEndpointResult(
+      service,
+      body.precompute.endpoint,
+      precomputeRequest
+    );
+  }
 
   await new AppKV(c.env?.CONTEXTKIT_KV).set(
     `context:${contextId}`,
     {
       messages,
       metadata: body.metadata,
+      results,
       createdAt: createdAt.toISOString(),
       expiresAt: expiresAt.toISOString()
     } satisfies StoredContext,
@@ -54,7 +82,11 @@ contextRoutes.post("/context/upload", zValidator("json", contextUploadSchema), a
       contextId,
       expiresAt: expiresAt.toISOString(),
       messageCount: messages.length,
-      inputTokens: estimateTokens(messages)
+      inputTokens: estimateTokens(messages),
+      precomputed: body.precompute ? {
+        endpoint: body.precompute.endpoint,
+        mode: body.precompute.mode ?? null
+      } : null
     },
     201
   );
@@ -63,7 +95,7 @@ contextRoutes.post("/context/upload", zValidator("json", contextUploadSchema), a
 contextRoutes.post("/summarize", requireApiKey("context:write"), apiKeyRateLimit(), apiCreditOrX402PaymentRequired("summarize"), zValidator("json", conversationRequestSchema), async (c) => {
   const request = await resolveConversationRequest(c, c.req.valid("json"));
   const service = new ContextService({ env: c.env ?? {}, requestId: c.get("requestId") });
-  const result = await service.summarize(request);
+  const result = cachedResult<SummarizeResponse>(request, "summarize") ?? await service.summarize(request);
   await complete(c, "/summarize", request, JSON.stringify(result), c.get("payment")?.paymentId);
   await service.emitCompleted(request, "summarization.completed", result);
   return c.json(result);
@@ -78,7 +110,7 @@ contextRoutes.post(
   async (c) => {
     const request = await resolveConversationRequest(c, c.req.valid("json"));
     const service = new ContextService({ env: c.env ?? {}, requestId: c.get("requestId") });
-    const result = await service.compress(request);
+    const result = cachedResult<CompressContextResponse>(request, "compress-context") ?? await service.compress(request);
     await complete(c, "/compress-context", request, JSON.stringify(result), c.get("payment")?.paymentId);
     await service.emitCompleted(request, "context.compressed", result);
     return c.json(result);
@@ -88,7 +120,7 @@ contextRoutes.post(
 contextRoutes.post("/handoff", requireApiKey("context:write"), apiKeyRateLimit(), apiCreditOrX402PaymentRequired("handoff"), zValidator("json", conversationRequestSchema), async (c) => {
   const request = await resolveConversationRequest(c, c.req.valid("json"));
   const service = new ContextService({ env: c.env ?? {}, requestId: c.get("requestId") });
-  const result = await service.handoff(request);
+  const result = cachedResult<HandoffResponse>(request, "handoff") ?? await service.handoff(request);
   await complete(c, "/handoff", request, JSON.stringify(result), c.get("payment")?.paymentId);
   await service.emitCompleted(request, "handoff.generated", result);
   return c.json(result);
@@ -103,7 +135,7 @@ contextRoutes.post(
   async (c) => {
     const request = await resolveConversationRequest(c, c.req.valid("json"));
     const service = new ContextService({ env: c.env ?? {}, requestId: c.get("requestId") });
-    const result = await service.profile(request);
+    const result = cachedResult<ProfileResponse>(request, "extract-profile") ?? await service.profile(request);
     await complete(c, "/extract-profile", request, JSON.stringify(result), c.get("payment")?.paymentId);
     await service.emitCompleted(request, "profile.extracted", result);
     return c.json(result);
@@ -113,7 +145,7 @@ contextRoutes.post(
 contextRoutes.post("/memory-enrichment", requireApiKey("context:write"), apiKeyRateLimit(), apiCreditOrX402PaymentRequired("memory-enrichment"), zValidator("json", conversationRequestSchema), async (c) => {
   const request = await resolveConversationRequest(c, c.req.valid("json"));
   const service = new ContextService({ env: c.env ?? {}, requestId: c.get("requestId") });
-  const result = await service.memoryEnrichment(request);
+  const result = cachedResult<MemoryEnrichmentResponse>(request, "memory-enrichment") ?? await service.memoryEnrichment(request);
   await complete(c, "/memory-enrichment", request, JSON.stringify(result), c.get("payment")?.paymentId);
   return c.json(result);
 });
@@ -121,7 +153,7 @@ contextRoutes.post("/memory-enrichment", requireApiKey("context:write"), apiKeyR
 contextRoutes.post("/x402/memory-enrichment", x402PaymentRequired("memory-enrichment"), zValidator("json", conversationRequestSchema), async (c) => {
   const request = await resolveConversationRequest(c, c.req.valid("json"));
   const service = new ContextService({ env: c.env ?? {}, requestId: c.get("requestId") });
-  const result = await service.memoryEnrichment(request);
+  const result = cachedResult<MemoryEnrichmentResponse>(request, "memory-enrichment") ?? await service.memoryEnrichment(request);
   await complete(c, "/x402/memory-enrichment", request, JSON.stringify(result), c.get("payment")?.paymentId);
   return c.json(result);
 });
@@ -129,7 +161,7 @@ contextRoutes.post("/x402/memory-enrichment", x402PaymentRequired("memory-enrich
 contextRoutes.post("/x402/summarize", x402PaymentRequired("summarize"), zValidator("json", conversationRequestSchema), async (c) => {
   const request = await resolveConversationRequest(c, c.req.valid("json"));
   const service = new ContextService({ env: c.env ?? {}, requestId: c.get("requestId") });
-  const result = await service.summarize(request);
+  const result = cachedResult<SummarizeResponse>(request, "summarize") ?? await service.summarize(request);
   await complete(c, "/x402/summarize", request, JSON.stringify(result), c.get("payment")?.paymentId);
   await service.emitCompleted(request, "summarization.completed", result);
   return c.json(result);
@@ -142,7 +174,7 @@ contextRoutes.post(
   async (c) => {
     const request = await resolveConversationRequest(c, c.req.valid("json"));
     const service = new ContextService({ env: c.env ?? {}, requestId: c.get("requestId") });
-    const result = await service.compress(request);
+    const result = cachedResult<CompressContextResponse>(request, "compress-context") ?? await service.compress(request);
     await complete(c, "/x402/compress-context", request, JSON.stringify(result), c.get("payment")?.paymentId);
     await service.emitCompleted(request, "context.compressed", result);
     return c.json(result);
@@ -152,7 +184,7 @@ contextRoutes.post(
 contextRoutes.post("/x402/handoff", x402PaymentRequired("handoff"), zValidator("json", conversationRequestSchema), async (c) => {
   const request = await resolveConversationRequest(c, c.req.valid("json"));
   const service = new ContextService({ env: c.env ?? {}, requestId: c.get("requestId") });
-  const result = await service.handoff(request);
+  const result = cachedResult<HandoffResponse>(request, "handoff") ?? await service.handoff(request);
   await complete(c, "/x402/handoff", request, JSON.stringify(result), c.get("payment")?.paymentId);
   await service.emitCompleted(request, "handoff.generated", result);
   return c.json(result);
@@ -165,7 +197,7 @@ contextRoutes.post(
   async (c) => {
     const request = await resolveConversationRequest(c, c.req.valid("json"));
     const service = new ContextService({ env: c.env ?? {}, requestId: c.get("requestId") });
-    const result = await service.profile(request);
+    const result = cachedResult<ProfileResponse>(request, "extract-profile") ?? await service.profile(request);
     await complete(c, "/x402/extract-profile", request, JSON.stringify(result), c.get("payment")?.paymentId);
     await service.emitCompleted(request, "profile.extracted", result);
     return c.json(result);
@@ -176,7 +208,7 @@ contextRoutes.post("/internal/summarize", requireInternalToken(), zValidator("js
   const request = await resolveConversationRequest(c, c.req.valid("json"));
   await markHostedPayment(c, "summarize", "/internal/summarize");
   const service = new ContextService({ env: c.env ?? {}, requestId: c.get("requestId") });
-  const result = await service.summarize(request);
+  const result = cachedResult<SummarizeResponse>(request, "summarize") ?? await service.summarize(request);
   await complete(c, "/internal/summarize", request, JSON.stringify(result));
   await service.emitCompleted(request, "summarization.completed", result);
   return c.json(result);
@@ -186,7 +218,7 @@ contextRoutes.post("/internal/compress-context", requireInternalToken(), zValida
   const request = await resolveConversationRequest(c, c.req.valid("json"));
   await markHostedPayment(c, "compress-context", "/internal/compress-context");
   const service = new ContextService({ env: c.env ?? {}, requestId: c.get("requestId") });
-  const result = await service.compress(request);
+  const result = cachedResult<CompressContextResponse>(request, "compress-context") ?? await service.compress(request);
   await complete(c, "/internal/compress-context", request, JSON.stringify(result));
   await service.emitCompleted(request, "context.compressed", result);
   return c.json(result);
@@ -196,7 +228,7 @@ contextRoutes.post("/internal/handoff", requireInternalToken(), zValidator("json
   const request = await resolveConversationRequest(c, c.req.valid("json"));
   await markHostedPayment(c, "handoff", "/internal/handoff");
   const service = new ContextService({ env: c.env ?? {}, requestId: c.get("requestId") });
-  const result = await service.handoff(request);
+  const result = cachedResult<HandoffResponse>(request, "handoff") ?? await service.handoff(request);
   await complete(c, "/internal/handoff", request, JSON.stringify(result));
   await service.emitCompleted(request, "handoff.generated", result);
   return c.json(result);
@@ -206,7 +238,7 @@ contextRoutes.post("/internal/extract-profile", requireInternalToken(), zValidat
   const request = await resolveConversationRequest(c, c.req.valid("json"));
   await markHostedPayment(c, "extract-profile", "/internal/extract-profile");
   const service = new ContextService({ env: c.env ?? {}, requestId: c.get("requestId") });
-  const result = await service.profile(request);
+  const result = cachedResult<ProfileResponse>(request, "extract-profile") ?? await service.profile(request);
   await complete(c, "/internal/extract-profile", request, JSON.stringify(result));
   await service.emitCompleted(request, "profile.extracted", result);
   return c.json(result);
@@ -216,7 +248,7 @@ contextRoutes.post("/internal/memory-enrichment", requireInternalToken(), zValid
   const request = await resolveConversationRequest(c, c.req.valid("json"));
   await markHostedPayment(c, "memory-enrichment", "/internal/memory-enrichment");
   const service = new ContextService({ env: c.env ?? {}, requestId: c.get("requestId") });
-  const result = await service.memoryEnrichment(request);
+  const result = cachedResult<MemoryEnrichmentResponse>(request, "memory-enrichment") ?? await service.memoryEnrichment(request);
   await complete(c, "/internal/memory-enrichment", request, JSON.stringify(result));
   return c.json(result);
 });
@@ -241,8 +273,29 @@ async function resolveConversationRequest(
       ...(stored.metadata ?? {}),
       ...(body.metadata ?? {})
     },
-    messages: sanitizeMessages(body.messages ?? stored.messages)
+    messages: sanitizeMessages(body.messages ?? stored.messages),
+    cachedResults: stored.results
   };
+}
+
+function resultCacheKey(endpoint: ContextEndpoint, mode?: ConversationRequestInput["mode"]) {
+  return endpoint === "summarize" ? `${endpoint}:${mode ?? "micro"}` : endpoint;
+}
+
+function cachedResult<T>(request: ResolvedConversationRequest, endpoint: ContextEndpoint): T | undefined {
+  return request.cachedResults?.[resultCacheKey(endpoint, request.mode)] as T | undefined;
+}
+
+async function generateEndpointResult(
+  service: ContextService,
+  endpoint: ContextEndpoint,
+  request: ResolvedConversationRequest
+) {
+  if (endpoint === "summarize") return service.summarize(request);
+  if (endpoint === "compress-context") return service.compress(request);
+  if (endpoint === "handoff") return service.handoff(request);
+  if (endpoint === "extract-profile") return service.profile(request);
+  return service.memoryEnrichment(request);
 }
 
 async function markHostedPayment(c: Context<AppBindings>, endpoint: keyof typeof endpointPricing, route: string) {

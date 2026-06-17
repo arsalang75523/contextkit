@@ -94,7 +94,12 @@ const valid = await verifyContextKitWebhook({
 
 const longContextUpload = `curl -X POST https://contextkit.pro/api/context/upload \\
   -H "Content-Type: application/json" \\
-  --data-binary @payload.json`;
+  -d '{
+    "messages": [
+      {"role":"user","content":"LONG_CONTEXT_HERE"}
+    ],
+    "precompute": {"endpoint":"summarize","mode":"micro"}
+  }'`;
 
 const bankrContextIdCall = `bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-summarize \\
   -X POST \\
@@ -102,7 +107,11 @@ const bankrContextIdCall = `bankr x402 call https://x402.bankr.bot/0xdace98cd605
 
 const sdkContextId = `${sdkClient}
 
-const uploaded = await client.uploadContext({ messages, ttlSeconds: 3600 });
+const uploaded = await client.uploadContext({
+  messages,
+  ttlSeconds: 3600,
+  precompute: { endpoint: "summarize", mode: "micro" }
+});
 const summary = await client.summarize({
   contextId: uploaded.contextId,
   mode: "micro"
@@ -316,7 +325,7 @@ curl https://contextkit.pro/api/public/metrics`} />
 
             <DocSection id="long-context" title="Long Context">
               <p>
-                For large source conversations, upload the payload once and reuse the returned <code>contextId</code> with summarize, compress-context, handoff, extract-profile, or memory-enrichment. This avoids sending large request bodies through hosted x402 gateways.
+                For large source conversations, upload the payload once, precompute the target operation, then reuse the returned <code>contextId</code> with summarize, compress-context, handoff, extract-profile, or memory-enrichment. This keeps the paid Bankr call small and fast while preserving the normal endpoint response shape.
               </p>
               <div className="mt-4 grid gap-4 lg:grid-cols-2">
                 <div>
