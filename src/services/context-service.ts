@@ -40,7 +40,7 @@ export class ContextService {
       ...openQuestions.map((item) => `Open: ${item}`),
       ...risks.map((item) => `Risk: ${item}`)
     ];
-    let micro = microCapsule(enforceBudget(usefulMicroCandidate(String(output.micro ?? ""), stateValue), microFacts, inputTokens, 0.16, 28));
+    let micro = microCapsule(enforceBudget(usefulMicroCandidate(String(output.micro ?? ""), stateValue), microFacts, inputTokens, 0.16, 40));
     const compact = compactSummaryParagraph(enforceBudget("", compactFacts, inputTokens, 0.4, 50));
     const extended = extendedParagraph(enforceBudget(String(output.extended ?? output.summary ?? compact), extendedFacts, inputTokens, 0.6, 180));
     const summary = compact || micro || extended;
@@ -644,7 +644,8 @@ function microCapsule(value: string) {
     .replace(/\s+/g, " ")
     .replace(/(?:^|;\s*)\w+:\s*$/g, "")
     .trim();
-  const trimmed = completeTextWithinBudget(sanitizeMicroParts(cleaned), 28);
+  const sanitized = sanitizeMicroParts(cleaned);
+  const trimmed = hasRequiredMicroAnchors(sanitized) ? sanitized : completeTextWithinBudget(sanitized, 40);
   if (!trimmed) return "";
   return /[.!?]$/.test(trimmed) ? trimmed : `${trimmed}.`;
 }
@@ -660,16 +661,16 @@ function sanitizeMicroParts(value: string) {
 function optimizedMicroCheckpoint(candidate: string, facts: string[], inputTokens: number, compactOutputTokens: number) {
   const candidates = [
     microCapsule(candidate),
-    ...[24, 20, 16, 12, 8].map((maxTokens) => microCapsule(enforceBudget("", facts, inputTokens, 0.16, maxTokens)))
+    microCapsule(facts.join("; "))
   ].filter(Boolean);
 
   for (const value of uniqueStrings(candidates)) {
-    if (microResponseTokens(value, inputTokens) < compactOutputTokens) return value;
+    if (hasRequiredMicroAnchors(value) && microResponseTokens(value, inputTokens) < compactOutputTokens) return value;
   }
 
-  const shortest = microCapsule(completeTextWithinBudget(normalizeSummary(facts.filter(Boolean).join("; ")), 8));
-  if (shortest && microResponseTokens(shortest, inputTokens) < compactOutputTokens) return shortest;
-  return uniqueStrings(candidates).sort((a, b) => estimateTokens(a) - estimateTokens(b))[0] ?? "";
+  const structural = microCapsule(facts.join("; "));
+  if (hasRequiredMicroAnchors(structural)) return structural;
+  return uniqueStrings(candidates).find(hasRequiredMicroAnchors) ?? structural;
 }
 
 function microResponseTokens(micro: string, inputTokens: number) {
@@ -710,12 +711,12 @@ function strategicMicroFacts(stateValue: ReturnType<typeof summarizeState>, outp
   const goal = microFragment(stateValue.goal, 7);
   const goalLike = [goal, stateValue.goal].filter(Boolean);
   const status = selectMicroStatusFragments([stateValue.status], 1, 5);
-  const blockers = selectOperationalFragments(stateValue.blockers, 2, 5, goalLike);
+  const blockers = selectOperationalFragments(stateValue.blockers, 2, 4, goalLike);
   const dependencies = selectOperationalFragments([
     ...stateValue.priorities,
     ...stateValue.decisions,
     ...stateValue.nextSteps
-  ], 1, 5, [...goalLike, ...blockers]);
+  ], 2, 4, [...goalLike, ...blockers]);
   const worldview = selectWorldviewFragments([
     stateValue.status,
     ...stateValue.blockers,
@@ -723,22 +724,22 @@ function strategicMicroFacts(stateValue: ReturnType<typeof summarizeState>, outp
     ...stateValue.priorities,
     ...stateValue.nextSteps
   ].filter((item) => !containsEquivalent([...goalLike, ...blockers, ...dependencies], item)), 1, 5);
-  const next = microFragment(stateValue.nextSteps.find((item) => !containsEquivalent([...goalLike, ...blockers, ...dependencies], item)) ?? "", 5);
+  const nextActions = selectOperationalFragments(stateValue.nextSteps, 2, 4, [...goalLike, ...blockers, ...dependencies]);
   const llmMicro = usefulMicroCandidate(String(output.micro ?? ""), stateValue);
   return canonicalMicroFacts({
     state: status[0] ?? worldview[0] ?? blockers[0] ?? "",
-    dep: dependencies[0] ?? blockers[1] ?? blockers[0] ?? "",
-    next,
+    blockers: fillMicroPair(blockers, dependencies),
+    next: fillMicroPair(nextActions, dependencies),
     goal,
     llmMicro
   });
 }
 
-function canonicalMicroFacts(parts: { state: string; dep: string; next: string; goal: string; llmMicro: string }) {
+function canonicalMicroFacts(parts: { state: string; blockers: string[]; next: string[]; goal: string; llmMicro: string }) {
   const values = [
     ["state", parts.state],
-    ["dep", parts.dep],
-    ["next", parts.next],
+    ["dep", joinMicroPair(parts.blockers)],
+    ["next", joinMicroPair(parts.next)],
     ["goal", parts.goal]
   ] as const;
   const facts = values
@@ -752,6 +753,27 @@ function canonicalMicroFacts(parts: { state: string; dep: string; next: string; 
     ...facts,
     ...prefixedMicroFacts(parts.llmMicro)
   ]).filter((item) => item && item !== "unknown").slice(0, 4);
+}
+
+function fillMicroPair(primary: string[], fallback: string[]) {
+  const values = uniqueStrings([...primary, ...fallback]).filter(Boolean).slice(0, 2);
+  while (values.length < 2) values.push("none stated");
+  return values;
+}
+
+function joinMicroPair(values: string[]) {
+  return values
+    .map((item) => microFragment(item, 4))
+    .filter(Boolean)
+    .slice(0, 2)
+    .join("/");
+}
+
+function hasRequiredMicroAnchors(value: string) {
+  const text = normalizeSummary(value);
+  return /\bgoal:[^;]+/i.test(text)
+    && /\bdep:[^;]+\/[^;]+/i.test(text)
+    && /\bnext:[^;]+\/[^;]+/i.test(text);
 }
 
 function prefixedMicroFacts(value: string) {
