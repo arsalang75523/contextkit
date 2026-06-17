@@ -104,6 +104,38 @@ const bankrContextIdCall = `bankr x402 call https://x402.bankr.bot/0xdace98cd605
   -X POST \\
   -d '{"contextId":"ctx_REPLACE_ME","mode":"micro"}'`;
 
+const longContextExamples = [
+  {
+    title: "Summarize",
+    upload: uploadTextCommand("summarize", "micro"),
+    call: bankrContextCommand("summarize", '{"contextId":"ctx_REPLACE_ME","mode":"micro"}')
+  },
+  {
+    title: "Compress context",
+    upload: uploadTextCommand("compress-context"),
+    call: bankrContextCommand("compress-context", '{"contextId":"ctx_REPLACE_ME"}')
+  },
+  {
+    title: "Agent handoff",
+    upload: uploadTextCommand("handoff"),
+    call: bankrContextCommand("handoff", '{"contextId":"ctx_REPLACE_ME"}')
+  },
+  {
+    title: "Extract profile",
+    upload: uploadTextCommand("extract-profile"),
+    call: bankrContextCommand("extract-profile", '{"contextId":"ctx_REPLACE_ME"}')
+  },
+  {
+    title: "Memory enrichment",
+    upload: uploadTextCommand("memory-enrichment"),
+    call: `curl -X POST https://contextkit.pro/api/memory-enrichment \\
+  -H "Authorization: Bearer <CONTEXTKIT_API_KEY>" \\
+  -H "Content-Type: application/json" \\
+  -d '{"contextId":"ctx_REPLACE_ME"}'`,
+    note: "Memory enrichment uses the direct API with credits. For Bankr-hosted profile + memory extraction, use contextkit-profile."
+  }
+];
+
 const sdkContextId = `${sdkClient}
 
 const uploaded = await client.uploadContext({
@@ -224,6 +256,24 @@ export default function DocsPage() {
                   <h3 className="mb-2 font-semibold text-white">Call Bankr with contextId</h3>
                   <CodeBlock code={bankrContextIdCall} />
                 </div>
+              </div>
+              <div className="mt-6 grid gap-4">
+                {longContextExamples.map((item) => (
+                  <div key={item.title} className="rounded-md border border-line bg-white/[0.035] p-5">
+                    <h3 className="font-semibold text-white">{item.title}</h3>
+                    {item.note ? <p className="mt-2 text-sm text-white/55">{item.note}</p> : null}
+                    <div className="mt-4 grid gap-4 lg:grid-cols-2">
+                      <div>
+                        <p className="mb-2 text-xs uppercase tracking-[0.18em] text-white/35">Upload and precompute</p>
+                        <CodeBlock code={item.upload} />
+                      </div>
+                      <div>
+                        <p className="mb-2 text-xs uppercase tracking-[0.18em] text-white/35">Call with contextId</p>
+                        <CodeBlock code={item.call} />
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             </DocSection>
 
@@ -398,6 +448,34 @@ function hostedExamples() {
     title: String(title),
     code: bankrX402Command(String(slug), payload)
   }));
+}
+
+function uploadTextCommand(endpoint: string, mode?: string) {
+  const params = new URLSearchParams({ endpoint });
+  if (mode) params.set("mode", mode);
+  return `cat > long-context.txt <<'EOF'
+Paste the long conversation or document here.
+EOF
+
+curl -X POST "https://contextkit.pro/api/context/upload-text?${params.toString()}" \\
+  -H "Content-Type: text/plain" \\
+  --data-binary @long-context.txt`;
+}
+
+function bankrContextCommand(slug: string, payload: string) {
+  return `bankr x402 call ${bankrHostedUrlForDocs(slug)} \\
+  -X POST \\
+  -d '${payload}'`;
+}
+
+function bankrHostedUrlForDocs(slug: string) {
+  const map: Record<string, string> = {
+    summarize: "contextkit-summarize",
+    "compress-context": "contextkit-compress",
+    handoff: "contextkit-handoff",
+    "extract-profile": "contextkit-profile"
+  };
+  return `https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/${map[slug] ?? slug}`;
 }
 
 function slugify(value: string) {

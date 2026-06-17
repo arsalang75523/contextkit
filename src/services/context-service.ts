@@ -33,18 +33,14 @@ export class ContextService {
     const actionItems = arrayOfStrings(output.actionItems);
     const openQuestions = arrayOfStrings(output.openQuestions);
     const risks = arrayOfStrings(output.risks);
-    const microFacts = [
-      stateValue.goal,
-      stateValue.status,
-      ...stateValue.blockers.map((item) => `Blocker: ${item}`)
-    ].filter((item) => item && item !== "unknown");
+    const microFacts = strategicMicroFacts(stateValue, output);
     const compactFacts = compactNarrativeFacts(stateValue, actionItems);
     const extendedFacts = [
       ...compactFacts,
       ...openQuestions.map((item) => `Open: ${item}`),
       ...risks.map((item) => `Risk: ${item}`)
     ];
-    const micro = compactSentence(enforceBudget(String(output.micro ?? ""), microFacts, inputTokens, 0.2, 40));
+    const micro = microCapsule(enforceBudget(usefulMicroCandidate(String(output.micro ?? ""), stateValue), microFacts, inputTokens, 0.2, 40));
     const compact = compactSummaryParagraph(enforceBudget("", compactFacts, inputTokens, 0.4, 50));
     const extended = extendedParagraph(enforceBudget(String(output.extended ?? output.summary ?? compact), extendedFacts, inputTokens, 0.6, 180));
     const summary = compact || micro || extended;
@@ -589,6 +585,83 @@ function compactSentence(value: string) {
   const trimmed = completeTextWithinBudget(normalizeSummary(value).replace(/[;|]+/g, ". "), 60);
   if (!trimmed) return "";
   return /[.!?]$/.test(trimmed) ? trimmed : `${trimmed}.`;
+}
+
+function microCapsule(value: string) {
+  const cleaned = normalizeSummary(value)
+    .replace(/\b(Blocker|Decision|Priority|Next|Status|Goal):\s*/gi, "")
+    .replace(/\b(because|since|therefore|so that|in order to)\b.*?(?=\.|;|$)/gi, "")
+    .replace(/\s*;\s*/g, "; ")
+    .replace(/\s+/g, " ")
+    .trim();
+  const trimmed = completeTextWithinBudget(cleaned, 40);
+  if (!trimmed) return "";
+  return /[.!?]$/.test(trimmed) ? trimmed : `${trimmed}.`;
+}
+
+function usefulMicroCandidate(value: string, stateValue: ReturnType<typeof summarizeState>) {
+  const cleaned = normalizeSummary(value);
+  if (!cleaned || cleaned === "unknown") return "";
+  const stateSignals = [
+    ...stateValue.blockers,
+    ...stateValue.decisions,
+    ...stateValue.priorities,
+    ...stateValue.nextSteps
+  ].map(normalizeComparable).filter(Boolean);
+  const candidate = normalizeComparable(cleaned);
+  const goal = normalizeComparable(stateValue.goal);
+  const hasOperationalSignal = stateSignals.some((signal) => signal && (candidate.includes(signal) || signal.includes(candidate)));
+  const hasCapsuleSeparators = /[;:|]/.test(cleaned);
+  const isGoalOnly = Boolean(goal) && (candidate === goal || goal.includes(candidate) || candidate.includes(goal)) && !hasOperationalSignal;
+  const isTooGeneric = wordCount(cleaned) <= 5 || /^(generate|build|create|summarize|analyze|plan)\b.{0,40}$/i.test(cleaned);
+  return hasOperationalSignal || hasCapsuleSeparators ? cleaned : isGoalOnly || isTooGeneric ? "" : cleaned;
+}
+
+function strategicMicroFacts(stateValue: ReturnType<typeof summarizeState>, output: Record<string, unknown>) {
+  const goal = microFragment(stateValue.goal, 9);
+  const status = microFragment(stateValue.status, 6);
+  const constraints = selectStrategicFragments([
+    ...stateValue.blockers,
+    ...stateValue.decisions,
+    ...stateValue.priorities
+  ], 2, 7);
+  const next = microFragment(stateValue.nextSteps[0] ?? "", 5);
+  const llmMicro = usefulMicroCandidate(String(output.micro ?? ""), stateValue);
+  return uniqueStrings([
+    goal,
+    status,
+    ...constraints.map((item) => `No drift: ${item}`),
+    next ? `Next: ${next}` : "",
+    llmMicro
+  ]).filter((item) => item && item !== "unknown");
+}
+
+function selectStrategicFragments(items: string[], limit: number, maxWords: number) {
+  const strategic = uniqueStrings(items)
+    .filter((item) => /(must|never|avoid|forbid|without|constraint|require|only|not|reject|anti|focus|assumption|worldview|frame|risk|block|limit|preserve|optimi[sz]e)/i.test(item))
+    .concat(uniqueStrings(items));
+  return uniqueStrings(strategic)
+    .map((item) => microFragment(item, maxWords))
+    .filter(Boolean)
+    .slice(0, limit);
+}
+
+function microFragment(value: string, maxWords: number) {
+  const cleaned = normalizeSummary(value)
+    .replace(/\b(the|a|an|this|that|these|those)\b\s*/gi, "")
+    .replace(/\b(should|must|needs? to|need to|has to|have to)\b\s*/gi, "")
+    .replace(/\b(do not|don't|cannot|can't|must not)\b/gi, "No")
+    .replace(/\b(in order to|so that|because|since)\b.*$/gi, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!cleaned || cleaned === "unknown") return "";
+  const words = cleaned.split(/\s+/).filter(Boolean);
+  if (words.length <= maxWords) return cleaned.replace(/[.!?]$/, "");
+  const selected = words.slice(0, maxWords);
+  while (selected.length > 1 && endsWithDanglingWord(selected.join(" "))) {
+    selected.pop();
+  }
+  return selected.join(" ").replace(/\s*[,;:([–-]\s*$/g, "");
 }
 
 function compactSummaryParagraph(value: string) {

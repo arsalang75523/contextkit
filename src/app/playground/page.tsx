@@ -6,14 +6,17 @@ import { CodeBlock } from "@/components/code-block";
 import { endpoints } from "@/content/docs";
 import { bankrHostedUrl, bankrX402Command } from "@/lib/bankr-x402";
 
-const seed = `[
-  {"role":"system","content":"You are helping a city operations team prepare a continuation handoff for a complex public transit pilot."},
-  {"role":"user","content":"The city is running a six-month night-bus pilot across three neighborhoods where late-shift hospital workers and airport staff currently wait 35-50 minutes after midnight. The goal is to reduce average wait time below 18 minutes without increasing the annual operating budget."},
-  {"role":"assistant","content":"Current plan: keep the existing daytime bus network unchanged, add three overnight loop routes, and use smaller electric shuttles for low-demand segments. The transit authority approved a temporary depot lease near the airport, but charging capacity is limited to eight vehicles at once."},
-  {"role":"user","content":"Important constraints: union rules require two consecutive rest days for drivers, the hospital district needs service before 5:30 AM shift change, and the airport authority will only allow curb access if buses arrive within assigned 10-minute windows."},
-  {"role":"assistant","content":"Completed work includes ridership interviews, stop safety audits, proposed route maps, a driver staffing model, and a draft agreement with the airport. Open issues are charger scheduling, weekend driver coverage, and whether the east neighborhood loop should run every 20 or 30 minutes."},
-  {"role":"user","content":"Please turn this into a concise state update for the next planning agent, preserving goals, decisions, blockers, constraints, and immediate next steps."}
-]`;
+const seed = `City operations team is preparing a continuation handoff for a six-month night-bus pilot across three neighborhoods.
+
+Late-shift hospital workers and airport staff currently wait 35-50 minutes after midnight. The goal is to reduce average wait time below 18 minutes without increasing the annual operating budget.
+
+Current plan: keep the daytime bus network unchanged, add three overnight loop routes, and use smaller electric shuttles for low-demand segments. The transit authority approved a temporary depot lease near the airport, but charging capacity is limited to eight vehicles at once.
+
+Important constraints: union rules require two consecutive rest days for drivers, the hospital district needs service before 5:30 AM shift change, and the airport authority will only allow curb access if buses arrive within assigned 10-minute windows.
+
+Completed work includes ridership interviews, stop safety audits, proposed route maps, a driver staffing model, and a draft airport agreement. Open issues are charger scheduling, weekend driver coverage, and whether the east neighborhood loop should run every 20 or 30 minutes.
+
+Turn this into a concise state update for the next planning agent, preserving goals, decisions, blockers, constraints, and immediate next steps.`;
 
 export default function PlaygroundPage() {
   const [endpoint, setEndpoint] = useState("summarize");
@@ -23,22 +26,35 @@ export default function PlaygroundPage() {
   const [isRunning, setIsRunning] = useState(false);
 
   const active = useMemo(() => endpoints.find((item) => item.slug === endpoint) ?? endpoints[0], [endpoint]);
+  const messages = useMemo(() => [{ role: "user" as const, content: input.trim() || "Summarize this context." }], [input]);
   const payload = useMemo(() => {
-    try {
-      const messages = JSON.parse(input);
-      return endpoint === "summarize" ? { messages, mode: summaryMode } : { messages };
-    } catch {
-      return { messages: [] };
-    }
-  }, [endpoint, input, summaryMode]);
+    return endpoint === "summarize" ? { messages, mode: summaryMode } : { messages };
+  }, [endpoint, messages, summaryMode]);
   const command = useMemo(() => bankrX402Command(active.slug, payload), [active.slug, payload]);
+  const longContextCommand = useMemo(() => {
+    const params = new URLSearchParams({ endpoint: active.slug });
+    if (active.slug === "summarize") params.set("mode", summaryMode);
+    const callPayload = active.slug === "summarize"
+      ? `{"contextId":"ctx_REPLACE_ME","mode":"${summaryMode}"}`
+      : '{"contextId":"ctx_REPLACE_ME"}';
+    return `cat > long-context.txt <<'EOF'
+Paste the long conversation or document here.
+EOF
+
+curl -X POST "https://contextkit.pro/api/context/upload-text?${params.toString()}" \\
+  -H "Content-Type: text/plain" \\
+  --data-binary @long-context.txt
+
+bankr x402 call ${bankrHostedUrl(active.slug)} \\
+  -X POST \\
+  -d '${callPayload}'`;
+  }, [active.slug, summaryMode]);
 
   function runLivePlayground() {
     setRunResult(null);
     setIsRunning(true);
     void (async () => {
       try {
-        const messages = JSON.parse(input);
         const response = await fetch("/api/playground/run", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -47,7 +63,7 @@ export default function PlaygroundPage() {
         const result = (await response.json()) as Record<string, unknown>;
         setRunResult(result);
       } catch (err) {
-        setRunResult({ error: err instanceof Error ? err.message : "Invalid JSON input." });
+        setRunResult({ error: err instanceof Error ? err.message : "Request failed." });
       } finally {
         setIsRunning(false);
       }
@@ -66,7 +82,7 @@ export default function PlaygroundPage() {
         <div className="mt-8 grid gap-4 md:grid-cols-3">
           {[
             ["1. Login once", "The live playground runs from your dashboard session and is limited to 3 real AI requests per account per day."],
-            ["2. Paste messages", "Write JSON messages on the left, choose summarize, compress, handoff, or profile, then run the real ContextKit processor."],
+            ["2. Paste text", "Paste normal text on the left. No JSON, escaping, or message formatting required."],
             ["3. Production path", "For unlimited paid agent traffic, copy the Bankr-hosted x402 command and let Bankr handle payment."]
           ].map(([title, text]) => (
             <div key={title} className="rounded-md border border-line bg-white/[0.035] p-4">
@@ -116,7 +132,8 @@ export default function PlaygroundPage() {
             <textarea
               value={input}
               onChange={(event) => setInput(event.target.value)}
-              className="min-h-[430px] w-full resize-y rounded-md border border-line bg-ink/70 p-4 font-mono text-sm leading-7 text-white outline-none focus:border-mint/60"
+              placeholder="Paste any conversation, project notes, document, or handoff context here."
+              className="min-h-[430px] w-full resize-y rounded-md border border-line bg-ink/70 p-4 text-sm leading-7 text-white outline-none focus:border-mint/60"
             />
             <div className="mt-4 rounded-md border border-line bg-carbon/60 p-4">
               <div className="flex flex-col gap-3 sm:flex-row">
@@ -156,6 +173,15 @@ export default function PlaygroundPage() {
                 Copy this command into a terminal where <code>bankr login</code> is already configured. Bankr will ask for payment approval, then return the ContextKit JSON response.
               </p>
               <CodeBlock code={command} />
+            </div>
+            <div>
+              <div className="mb-3 flex items-center gap-2 text-sm uppercase tracking-[0.18em] text-white/45">
+                <Terminal className="h-4 w-4" /> Copyable long context request
+              </div>
+              <p className="mb-3 text-sm leading-6 text-white/55">
+                For long content, paste the text into <code>long-context.txt</code>, upload and precompute it first, then replace <code>ctx_REPLACE_ME</code> with the returned <code>contextId</code>.
+              </p>
+              <CodeBlock code={longContextCommand} />
             </div>
           </section>
         </div>
