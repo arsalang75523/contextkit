@@ -34,7 +34,7 @@ export class ContextService {
     const openQuestions = arrayOfStrings(output.openQuestions);
     const risks = arrayOfStrings(output.risks);
     const microFacts = strategicMicroFacts(stateValue, output);
-    const compactFacts = compactNarrativeFacts(stateValue, actionItems);
+    const compactFacts = groundedCompactFacts(stateValue, actionItems);
     const extendedFacts = [
       ...compactFacts,
       ...openQuestions.map((item) => `Open: ${item}`),
@@ -699,58 +699,62 @@ function semanticallyBrokenMicroFragment(value: string) {
 }
 
 function compactSummaryParagraph(value: string) {
-  const withoutLists = normalizeSummary(value)
-    .replace(/\b(Blocker|Decision|Priority|Next):\s*/gi, "")
+  const withoutFiller = normalizeSummary(value)
     .replace(/\b(because|since|therefore|so that|in order to)\b.*?(?=\.|;|$)/gi, "")
-    .replace(/[;|]+/g, ". ");
-  const trimmed = completeTextWithinBudget(withoutLists, 50);
+    .replace(/\b(core capabilities are in place|the primary risk is|phase is complete|work is active|awaiting execution|execution is moving through active refinement|progress depends on resolving active issues)\b\.?/gi, "")
+    .replace(/[|]+/g, "; ")
+    .replace(/\s*;\s*/g, "; ");
+  const trimmed = completeTextWithinBudget(withoutFiller, 50);
   if (!trimmed) return "";
   return /[.!?]$/.test(trimmed) ? trimmed : `${trimmed}.`;
 }
 
-function compactNarrativeFacts(stateValue: ReturnType<typeof summarizeState>, actionItems: string[]) {
-  const blockerCategories = summarizeCategories(stateValue.blockers);
-  const focusCategories = summarizeCategories([...stateValue.priorities, ...stateValue.nextSteps, ...actionItems])
-    .filter((category) => !blockerCategories.includes(category));
+function groundedCompactFacts(stateValue: ReturnType<typeof summarizeState>, actionItems: string[]) {
+  const goal = compactFactText(stateValue.goal, 12);
+  const status = compactStatusText(stateValue.status);
+  const blockers = selectGroundedCompactItems(stateValue.blockers, 2, 9);
+  const decisions = selectGroundedCompactItems(stateValue.decisions, 1, 9, blockers);
+  const next = selectGroundedCompactItems([...stateValue.nextSteps, ...actionItems], 2, 7, [...blockers, ...decisions]);
+
   return uniqueStrings([
-    compactGoalSentence(stateValue.goal),
-    compactSituationSentence(stateValue.status),
-    compactRemainingWorkSentence(blockerCategories, focusCategories)
-  ]).filter((item) => item && item !== "unknown");
+    goal ? `Goal: ${goal}` : "",
+    status ? `Status: ${status}` : "",
+    blockers.length ? `Open: ${blockers.join(", ")}` : "",
+    decisions.length ? `Decisions: ${decisions.join(", ")}` : "",
+    next.length ? `Next: ${next.join(", ")}` : ""
+  ]).filter(Boolean);
 }
 
-function compactGoalSentence(goal: string) {
-  const goalText = normalizeSummary(goal);
-  if (!goalText || goalText === "unknown") return "";
-  const compactGoal = completeTextWithinBudget(goalText, 12) || conciseStateText(goalText);
-  if (!compactGoal) return "";
-  return /[.!?]$/.test(compactGoal) ? compactGoal : `${compactGoal}.`;
+function compactFactText(value: string, maxWords: number) {
+  const text = normalizeSummary(value)
+    .replace(/\b(because|since|therefore|so that|in order to)\b.*$/gi, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!text || text === "unknown") return "";
+  const words = text.split(/\s+/).filter(Boolean);
+  if (words.length <= maxWords && !endsWithDanglingWord(text)) return text.replace(/[.!?]$/, "");
+  const selected = words.slice(0, maxWords);
+  while (selected.length > 1 && endsWithDanglingWord(selected.join(" "))) selected.pop();
+  return selected.join(" ").replace(/\s*[,;:([–-]\s*$/g, "");
 }
 
-function compactSituationSentence(status: string) {
-  const statusText = normalizeSummary(status);
-  if (!statusText || statusText === "unknown") return "";
-  if (/complete|live|ready|deployed|working|operational/i.test(statusText)) {
-    return "Core capabilities are in place.";
-  }
-  if (/block|fail|issue|bug|problem|broken/i.test(statusText)) {
-    return "Progress depends on resolving active issues.";
-  }
-  if (/progress|active|underway|building|implement|refactor|optim/i.test(statusText)) {
-    return "Execution is moving through active refinement.";
-  }
-  return "Work is active.";
+function compactStatusText(status: string) {
+  const text = compactFactText(status, 9);
+  if (!text || /^(work active|active|in progress|initial instruction received|awaiting execution|core capabilities)$/i.test(text)) return "";
+  if (/\b(core capabilities are in place|phase is complete|work is active|awaiting execution)\b/i.test(text)) return "";
+  return text;
 }
 
-function compactRemainingWorkSentence(blockerCategories: string[], focusCategories: string[]) {
-  const focus = formatCategoryList(focusCategories);
-  const blockers = formatCategoryList(blockerCategories);
-  if (focus && blockers) {
-    return `Remaining work centers on ${focus}, with ${blockers} still unresolved.`;
+function selectGroundedCompactItems(items: string[], limit: number, maxWords: number, exclude: string[] = []) {
+  const selected: string[] = [];
+  for (const item of uniqueStrings(items)) {
+    if (exclude.some((existing) => containsEquivalent([existing], item))) continue;
+    const text = compactFactText(item, maxWords);
+    if (!text || selected.some((existing) => containsEquivalent([existing], text))) continue;
+    selected.push(text);
+    if (selected.length >= limit) break;
   }
-  if (focus) return `Remaining work centers on ${focus}.`;
-  if (blockers) return `The primary risk is unresolved ${blockers}.`;
-  return "";
+  return selected;
 }
 
 function summarizeCategories(items: string[]) {
