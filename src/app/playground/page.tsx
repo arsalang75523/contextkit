@@ -31,25 +31,25 @@ export default function PlaygroundPage() {
     return endpoint === "summarize" ? { messages, mode: summaryMode } : { messages };
   }, [endpoint, messages, summaryMode]);
   const command = useMemo(() => bankrX402Command(active.slug, payload), [active.slug, payload]);
-  const longContextCommand = useMemo(() => {
+  const longContextCommands = useMemo(() => {
     const params = new URLSearchParams({ endpoint: active.slug });
     if (active.slug === "summarize") params.set("mode", summaryMode);
     const callPayload = active.slug === "summarize"
       ? `{"contextId":"ctx_REPLACE_ME","mode":"${summaryMode}"}`
       : '{"contextId":"ctx_REPLACE_ME"}';
     const marker = heredocMarker(input);
-    return `cat > long-context.txt <<'${marker}'
+    return {
+      upload: `cat > long-context.txt <<'${marker}'
 ${input.trim() || "Paste the long conversation or document here."}
 ${marker}
 
 curl -X POST "https://contextkit.pro/api/context/upload-text?${params.toString()}" \\
   -H "Content-Type: text/plain" \\
-  --data-binary @long-context.txt
-
-# Copy the contextId from the upload response and replace ctx_REPLACE_ME below.
-bankr x402 call ${bankrHostedUrl(active.slug)} \\
+  --data-binary @long-context.txt`,
+      call: `bankr x402 call ${bankrHostedUrl(active.slug)} \\
   -X POST \\
-  -d '${callPayload}'`;
+  -d '${callPayload}'`
+    };
   }, [active.slug, input, summaryMode]);
 
   function runLivePlayground() {
@@ -183,7 +183,19 @@ bankr x402 call ${bankrHostedUrl(active.slug)} \\
               <p className="mb-3 text-sm leading-6 text-white/55">
                 For long content, paste the text into <code>long-context.txt</code>, upload and precompute it first, then replace <code>ctx_REPLACE_ME</code> with the returned <code>contextId</code>.
               </p>
-              <CodeBlock code={longContextCommand} />
+              <div className="space-y-4">
+                <div>
+                  <p className="mb-2 text-xs uppercase tracking-[0.18em] text-white/35">1. Upload and precompute</p>
+                  <CodeBlock code={longContextCommands.upload} />
+                </div>
+                <p className="rounded-md border border-aqua/20 bg-aqua/10 p-3 text-sm leading-6 text-aqua">
+                  Copy the <code>contextId</code> from the upload response, then paste it instead of <code>ctx_REPLACE_ME</code> in the next request.
+                </p>
+                <div>
+                  <p className="mb-2 text-xs uppercase tracking-[0.18em] text-white/35">2. Pay and fetch result</p>
+                  <CodeBlock code={longContextCommands.call} />
+                </div>
+              </div>
             </div>
           </section>
         </div>
