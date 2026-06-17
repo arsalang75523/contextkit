@@ -40,7 +40,7 @@ export class ContextService {
       ...openQuestions.map((item) => `Open: ${item}`),
       ...risks.map((item) => `Risk: ${item}`)
     ];
-    let micro = microCapsule(enforceBudget(usefulMicroCandidate(String(output.micro ?? ""), stateValue), microFacts, inputTokens, 0.16, 40));
+    let micro = microCapsule(enforceBudget(usefulMicroCandidate(String(output.micro ?? ""), stateValue), microFacts, inputTokens, 0.16, 56));
     const compact = compactSummaryParagraph(enforceBudget("", compactFacts, inputTokens, 0.4, 50));
     const extended = extendedParagraph(enforceBudget(String(output.extended ?? output.summary ?? compact), extendedFacts, inputTokens, 0.6, 180));
     const summary = compact || micro || extended;
@@ -78,7 +78,7 @@ export class ContextService {
     const compactResponseTokens = estimateTokens(JSON.stringify({ mode: "compact", compact, state: responseState, metrics }));
     micro = optimizedMicroCheckpoint(micro, microFacts, inputTokens, compactResponseTokens);
     microTokens = estimateTokens(micro);
-    if (microResponseTokens(micro, inputTokens) >= compactResponseTokens) {
+    if (!hasRequiredMicroAnchors(micro) || microResponseTokens(micro, inputTokens) >= compactResponseTokens) {
       throw new Error("micro_optimization_check_failed");
     }
     return {
@@ -645,7 +645,7 @@ function microCapsule(value: string) {
     .replace(/(?:^|;\s*)\w+:\s*$/g, "")
     .trim();
   const sanitized = sanitizeMicroParts(cleaned);
-  const trimmed = hasRequiredMicroAnchors(sanitized) ? sanitized : completeTextWithinBudget(sanitized, 40);
+  const trimmed = hasRequiredMicroAnchors(sanitized) ? sanitized : completeTextWithinBudget(sanitized, 56);
   if (!trimmed) return "";
   return /[.!?]$/.test(trimmed) ? trimmed : `${trimmed}.`;
 }
@@ -708,15 +708,15 @@ function usefulMicroCandidate(value: string, stateValue: ReturnType<typeof summa
 }
 
 function strategicMicroFacts(stateValue: ReturnType<typeof summarizeState>, output: Record<string, unknown>) {
-  const goal = microFragment(stateValue.goal, 7);
+  const goal = microFragmentPreservingNumbers(stateValue.goal, 12);
   const goalLike = [goal, stateValue.goal].filter(Boolean);
   const status = selectMicroStatusFragments([stateValue.status], 1, 5);
-  const blockers = selectOperationalFragments(stateValue.blockers, 2, 4, goalLike);
+  const blockers = selectOperationalFragments(stateValue.blockers, 2, 6, goalLike);
   const dependencies = selectOperationalFragments([
     ...stateValue.priorities,
     ...stateValue.decisions,
     ...stateValue.nextSteps
-  ], 2, 4, [...goalLike, ...blockers]);
+  ], 2, 6, [...goalLike, ...blockers]);
   const worldview = selectWorldviewFragments([
     stateValue.status,
     ...stateValue.blockers,
@@ -724,7 +724,7 @@ function strategicMicroFacts(stateValue: ReturnType<typeof summarizeState>, outp
     ...stateValue.priorities,
     ...stateValue.nextSteps
   ].filter((item) => !containsEquivalent([...goalLike, ...blockers, ...dependencies], item)), 1, 5);
-  const nextActions = selectOperationalFragments(stateValue.nextSteps, 2, 4, [...goalLike, ...blockers, ...dependencies]);
+  const nextActions = selectActionFragments(stateValue.nextSteps, 2, 6, [...goalLike, ...blockers, ...dependencies]);
   const llmMicro = usefulMicroCandidate(String(output.micro ?? ""), stateValue);
   return canonicalMicroFacts({
     state: status[0] ?? worldview[0] ?? blockers[0] ?? "",
@@ -736,6 +736,9 @@ function strategicMicroFacts(stateValue: ReturnType<typeof summarizeState>, outp
 }
 
 function canonicalMicroFacts(parts: { state: string; blockers: string[]; next: string[]; goal: string; llmMicro: string }) {
+  if (!parts.goal || parts.blockers.length < 2 || parts.next.length < 2) {
+    throw new Error("micro_semantic_anchor_missing");
+  }
   const values = [
     ["state", parts.state],
     ["dep", joinMicroPair(parts.blockers)],
@@ -744,7 +747,7 @@ function canonicalMicroFacts(parts: { state: string; blockers: string[]; next: s
   ] as const;
   const facts = values
     .map(([label, value]) => {
-      const fragment = microFragment(value, label === "goal" ? 5 : 4);
+      const fragment = label === "goal" ? microFragmentPreservingNumbers(value, 12) : microFragmentPreservingNumbers(value, 6);
       return fragment ? `${label}:${fragment}` : "";
     })
     .filter(Boolean);
@@ -757,13 +760,12 @@ function canonicalMicroFacts(parts: { state: string; blockers: string[]; next: s
 
 function fillMicroPair(primary: string[], fallback: string[]) {
   const values = uniqueStrings([...primary, ...fallback]).filter(Boolean).slice(0, 2);
-  while (values.length < 2) values.push("none stated");
   return values;
 }
 
 function joinMicroPair(values: string[]) {
   return values
-    .map((item) => microFragment(item, 4))
+    .map((item) => microFragmentPreservingNumbers(item, 6))
     .filter(Boolean)
     .slice(0, 2)
     .join("/");
@@ -794,8 +796,14 @@ function selectOperationalFragments(items: string[], limit: number, maxWords: nu
   return uniqueStrings(items)
     .filter((item) => !containsEquivalent(exclude, item))
     .sort((a, b) => operationalPriorityScore(b) - operationalPriorityScore(a))
-    .map((item) => microFragment(stripGenericGoalLanguage(item), maxWords))
+    .map((item) => microFragmentPreservingNumbers(stripGenericGoalLanguage(item), maxWords))
     .filter(Boolean)
+    .slice(0, limit);
+}
+
+function selectActionFragments(items: string[], limit: number, maxWords: number, exclude: string[] = []) {
+  return selectOperationalFragments(items, limit, maxWords, exclude)
+    .filter((item) => !isIncompleteAction(item))
     .slice(0, limit);
 }
 
@@ -850,6 +858,35 @@ function microFragment(value: string, maxWords: number) {
   }
   const fragment = selected.join(" ").replace(/\s*[,;:([–-]\s*$/g, "");
   return semanticallyBrokenMicroFragment(fragment) ? "" : fragment;
+}
+
+function microFragmentPreservingNumbers(value: string, maxWords: number) {
+  const fragment = microFragment(value, maxWords);
+  if (!fragment) return "";
+  const requiredNumbers = numericTokens(value);
+  if (requiredNumbers.every((token) => fragment.includes(token))) return fragment;
+
+  const words = normalizeSummary(value).split(/\s+/).filter(Boolean);
+  const selected = words.slice(0, Math.min(words.length, maxWords + requiredNumbers.length + 2));
+  for (const token of requiredNumbers) {
+    if (!selected.some((word) => word.includes(token))) {
+      const numericWord = words.find((word) => word.includes(token));
+      if (numericWord) selected.push(numericWord);
+    }
+  }
+  while (selected.length > 1 && endsWithDanglingWord(selected.join(" "))) selected.pop();
+  const withNumbers = selected.join(" ").replace(/\s*[,;:([–-]\s*$/g, "");
+  return semanticallyBrokenMicroFragment(withNumbers) ? fragment : withNumbers;
+}
+
+function numericTokens(value: string) {
+  return normalizeSummary(value).match(/(?:[<>]=?|~)?\d+(?:[.,:]\d+)?%?|\d+\s*(?:minutes?|mins?|hours?|hrs?|days?|weeks?|months?|vehicles?|regions?|systems?)/gi) ?? [];
+}
+
+function isIncompleteAction(value: string) {
+  const text = normalizeSummary(value);
+  if (semanticallyBrokenMicroFragment(text)) return true;
+  return /^(conduct|perform|run|execute|finali[sz]e|define|confirm|verify|implement|resolve|test|deploy)\s+[a-z-]+$/i.test(text);
 }
 
 function semanticallyBrokenMicroFragment(value: string) {
