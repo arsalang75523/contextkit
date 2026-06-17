@@ -652,7 +652,7 @@ function microCapsule(value: string) {
 function sanitizeMicroParts(value: string) {
   const parts = normalizeSummary(value)
     .split(/\s*;\s*/)
-    .map((part) => normalizeSummary(part).replace(/\s*[,;:([–-]\s*$/g, ""))
+    .map((part) => stripGenericGoalLanguage(part).replace(/\s*[,;:([–-]\s*$/g, ""))
     .filter((part) => part && !semanticallyBrokenMicroFragment(part));
   return uniqueMicroFacts(parts).join("; ");
 }
@@ -709,27 +709,48 @@ function usefulMicroCandidate(value: string, stateValue: ReturnType<typeof summa
 function strategicMicroFacts(stateValue: ReturnType<typeof summarizeState>, output: Record<string, unknown>) {
   const goal = microFragment(stateValue.goal, 7);
   const goalLike = [goal, stateValue.goal].filter(Boolean);
+  const status = selectMicroStatusFragments([stateValue.status], 1, 5);
+  const blockers = selectOperationalFragments(stateValue.blockers, 2, 6, goalLike);
+  const dependencies = selectOperationalFragments([
+    ...stateValue.priorities,
+    ...stateValue.decisions,
+    ...stateValue.nextSteps
+  ], 1, 6, [...goalLike, ...blockers]);
   const worldview = selectWorldviewFragments([
     stateValue.status,
     ...stateValue.blockers,
     ...stateValue.decisions,
     ...stateValue.priorities,
     ...stateValue.nextSteps
-  ].filter((item) => !containsEquivalent(goalLike, item)), 1, 6);
-  const constraints = selectStrategicFragments([
-    ...stateValue.blockers,
-    ...stateValue.decisions,
-    ...stateValue.priorities
-  ].filter((item) => !containsEquivalent(goalLike, item)), 2, 6);
-  const next = microFragment(stateValue.nextSteps.find((item) => !containsEquivalent([...goalLike, ...constraints], item)) ?? "", 4);
+  ].filter((item) => !containsEquivalent([...goalLike, ...blockers, ...dependencies], item)), 1, 5);
+  const next = microFragment(stateValue.nextSteps.find((item) => !containsEquivalent([...goalLike, ...blockers, ...dependencies], item)) ?? "", 5);
   const llmMicro = usefulMicroCandidate(String(output.micro ?? ""), stateValue);
   return uniqueMicroFacts([
-    goal,
+    ...blockers,
+    ...status.map((item) => `state:${item}`),
+    ...dependencies.map((item) => `dep:${item}`),
     ...worldview.map((item) => `ctx:${item}`),
-    ...constraints.map((item) => `no:${item}`),
     next ? `next:${next}` : "",
+    goal ? `goal:${goal}` : "",
     llmMicro
   ]).filter((item) => item && item !== "unknown");
+}
+
+function selectMicroStatusFragments(items: string[], limit: number, maxWords: number) {
+  return uniqueStrings(items)
+    .filter((item) => !/^(unknown|initial instruction received|work active|awaiting execution)$/i.test(normalizeSummary(item)))
+    .map((item) => microFragment(stripGenericStatus(item), maxWords))
+    .filter(Boolean)
+    .slice(0, limit);
+}
+
+function selectOperationalFragments(items: string[], limit: number, maxWords: number, exclude: string[] = []) {
+  return uniqueStrings(items)
+    .filter((item) => !containsEquivalent(exclude, item))
+    .sort((a, b) => operationalPriorityScore(b) - operationalPriorityScore(a))
+    .map((item) => microFragment(stripGenericGoalLanguage(item), maxWords))
+    .filter(Boolean)
+    .slice(0, limit);
 }
 
 function selectWorldviewFragments(items: string[], limit: number, maxWords: number) {
@@ -740,14 +761,25 @@ function selectWorldviewFragments(items: string[], limit: number, maxWords: numb
     .slice(0, limit);
 }
 
-function selectStrategicFragments(items: string[], limit: number, maxWords: number) {
-  const strategic = uniqueStrings(items)
-    .filter((item) => /(must|never|avoid|forbid|without|constraint|require|only|not|reject|anti|generic|clone|consumer|sv|focus|assumption|worldview|frame|risk|block|limit|preserve|optimi[sz]e)/i.test(item))
-    .concat(uniqueStrings(items));
-  return uniqueStrings(strategic)
-    .map((item) => microFragment(item, maxWords))
-    .filter(Boolean)
-    .slice(0, limit);
+function operationalPriorityScore(value: string) {
+  const text = normalizeSummary(value);
+  let score = statePriorityScore(text);
+  if (/\b(failure|shortage|outage|telemetry|coverage|capacity|security|privacy|approval|dependency|bottleneck|unresolved|blocked|delay|risk|gap|supplier|staff|technician|charging|payment|deployment|verification|integration)\b/i.test(text)) score += 5;
+  if (/\b(improve|reduce|increase|decrease|optimi[sz]e|visibility|coordination|efficiency)\b/i.test(text)) score -= 2;
+  return score;
+}
+
+function stripGenericStatus(value: string) {
+  return normalizeSummary(value)
+    .replace(/\b(core capabilities are in place|work is active|awaiting execution|initial instruction received|planning in progress|current focus is)\b\.?/gi, "")
+    .trim();
+}
+
+function stripGenericGoalLanguage(value: string) {
+  return normalizeSummary(value)
+    .replace(/\b(goal is to|objective is to|aim is to|trying to|need to)\b\s*/gi, "")
+    .replace(/\b(improve visibility|improve coordination|reduce incidents|increase efficiency)\b\.?/gi, "")
+    .trim();
 }
 
 function microFragment(value: string, maxWords: number) {
