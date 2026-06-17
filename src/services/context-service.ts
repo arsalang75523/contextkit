@@ -644,9 +644,17 @@ function microCapsule(value: string) {
     .replace(/\s+/g, " ")
     .replace(/(?:^|;\s*)\w+:\s*$/g, "")
     .trim();
-  const trimmed = completeTextWithinBudget(cleaned, 28);
+  const trimmed = completeTextWithinBudget(sanitizeMicroParts(cleaned), 28);
   if (!trimmed) return "";
   return /[.!?]$/.test(trimmed) ? trimmed : `${trimmed}.`;
+}
+
+function sanitizeMicroParts(value: string) {
+  const parts = normalizeSummary(value)
+    .split(/\s*;\s*/)
+    .map((part) => normalizeSummary(part).replace(/\s*[,;:([–-]\s*$/g, ""))
+    .filter((part) => part && !semanticallyBrokenMicroFragment(part));
+  return uniqueMicroFacts(parts).join("; ");
 }
 
 function optimizedMicroCheckpoint(candidate: string, facts: string[], inputTokens: number, compactOutputTokens: number) {
@@ -679,7 +687,7 @@ function microResponseTokens(micro: string, inputTokens: number) {
 
 function usefulMicroCandidate(value: string, stateValue: ReturnType<typeof summarizeState>) {
   const cleaned = normalizeSummary(value);
-  if (!cleaned || cleaned === "unknown") return "";
+  if (!cleaned || cleaned === "unknown" || semanticallyBrokenMicroFragment(cleaned)) return "";
   const stateSignals = [
     ...stateValue.blockers,
     ...stateValue.decisions,
@@ -700,22 +708,22 @@ function usefulMicroCandidate(value: string, stateValue: ReturnType<typeof summa
 
 function strategicMicroFacts(stateValue: ReturnType<typeof summarizeState>, output: Record<string, unknown>) {
   const goal = microFragment(stateValue.goal, 7);
+  const goalLike = [goal, stateValue.goal].filter(Boolean);
   const worldview = selectWorldviewFragments([
-    stateValue.goal,
     stateValue.status,
     ...stateValue.blockers,
     ...stateValue.decisions,
     ...stateValue.priorities,
     ...stateValue.nextSteps
-  ], 1, 6);
+  ].filter((item) => !containsEquivalent(goalLike, item)), 1, 6);
   const constraints = selectStrategicFragments([
     ...stateValue.blockers,
     ...stateValue.decisions,
     ...stateValue.priorities
-  ], 2, 6);
-  const next = microFragment(stateValue.nextSteps[0] ?? "", 4);
+  ].filter((item) => !containsEquivalent(goalLike, item)), 2, 6);
+  const next = microFragment(stateValue.nextSteps.find((item) => !containsEquivalent([...goalLike, ...constraints], item)) ?? "", 4);
   const llmMicro = usefulMicroCandidate(String(output.micro ?? ""), stateValue);
-  return uniqueStrings([
+  return uniqueMicroFacts([
     goal,
     ...worldview.map((item) => `ctx:${item}`),
     ...constraints.map((item) => `no:${item}`),
@@ -771,7 +779,26 @@ function semanticallyBrokenMicroFragment(value: string) {
   if (!text || wordCount(text) < 2) return true;
   if (/^(unless|because|since|while|after|before|without|within|into|between|from|to|for|and|or)\b/i.test(text)) return true;
   if (endsWithDanglingWord(text)) return true;
+  if (/,\s*(decrease|increase|reduce|improve|optimi[sz]e|minimi[sz]e|maximi[sz]e|stabili[sz]e|resolve|finali[sz]e|implement|define|confirm|verify)$/i.test(text)) return true;
   return /\b(unless|because|since|while|after|before|without|within|into|between|from|to|for|and|or)\s*$/i.test(text);
+}
+
+function uniqueMicroFacts(items: string[]) {
+  const result: string[] = [];
+  for (const item of items) {
+    const normalized = normalizeMicroFact(item);
+    if (!normalized) continue;
+    if (result.some((existing) => {
+      const existingNormalized = normalizeMicroFact(existing);
+      return existingNormalized === normalized || existingNormalized.includes(normalized) || normalized.includes(existingNormalized);
+    })) continue;
+    result.push(item);
+  }
+  return result;
+}
+
+function normalizeMicroFact(value: string) {
+  return normalizeComparable(value.replace(/^(ctx|no|next):\s*/i, ""));
 }
 
 function compactSummaryParagraph(value: string) {
