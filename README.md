@@ -2,6 +2,8 @@
 
 ContextKit is a memory layer for autonomous AI agents.
 
+Website: https://contextkit.pro
+
 It turns long conversations, project notes, and operational history into compact continuation state that another agent can safely pick up later. The focus is not pretty summaries. The focus is preserving goals, blockers, constraints, decisions, next actions, durable preferences, and handoff state with fewer tokens.
 
 ## Why It Exists

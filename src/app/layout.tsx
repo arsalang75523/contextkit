@@ -72,7 +72,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
               ))}
             </div>
             <Link
-              href="https://github.com/contextkit/contextkit"
+              href="https://github.com/arsalang75523/contextkit"
               className="inline-flex h-10 items-center gap-2 rounded-md border border-line px-3 text-sm text-white/80 transition hover:border-mint/40 hover:text-white"
             >
               <Github className="h-4 w-4" />

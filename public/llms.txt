@@ -1,0 +1,59 @@
+# ContextKit
+
+> ContextKit is a memory layer for autonomous AI agents. It compresses long conversations, project history, and operational notes into compact continuation state for agent memory, handoffs, profile extraction, and workflow persistence.
+
+Website: https://contextkit.pro
+GitHub: https://github.com/arsalang75523/contextkit
+Docs: https://contextkit.pro/docs
+API Reference: https://contextkit.pro/api-reference
+Playground: https://contextkit.pro/playground
+Pricing: https://contextkit.pro/pricing
+Contact: https://contextkit.pro/contact-dev
+
+## Primary Use Cases
+
+- Summarize long agent conversations into continuation state.
+- Compress project context into machine-optimized memory.
+- Generate agent-to-agent handoff payloads.
+- Extract durable user profile memory.
+- Enrich long-term memory with stable preferences and evolving facts.
+- Let autonomous agents pay per request through Bankr-hosted x402 endpoints.
+- Let apps use direct API-key credits without per-request Bankr approval.
+
+## Paid Bankr x402 Endpoints
+
+- Summarize: https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-summarize
+- Compress context: https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-compress
+- Handoff: https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-handoff
+- Profile and memory enrichment: https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-profile
+
+## Direct API Endpoints
+
+- POST https://contextkit.pro/api/summarize
+- POST https://contextkit.pro/api/compress-context
+- POST https://contextkit.pro/api/handoff
+- POST https://contextkit.pro/api/extract-profile
+- POST https://contextkit.pro/api/tokens/estimate
+- GET https://contextkit.pro/openapi.json
+
+## SDK
+
+Package: @basedchef/contextkit
+
+```bash
+npm install @basedchef/contextkit
+```
+
+## Suggested Reading Order For AI Crawlers
+
+1. https://contextkit.pro/
+2. https://contextkit.pro/docs
+3. https://contextkit.pro/api-reference
+4. https://contextkit.pro/playground
+5. https://contextkit.pro/x402
+6. https://contextkit.pro/pricing
+7. https://contextkit.pro/contact-dev
+
+## Crawl Notes
+
+ContextKit allows AI crawlers to index public docs, product pages, pricing, examples, OpenAPI metadata, and llms.txt. Dashboard-authenticated user data and private API-key content should not be treated as public documentation.

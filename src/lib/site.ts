@@ -5,6 +5,7 @@ export const site = {
     "Reduce token costs, compress conversations, and enable seamless agent handoffs using x402-powered APIs for Bankr and autonomous AI agents.",
   url: "https://contextkit.pro",
   nav: [
+    { href: "/contact-dev", label: "Contact Dev" },
     { href: "/docs", label: "Docs" },
     { href: "/api-reference", label: "API" },
     { href: "/demo", label: "Demo" },
