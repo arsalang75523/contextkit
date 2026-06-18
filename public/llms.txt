@@ -5,10 +5,15 @@
 Website: https://contextkit.pro
 GitHub: https://github.com/arsalang75523/contextkit
 Docs: https://contextkit.pro/docs
+AI Agents: https://contextkit.pro/ai-agents
 API Reference: https://contextkit.pro/api-reference
 Playground: https://contextkit.pro/playground
 Pricing: https://contextkit.pro/pricing
 Contact: https://contextkit.pro/contact-dev
+Full LLM Index: https://contextkit.pro/llms-full.txt
+Markdown Docs: https://contextkit.pro/docs.md
+Markdown API Reference: https://contextkit.pro/api-reference.md
+Markdown x402 Guide: https://contextkit.pro/x402.md
 
 ## Primary Use Cases
 
@@ -48,11 +53,16 @@ npm install @basedchef/contextkit
 
 1. https://contextkit.pro/
 2. https://contextkit.pro/docs
-3. https://contextkit.pro/api-reference
-4. https://contextkit.pro/playground
-5. https://contextkit.pro/x402
-6. https://contextkit.pro/pricing
-7. https://contextkit.pro/contact-dev
+3. https://contextkit.pro/ai-agents
+4. https://contextkit.pro/api-reference
+5. https://contextkit.pro/playground
+6. https://contextkit.pro/x402
+7. https://contextkit.pro/pricing
+8. https://contextkit.pro/contact-dev
+9. https://contextkit.pro/llms-full.txt
+10. https://contextkit.pro/docs.md
+11. https://contextkit.pro/api-reference.md
+12. https://contextkit.pro/x402.md
 
 ## Crawl Notes
 

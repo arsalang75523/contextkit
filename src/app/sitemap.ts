@@ -2,7 +2,7 @@ import type { MetadataRoute } from "next";
 import { site } from "@/lib/site";
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  return ["", "/llms.txt", "/openapi.json", "/contact-dev", "/docs", "/docs/api", "/docs/redoc", "/api-reference", "/demo", "/playground", "/pricing", "/x402", "/integrations", "/dashboard"].map((path) => ({
+  return ["", "/llms.txt", "/llms-full.txt", "/docs.md", "/api-reference.md", "/x402.md", "/openapi.json", "/ai-agents", "/contact-dev", "/docs", "/docs/api", "/docs/redoc", "/api-reference", "/demo", "/playground", "/pricing", "/x402", "/integrations", "/dashboard"].map((path) => ({
     url: `${site.url}${path}`,
     lastModified: new Date(),
     changeFrequency: "weekly" as const,

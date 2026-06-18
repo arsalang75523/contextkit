@@ -1,0 +1,122 @@
+# ContextKit Full AI Index
+
+ContextKit is a memory layer for autonomous AI agents. It is built for continuation memory, context compression, agent handoff, user profile extraction, memory enrichment, and x402-paid API usage.
+
+Website: https://contextkit.pro
+GitHub: https://github.com/arsalang75523/contextkit
+NPM: @basedchef/contextkit
+OpenAPI: https://contextkit.pro/openapi.json
+
+## What ContextKit Does
+
+ContextKit helps agents preserve execution state when conversations become too long, expensive, or lossy. It turns source messages into structured JSON that downstream agents can use without rereading the full conversation.
+
+It prioritizes:
+
+- goals,
+- blockers,
+- constraints,
+- decisions,
+- current state,
+- next actions,
+- durable preferences,
+- memory facts,
+- continuation safety,
+- anti-drift state retention.
+
+It does not optimize for generic prose summaries. It optimizes for machine-usable continuation state.
+
+## Product Pages
+
+- Home: https://contextkit.pro/
+- AI agents: https://contextkit.pro/ai-agents
+- Docs: https://contextkit.pro/docs
+- API reference: https://contextkit.pro/api-reference
+- Playground: https://contextkit.pro/playground
+- Pricing: https://contextkit.pro/pricing
+- x402: https://contextkit.pro/x402
+- Contact dev: https://contextkit.pro/contact-dev
+
+## Plain Text And Machine-Readable Docs
+
+- Short LLM guide: https://contextkit.pro/llms.txt
+- Full LLM guide: https://contextkit.pro/llms-full.txt
+- Markdown docs: https://contextkit.pro/docs.md
+- Markdown API reference: https://contextkit.pro/api-reference.md
+- Markdown x402 guide: https://contextkit.pro/x402.md
+- OpenAPI JSON: https://contextkit.pro/openapi.json
+- Sitemap: https://contextkit.pro/sitemap.xml
+- Robots: https://contextkit.pro/robots.txt
+
+## Usage Paths
+
+### Bankr-hosted x402
+
+Best for simple users and autonomous agents. The caller pays per request with Bankr and receives JSON. No ContextKit API key or SDK required.
+
+### API key credits
+
+Best for apps. A dashboard user buys credits and then calls ContextKit direct APIs with an API key.
+
+### TypeScript SDK
+
+Best for developers building ContextKit into TypeScript apps.
+
+```bash
+npm install @basedchef/contextkit
+```
+
+## Paid Endpoints
+
+### Summarize
+
+Direct route: POST https://contextkit.pro/api/summarize
+Bankr route: https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-summarize
+Price: $0.05
+
+Modes:
+
+- micro: ultra-compressed machine checkpoint.
+- compact: structured state snapshot.
+- extended: human-readable continuation summary.
+- debug: diagnostic response.
+
+### Compress Context
+
+Direct route: POST https://contextkit.pro/api/compress-context
+Bankr route: https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-compress
+Price: $0.03
+
+Returns compressedContext, state, entities, and metrics.
+
+### Handoff
+
+Direct route: POST https://contextkit.pro/api/handoff
+Bankr route: https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-handoff
+Price: $0.03
+
+Returns project state, completed work, pending work, blockers, decisions, priorities, criticalContext, startHere, and agentNotes.
+
+### Extract Profile And Memory Enrichment
+
+Direct route: POST https://contextkit.pro/api/extract-profile
+Bankr route: https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-profile
+Price: $0.04
+
+Use mode: extract-profile for durable user profile memory.
+Use mode: memory-enrichment for stable and evolving memory records.
+
+## Recommended Agent Integration Pattern
+
+1. Use summarize after long planning sessions.
+2. Use compress-context before expensive model calls.
+3. Use handoff when another agent or worker continues the task.
+4. Use extract-profile when user preferences should become durable memory.
+5. Use memory-enrichment when preferences change over time.
+6. Use webhooks to route completed events into downstream systems.
+
+## Crawl Notes
+
+AI crawlers are allowed to index public docs, pricing, examples, OpenAPI metadata, Bankr x402 usage, SDK installation docs, and this file.
+
+Dashboard-authenticated data, private API-key content, and user-specific account data are not public documentation.

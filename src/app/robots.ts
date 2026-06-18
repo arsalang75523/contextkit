@@ -26,7 +26,21 @@ export default function robots(): MetadataRoute.Robots {
       },
       ...aiCrawlers.map((userAgent) => ({
         userAgent,
-        allow: ["/", "/docs", "/api-reference", "/playground", "/pricing", "/x402", "/openapi.json", "/llms.txt"]
+        allow: [
+          "/",
+          "/ai-agents",
+          "/docs",
+          "/api-reference",
+          "/playground",
+          "/pricing",
+          "/x402",
+          "/openapi.json",
+          "/llms.txt",
+          "/llms-full.txt",
+          "/docs.md",
+          "/api-reference.md",
+          "/x402.md"
+        ]
       }))
     ],
     sitemap: [`${site.url}/sitemap.xml`, `${site.url}/llms.txt`]
