@@ -29,6 +29,8 @@ export default function robots(): MetadataRoute.Robots {
         allow: [
           "/",
           "/ai-agents",
+          "/benchmarks",
+          "/examples",
           "/docs",
           "/api-reference",
           "/playground",

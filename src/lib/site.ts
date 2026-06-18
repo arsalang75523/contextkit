@@ -8,8 +8,10 @@ export const site = {
     { href: "/contact-dev", label: "Contact Dev" },
     { href: "/docs", label: "Docs" },
     { href: "/api-reference", label: "API" },
+    { href: "/examples", label: "Examples" },
     { href: "/demo", label: "Demo" },
     { href: "/playground", label: "Playground" },
+    { href: "/benchmarks", label: "Benchmarks" },
     { href: "/pricing", label: "Pricing" },
     { href: "/dashboard", label: "Dashboard" }
   ]

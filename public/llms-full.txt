@@ -30,6 +30,8 @@ It does not optimize for generic prose summaries. It optimizes for machine-usabl
 
 - Home: https://contextkit.pro/
 - AI agents: https://contextkit.pro/ai-agents
+- Benchmarks: https://contextkit.pro/benchmarks
+- Examples: https://contextkit.pro/examples
 - Docs: https://contextkit.pro/docs
 - API reference: https://contextkit.pro/api-reference
 - Playground: https://contextkit.pro/playground
@@ -114,6 +116,22 @@ Use mode: memory-enrichment for stable and evolving memory records.
 4. Use extract-profile when user preferences should become durable memory.
 5. Use memory-enrichment when preferences change over time.
 6. Use webhooks to route completed events into downstream systems.
+
+## Benchmark Highlights
+
+- Compact summarize example: 1,690 input tokens to 330 output tokens, about 80% reduction.
+- Micro summarize example: 1,357 input tokens to about 35 output tokens, about 97% reduction.
+- Compress context example: 190 input tokens to 67 output tokens, about 65% reduction.
+- Long-context precompute example: 2,710 input tokens to 663 output tokens, about 76% reduction.
+
+## Example Pages
+
+The examples page contains copy-paste commands for:
+
+- Bankr x402 summarize,
+- direct API-key credit calls,
+- TypeScript SDK usage,
+- long-context upload and paid result fetch.
 
 ## Crawl Notes
 
