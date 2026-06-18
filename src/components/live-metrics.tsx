@@ -22,7 +22,7 @@ export function LiveMetrics() {
 
   const items = [
     ["Requests processed", metrics?.totalRequests ?? 0],
-    ["Paid endpoints", 5],
+    ["Paid endpoints", 4],
     ["Starting price", "$0.03"],
     ["x402 revenue", `$${(metrics?.paymentTotal ?? 0).toFixed(3)}`]
   ];

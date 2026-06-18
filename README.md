@@ -1,44 +1,59 @@
 # ContextKit
 
-ContextKit is context infrastructure for autonomous AI agents. It turns long conversations and project history into compact, structured outputs for agent memory, handoffs, profile extraction, and continuation workflows.
+ContextKit is a memory layer for autonomous AI agents.
 
-The product supports three usage paths:
+It turns long conversations, project notes, and operational history into compact continuation state that another agent can safely pick up later. The focus is not pretty summaries. The focus is preserving goals, blockers, constraints, decisions, next actions, durable preferences, and handoff state with fewer tokens.
 
-- **Bankr-hosted x402:** simplest paid path. User runs `bankr x402 call`, pays with Bankr, receives JSON. No API key or SDK needed.
-- **API key credits:** dashboard users buy credits with USDC on Base, then use direct `/api/*` endpoints without Bankr per request.
-- **TypeScript SDK:** advanced developers integrate ContextKit into their own app using API keys, credits, webhooks, and optional x402 fallback.
+## Why It Exists
 
-## Endpoints
+Long-running agents drift when context gets too large, too expensive, or too loosely summarized. ContextKit gives agents a paid context-compression layer that can be called from a terminal, another agent, a backend service, or a TypeScript app.
 
-| Endpoint | Purpose | Price |
-| --- | --- | ---: |
-| `POST /api/summarize` | Micro/compact/extended context reduction | `$0.05` |
-| `POST /api/compress-context` | Machine-optimized context packet | `$0.03` |
-| `POST /api/handoff` | Agent-to-agent project transfer | `$0.03` |
-| `POST /api/extract-profile` | Durable user profile; `mode:"memory-enrichment"` also returns memory enrichment | `$0.04` |
-| `POST /api/memory-enrichment` | Direct API-key memory enrichment compatibility route | `$0.04` API key credits/direct |
-| `POST /api/tokens/estimate` | Token estimate for API-key workflows | API key |
+Use ContextKit when you need:
 
-## Fastest User Path: Bankr-Hosted x402
+- agent continuation memory,
+- compact project state,
+- agent-to-agent handoffs,
+- durable profile extraction,
+- memory enrichment,
+- API-key credits for app integrations,
+- Bankr-hosted x402 payment for public pay-per-call usage,
+- signed webhook delivery for downstream automation.
 
-This is the main public path for simple users and agents.
+## Usage Paths
 
-```bash
-bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-summarize \
-  -X POST \
-  -d '{"messages":[{"role":"user","content":"Summarize this context for another AI agent."}]}'
-```
+### 1. Bankr-Hosted x402
 
-No ContextKit API key, npm package, or SDK is required. The user only needs Bankr login and payment approval.
+This is the main public path for users and autonomous agents.
 
-### Hosted Commands
+The caller runs a `bankr x402 call`, approves USDC payment, and receives JSON. No ContextKit API key, npm package, or SDK is required.
+
+### 2. API Key Credits
+
+Dashboard users can create API keys and buy account credits. Direct `/api/*` routes spend credits first, so apps can call paid endpoints without asking the user to approve Bankr on every request.
+
+### 3. TypeScript SDK
+
+Advanced developers can install `@basedchef/contextkit` for typed API calls, credit checks, webhook verification, and optional x402 fallback handling.
+
+## Paid Endpoints
+
+| Endpoint | Bankr service | Purpose | Price |
+| --- | --- | --- | ---: |
+| `POST /api/summarize` | `contextkit-summarize` | Micro, compact, extended, or debug continuation summaries | `$0.05` |
+| `POST /api/compress-context` | `contextkit-compress` | Machine-optimized context packet | `$0.03` |
+| `POST /api/handoff` | `contextkit-handoff` | Agent-to-agent project transfer | `$0.03` |
+| `POST /api/extract-profile` | `contextkit-profile` | Durable profile extraction or memory enrichment via `mode` | `$0.04` |
+
+Utility endpoints such as token estimates, credits, analytics, keys, and webhooks use dashboard API keys instead of Bankr-hosted pay-per-call.
+
+## Bankr-Hosted x402 Commands
 
 Summarize:
 
 ```bash
 bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-summarize \
   -X POST \
-  -d '{"messages":[{"role":"user","content":"Summarize the deployment state, blockers, and next actions."}],"mode":"compact"}'
+  -d '{"messages":[{"role":"user","content":"Summarize this project state for the next AI agent."}],"mode":"compact"}'
 ```
 
 Compress context:
@@ -46,7 +61,7 @@ Compress context:
 ```bash
 bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-compress \
   -X POST \
-  -d '{"messages":[{"role":"user","content":"Project Atlas uses Next.js, Postgres, and Redis. Auth is complete. Slow report generation and enterprise onboarding remain. Beta is due in six weeks."}]}'
+  -d '{"messages":[{"role":"user","content":"Project Atlas uses Next.js, Postgres, and Redis. Auth is complete. Slow report generation and onboarding remain. Beta is due in six weeks."}]}'
 ```
 
 Handoff:
@@ -54,7 +69,7 @@ Handoff:
 ```bash
 bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-handoff \
   -X POST \
-  -d '{"messages":[{"role":"user","content":"ContextKit is live on Hetzner with Postgres, dashboard auth, API credits, Bankr-hosted x402, webhooks, and SDK publishing. Next work is docs, demo polish, and credit top-up testing."}]}'
+  -d '{"messages":[{"role":"user","content":"Create a handoff for the next AI agent. Preserve goal, completed work, blockers, decisions, constraints, and immediate next actions."}]}'
 ```
 
 Extract profile:
@@ -62,10 +77,10 @@ Extract profile:
 ```bash
 bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-profile \
   -X POST \
-  -d '{"messages":[{"role":"user","content":"I prefer short technical explanations, direct debugging help, clear risks, and step-by-step deployment commands."}],"mode":"extract-profile"}'
+  -d '{"messages":[{"role":"user","content":"I prefer short technical explanations, direct debugging help, clear risks, and step-by-step commands."}],"mode":"extract-profile"}'
 ```
 
-Memory enrichment through the same Bankr profile endpoint:
+Memory enrichment uses the same hosted profile endpoint:
 
 ```bash
 bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-profile \
@@ -73,15 +88,69 @@ bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd82
   -d '{"messages":[{"role":"user","content":"I used to want long weekly reports, but now I prefer short risk-focused updates with clear next actions."}],"mode":"memory-enrichment"}'
 ```
 
-Schema and interactive mode:
+Useful Bankr helpers:
 
 ```bash
 bankr x402 schema https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-summarize
 bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-summarize -i
-bankr x402 list
 ```
 
-## Dashboard Signup
+## Long Context
+
+For very large content, upload first and then pay only for the final result request.
+
+Summarize long plain text:
+
+```bash
+cat > long-context.txt <<'CONTEXTKIT_LONG_CONTEXT'
+Paste the long conversation or document here.
+CONTEXTKIT_LONG_CONTEXT
+
+curl -X POST "https://contextkit.pro/api/context/upload-text?endpoint=summarize&mode=compact" \
+  -H "Content-Type: text/plain" \
+  --data-binary @long-context.txt
+```
+
+Copy the returned `contextId`, then call the paid Bankr endpoint:
+
+```bash
+bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-summarize \
+  -X POST \
+  -d '{"contextId":"ctx_REPLACE_ME","mode":"compact"}'
+```
+
+For `compress-context` and `extract-profile`, upload JSON so the text is wrapped as a message payload:
+
+```bash
+cat > context-payload.json <<'CONTEXTKIT_JSON'
+{
+  "messages": [
+    {
+      "role": "user",
+      "content": "[{\"role\":\"user\",\"content\":\"Paste the long text here.\"}]"
+    }
+  ],
+  "precompute": {
+    "endpoint": "extract-profile",
+    "mode": "extract-profile"
+  }
+}
+CONTEXTKIT_JSON
+
+curl -X POST "https://contextkit.pro/api/context/upload" \
+  -H "Content-Type: application/json" \
+  --data-binary @context-payload.json
+```
+
+Then fetch through Bankr:
+
+```bash
+bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-profile \
+  -X POST \
+  -d '{"contextId":"ctx_REPLACE_ME","mode":"extract-profile"}'
+```
+
+## Dashboard
 
 Create an account:
 
@@ -96,18 +165,7 @@ curl -X POST https://contextkit.pro/api/dashboard/signup \
   }'
 ```
 
-Login:
-
-```bash
-curl -i -X POST https://contextkit.pro/api/dashboard/login \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "agent-owner@example.com",
-    "password": "replace-with-12-plus-chars"
-  }'
-```
-
-Browser dashboard paths:
+Dashboard paths:
 
 ```txt
 /dashboard
@@ -118,46 +176,11 @@ Browser dashboard paths:
 /dashboard/webhooks
 ```
 
-## API Keys
+Create API keys from `/dashboard/keys`. New keys are shown once. Store them safely.
 
-API keys identify dashboard accounts and direct API integrations. They are used for dashboard auth, analytics, usage, token estimates, webhook management, memory enrichment, and credit billing.
+## API Key Credits
 
-API keys do **not** make paid generation free by themselves. Direct paid routes first try account credits. If credits are insufficient, the route returns an x402 payment challenge.
-
-Create API keys from the dashboard:
-
-```txt
-/dashboard/keys
-```
-
-New keys are shown once when created. Store the key safely, because ContextKit only keeps the hashed record after creation.
-
-List keys:
-
-```bash
-curl https://contextkit.pro/api/auth/keys \
-  -H "Authorization: Bearer <CONTEXTKIT_API_KEY>"
-```
-
-Revoke a key:
-
-```bash
-curl -X POST https://contextkit.pro/api/auth/revoke-key \
-  -H "Authorization: Bearer <CONTEXTKIT_API_KEY>" \
-  -H "Content-Type: application/json" \
-  -d '{"keyId":"key_replace_me"}'
-```
-
-Check usage:
-
-```bash
-curl https://contextkit.pro/api/auth/usage \
-  -H "Authorization: Bearer <CONTEXTKIT_API_KEY>"
-```
-
-## Credits
-
-Credits let SDK/API-key users call paid endpoints without Bankr per request.
+Credits let SDK and backend users call paid direct endpoints without Bankr per request.
 
 Check credits:
 
@@ -168,27 +191,17 @@ curl https://contextkit.pro/api/auth/credits \
 
 Self-serve crypto top-up:
 
-1. User opens `/dashboard/credits`.
-2. User creates a USDC invoice.
-3. User sends USDC on Base to the shown wallet.
-4. User pastes the transaction hash.
-5. ContextKit verifies the on-chain USDC transfer and grants credits automatically.
+1. Open `/dashboard/credits`.
+2. Create a USDC invoice.
+3. Send USDC on Base to the shown wallet.
+4. Paste the transaction hash.
+5. ContextKit verifies the transfer and grants credits automatically.
 
-Required env:
+If credits are insufficient, direct paid routes return HTTP `402 Payment Required`.
 
-```env
-X402_PAY_TO=0xYourWallet
-CREDIT_BASE_RPC_URL=https://mainnet.base.org
-CREDIT_USDC_CONTRACT=0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913
-```
+## Direct API Examples
 
-If the public Base RPC rate-limits, use Alchemy, Infura, QuickNode, or another Base RPC URL.
-
-## Direct API Commands
-
-These commands use API key credits. If credits are missing, paid generation routes return HTTP 402.
-
-Summarize:
+Summarize with credits:
 
 ```bash
 curl -X POST https://contextkit.pro/api/summarize \
@@ -231,7 +244,7 @@ curl -X POST https://contextkit.pro/api/handoff \
     "messages": [
       {
         "role": "user",
-        "content": "ContextKit is live with Hetzner, Postgres, dashboard auth, API credits, Bankr-hosted x402, SDK, webhooks, and crypto credit top-up. Next agent should test payment verification and polish docs."
+        "content": "Create a project handoff for a successor agent. Preserve goals, completed work, blockers, decisions, constraints, and next actions."
       }
     ]
   }'
@@ -248,13 +261,13 @@ curl -X POST https://contextkit.pro/api/extract-profile \
     "messages": [
       {
         "role": "user",
-        "content": "I prefer short technical updates, direct debugging, clear risks, and command-by-command deployment instructions."
+        "content": "I prefer concise technical updates, direct debugging, clear risks, and command-by-command instructions."
       }
     ]
   }'
 ```
 
-Memory enrichment:
+Memory enrichment through profile mode:
 
 ```bash
 curl -X POST https://contextkit.pro/api/extract-profile \
@@ -262,22 +275,6 @@ curl -X POST https://contextkit.pro/api/extract-profile \
   -H "Content-Type: application/json" \
   -d '{
     "mode": "memory-enrichment",
-    "messages": [
-      {
-        "role": "user",
-        "content": "I used to want long weekly reports, but now I prefer short risk-focused updates with clear next actions."
-      }
-    ]
-  }'
-```
-
-Compatibility direct route:
-
-```bash
-curl -X POST https://contextkit.pro/api/memory-enrichment \
-  -H "Authorization: Bearer <CONTEXTKIT_API_KEY>" \
-  -H "Content-Type: application/json" \
-  -d '{
     "messages": [
       {
         "role": "user",
@@ -300,7 +297,7 @@ curl -X POST https://contextkit.pro/api/tokens/estimate \
   }'
 ```
 
-## SDK
+## TypeScript SDK
 
 Install:
 
@@ -308,57 +305,18 @@ Install:
 npm install @basedchef/contextkit
 ```
 
-Smoke test:
+Create a client:
 
-```bash
-node --input-type=module -e 'import { ContextKit } from "@basedchef/contextkit"; console.log(typeof ContextKit)'
-```
-
-Call summarize with credits:
-
-```bash
-cat > summarize-sdk.mjs <<'EOF'
+```ts
 import { ContextKit } from "@basedchef/contextkit";
 
 const client = new ContextKit({
   apiKey: "<CONTEXTKIT_API_KEY>",
   baseUrl: "https://contextkit.pro"
 });
-
-const result = await client.summarize({
-  mode: "compact",
-  messages: [
-    {
-      role: "user",
-      content: "We are planning a night-bus pilot. Summarize current goal, blockers, and next steps."
-    }
-  ]
-});
-
-console.log(JSON.stringify(result, null, 2));
-EOF
-
-node summarize-sdk.mjs
 ```
 
-Check credits with SDK:
-
-```bash
-cat > credits-sdk.mjs <<'EOF'
-import { ContextKit } from "@basedchef/contextkit";
-
-const client = new ContextKit({
-  apiKey: "<CONTEXTKIT_API_KEY>",
-  baseUrl: "https://contextkit.pro"
-});
-
-console.log(JSON.stringify(await client.credits(), null, 2));
-EOF
-
-node credits-sdk.mjs
-```
-
-SDK methods:
+Call methods:
 
 ```ts
 await client.summarize({ messages, mode: "compact" });
@@ -372,7 +330,7 @@ await client.credits();
 
 ## Webhooks
 
-Register webhook:
+Register a webhook:
 
 ```bash
 curl -X POST https://contextkit.pro/api/webhooks/register \
@@ -384,30 +342,7 @@ curl -X POST https://contextkit.pro/api/webhooks/register \
   }'
 ```
 
-List webhook events:
-
-```bash
-curl https://contextkit.pro/api/webhooks/events \
-  -H "Authorization: Bearer <CONTEXTKIT_API_KEY>"
-```
-
-List deliveries:
-
-```bash
-curl https://contextkit.pro/api/webhooks/deliveries \
-  -H "Authorization: Bearer <CONTEXTKIT_API_KEY>"
-```
-
-Replay a webhook event:
-
-```bash
-curl -X POST https://contextkit.pro/api/webhooks/replay \
-  -H "Authorization: Bearer <CONTEXTKIT_API_KEY>" \
-  -H "Content-Type: application/json" \
-  -d '{"eventId":"evt_replace_me"}'
-```
-
-Webhook headers:
+Webhook deliveries include:
 
 ```txt
 ContextKit-Signature: <hmac-sha256>
@@ -415,22 +350,13 @@ ContextKit-Event: handoff.generated
 ContextKit-Request-Id: req_...
 ```
 
-## Analytics
+Replay a webhook:
 
 ```bash
-curl https://contextkit.pro/api/analytics/overview \
-  -H "Authorization: Bearer <CONTEXTKIT_API_KEY>"
-
-curl https://contextkit.pro/api/analytics/tokens \
-  -H "Authorization: Bearer <CONTEXTKIT_API_KEY>"
-
-curl https://contextkit.pro/api/analytics/payments \
-  -H "Authorization: Bearer <CONTEXTKIT_API_KEY>"
-
-curl https://contextkit.pro/api/analytics/usage \
-  -H "Authorization: Bearer <CONTEXTKIT_API_KEY>"
-
-curl https://contextkit.pro/api/public/metrics
+curl -X POST https://contextkit.pro/api/webhooks/replay \
+  -H "Authorization: Bearer <CONTEXTKIT_API_KEY>" \
+  -H "Content-Type: application/json" \
+  -d '{"eventId":"evt_replace_me"}'
 ```
 
 ## Local Development
@@ -442,13 +368,13 @@ npm run build
 npm run dev
 ```
 
-Run migrations:
+Run local database migrations:
 
 ```bash
 npm run db:migrate
 ```
 
-Start only Postgres with Docker:
+Start local Postgres only:
 
 ```bash
 docker compose -p contextkit up -d postgres
@@ -456,36 +382,35 @@ npm run db:migrate
 npm run dev
 ```
 
-## Environment
+## Public Repo Policy
 
-Example production `.env`:
+This repository is intended to be public and open-core friendly.
 
-```env
-POSTGRES_PASSWORD=replace_with_strong_password
-DATABASE_URL=postgres://contextkit:replace_with_strong_password@postgres:5432/contextkit
+Safe to keep public:
 
-CONTEXTKIT_ADMIN_TOKEN=replace_with_admin_token
-CONTEXTKIT_INTERNAL_TOKEN=replace_with_internal_forwarder_token
-CONTEXTKIT_WEBHOOK_SECRET=replace_with_webhook_secret
-CONTEXTKIT_BASE_URL=https://contextkit.pro
-CONTEXTKIT_BACKEND_URL=https://contextkit.pro
+- SDK source,
+- docs,
+- OpenAPI schema,
+- example requests,
+- x402 service handlers,
+- UI code,
+- local development setup.
 
-RESEND_API_KEY=re_replace_me
-CONTEXTKIT_EMAIL_FROM=ContextKit <security@contextkit.pro>
+Kept private outside the public repo:
 
-BANKR_LLM_KEY=bk_replace_me
-BANKR_LLM_BASE_URL=https://llm.bankr.bot/v1
-BANKR_LLM_MODEL=claude-sonnet-4.5
+- production deployment runbooks,
+- real environment values,
+- admin tokens,
+- Bankr API keys,
+- LLM provider keys,
+- Resend keys,
+- production wallet operations,
+- fraud/risk operations,
+- server access notes.
 
-X402_PAY_TO=0x_your_wallet
-X402_NETWORK=base
-X402_FACILITATOR_URL=https://facilitator.x402.org
+Use `.env.example` as a placeholder reference only. Never commit real `.env` files, production tokens, private deployment notes, or operational credentials.
 
-CREDIT_BASE_RPC_URL=https://mainnet.base.org
-CREDIT_USDC_CONTRACT=0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913
-```
-
-## OpenAPI And Docs
+## OpenAPI And Product Pages
 
 ```txt
 /openapi.json
@@ -499,41 +424,23 @@ CREDIT_USDC_CONTRACT=0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913
 /x402
 ```
 
-## Nginx / HTTPS Notes
-
-For the current Hetzner test deployment, HTTPS is served at:
-
-```txt
-https://contextkit.pro
-```
-
-Nginx terminates TLS and forwards to the Next.js app on port `3000`.
-
 ## Troubleshooting
 
-`402 Payment Required` on direct `/api/summarize`
+`402 Payment Required`
 
 The API key has no credits. Top up credits or use Bankr-hosted x402.
 
-`internal_not_configured`
+`401 Unauthorized`
 
-`CONTEXTKIT_INTERNAL_TOKEN` is missing inside the app container.
+The API key is missing, invalid, revoked, or does not have the required scope.
 
-`Bankr deploy 403`
+`Long Bankr call fails but playground works`
 
-Usually Bankr account/service limit or config issue. Keep `bankr.x402.json` to supported services and run `bankr whoami`, `bankr x402 list`, then retry.
-
-`Bankr call status 503`
-
-Check direct internal endpoint first, then app logs:
-
-```bash
-docker compose -p contextkit logs app --tail=200
-```
+Upload long content first with `/api/context/upload-text` or `/api/context/upload`, then call Bankr with the returned `contextId`.
 
 `Credit top-up payment_not_verified`
 
-Make sure the tx is on Base, uses USDC contract `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913`, sends at least the invoice amount, and sends to `X402_PAY_TO`.
+Make sure the transaction is on Base, uses the official Base USDC contract, sends at least the invoice amount, and sends to the wallet shown in the dashboard invoice.
 
 ## License
 

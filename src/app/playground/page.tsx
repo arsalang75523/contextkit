@@ -135,15 +135,15 @@ curl -X POST "https://contextkit.pro/api/context/upload-text?${params.toString()
             <div className="mb-4 rounded-md border border-aqua/20 bg-aqua/10 p-4 text-sm leading-6 text-white/65">
               Pick one service below. <span className="text-aqua">Summarize</span> is selected by default because it is the easiest first test. The other services are here too; clicking them changes the paid endpoint and command.
             </div>
-            <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+            <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
               {playgroundEndpoints.map((item) => (
                 <button
                   key={item.slug}
                   type="button"
                   onClick={() => setEndpoint(item.slug)}
-                  className={`min-w-0 rounded-md border px-2 py-2 text-xs transition xl:text-sm ${endpoint === item.slug ? "border-mint bg-mint/10 text-mint" : "border-line text-white/65 hover:text-white"}`}
+                  className={`min-w-0 rounded-md border px-3 py-2 text-xs transition xl:text-sm ${endpoint === item.slug ? "border-mint bg-mint/10 text-mint" : "border-line text-white/65 hover:text-white"}`}
                 >
-                  <span className="block truncate">{item.slug}</span>
+                  <span className="block break-words">{item.slug}</span>
                 </button>
               ))}
             </div>

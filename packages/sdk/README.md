@@ -125,7 +125,7 @@ const result = await client.handoff({
   messages: [
     {
       role: "user",
-      content: "ContextKit is live on Hetzner with Postgres, dashboard auth, API credits, webhooks, and Bankr-hosted x402. Next work is docs, SDK examples, credit top-up polish, and long-context demos."
+      content: "Create a project handoff for a successor agent. Preserve goals, completed work, blockers, decisions, constraints, and next actions."
     }
   ]
 });

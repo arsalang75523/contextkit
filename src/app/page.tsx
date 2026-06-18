@@ -1,15 +1,14 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { ArrowRight, Bot, BrainCircuit, Cable, CircleDollarSign, FileJson, Gauge, KeyRound, Webhook } from "lucide-react";
 import { Architecture } from "@/components/architecture";
 import { Button } from "@/components/button";
-import { CodeBlock } from "@/components/code-block";
 import { GetStartedCard } from "@/components/get-started-card";
 import { LiveMetrics } from "@/components/live-metrics";
 import { Section } from "@/components/section";
-import { bankrX402Command } from "@/lib/bankr-x402";
 
 const features = [
   ["Conversation Summarization", BrainCircuit, "/api/summarize", "{ compact, state, metrics }"],
@@ -21,9 +20,27 @@ const features = [
   ["Bankr-native Integration", Cable, "LLM gateway", "claude-sonnet-4.5 via Bankr"]
 ] as const;
 
-const sample = bankrX402Command("handoff", {
-  messages: [{ role: "user", content: "Build an x402-powered context API for AI agents." }]
-});
+const requestStream = [
+  "POST /contextkit-summarize",
+  "x402: $0.05 USDC",
+  "agent: night-bus pilot",
+  "mode: compact",
+  "context: overnight transit ops",
+  "constraints: airport windows",
+  "risk: charging capacity",
+  "preserve: goal, blockers, next"
+];
+
+const responseStream = [
+  "mode: compact",
+  "blocked: charging + weekend coverage",
+  "next: finalize depot schedule",
+  "state: route + staffing constraints",
+  "metrics.inputTokens: 1690",
+  "metrics.outputTokens: 330",
+  "metrics.reduction: 80%",
+  "metrics.latencyMs: 4316"
+];
 
 export default function HomePage() {
   return (
@@ -48,7 +65,7 @@ export default function HomePage() {
               <Button href="/docs" variant="secondary">
                 Read Docs <ArrowRight className="h-4 w-4" />
               </Button>
-              <Button href="https://github.com/contextkit/contextkit" variant="secondary">
+              <Button href="https://github.com/arsalang75523/contextkit" variant="secondary">
                 View GitHub
               </Button>
             </div>
@@ -61,10 +78,13 @@ export default function HomePage() {
           >
             <div className="mb-4 grid grid-cols-3 gap-2 text-xs text-white/60">
               <span className="rounded bg-mint/10 px-3 py-2 text-mint">live metrics below</span>
-              <span className="rounded bg-aqua/10 px-3 py-2 text-aqua">$0.03 handoff</span>
-              <span className="rounded bg-coral/10 px-3 py-2 text-coral">signed webhooks</span>
+              <span className="rounded bg-aqua/10 px-3 py-2 text-aqua">$0.05 summarize</span>
+              <span className="rounded bg-coral/10 px-3 py-2 text-coral">compress, handoff, profile</span>
             </div>
-            <CodeBlock code={sample} />
+            <div className="grid gap-3 md:grid-cols-2">
+              <TypingPanel title="Request" tone="aqua" lines={requestStream} />
+              <TypingPanel title="Response" tone="mint" lines={responseStream} startDelayMs={900} />
+            </div>
           </motion.div>
         </div>
       </section>
@@ -115,5 +135,65 @@ export default function HomePage() {
         </div>
       </section>
     </main>
+  );
+}
+
+function TypingPanel({ title, tone, lines, startDelayMs = 0 }: { title: string; tone: "aqua" | "mint"; lines: string[]; startDelayMs?: number }) {
+  const toneClass = tone === "aqua" ? "text-aqua" : "text-mint";
+  const fullText = lines.join("\n");
+  const [typed, setTyped] = useState("");
+
+  useEffect(() => {
+    let index = 0;
+    let interval: ReturnType<typeof setInterval> | undefined;
+    let restartTimeout: ReturnType<typeof setTimeout> | undefined;
+
+    const start = () => {
+      interval = setInterval(() => {
+        index += 1;
+        setTyped(fullText.slice(0, index));
+
+        if (index >= fullText.length && interval) {
+          clearInterval(interval);
+          restartTimeout = setTimeout(() => {
+            index = 0;
+            setTyped("");
+            start();
+          }, 1400);
+        }
+      }, 34);
+    };
+
+    const startTimeout = setTimeout(start, startDelayMs);
+
+    return () => {
+      clearTimeout(startTimeout);
+      if (restartTimeout) clearTimeout(restartTimeout);
+      if (interval) clearInterval(interval);
+    };
+  }, [fullText, startDelayMs]);
+
+  const visibleLines = typed.split("\n");
+  const typedLines = lines.map((_, index) => visibleLines[index] ?? "");
+
+  return (
+    <div className="h-[350px] overflow-hidden rounded border border-line bg-ink/75 p-4 font-mono text-xs shadow-inner">
+      <div className="mb-4 flex items-center justify-between border-b border-line pb-3">
+        <span className={`uppercase tracking-[0.18em] ${toneClass}`}>{title}</span>
+        <span className="h-2 w-2 animate-pulse rounded-full bg-mint" />
+      </div>
+      <div className="space-y-2.5">
+        {typedLines.map((line, index) => (
+          <div key={`${title}-${index}`} className="flex min-h-[1.25rem] items-start gap-2 text-white/72">
+            <span className={toneClass}>{">"}</span>
+            <span>{line}</span>
+          </div>
+        ))}
+        <div className="flex min-h-[1.25rem] items-start gap-2">
+          <span className={toneClass}>{">"}</span>
+          <span className="stream-cursor mt-0.5 h-4 w-[7px] rounded-sm bg-mint/80" />
+        </div>
+      </div>
+    </div>
   );
 }
