@@ -38,6 +38,9 @@ export const metadata: Metadata = {
     title: `${site.name} | ${site.tagline}`,
     description: site.description,
     images: ["/og.svg"]
+  },
+  verification: {
+    google: "3AQtlnuucvn6SHCRA6eJkv40xZtJARUNlgF2LZyglko"
   }
 };
 
