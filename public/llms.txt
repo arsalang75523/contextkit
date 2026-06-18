@@ -8,6 +8,8 @@ Docs: https://contextkit.pro/docs
 AI Agents: https://contextkit.pro/ai-agents
 Benchmarks: https://contextkit.pro/benchmarks
 Examples: https://contextkit.pro/examples
+Markdown Benchmarks: https://contextkit.pro/benchmarks.md
+Markdown Examples: https://contextkit.pro/examples.md
 API Reference: https://contextkit.pro/api-reference
 Playground: https://contextkit.pro/playground
 Pricing: https://contextkit.pro/pricing
@@ -58,15 +60,17 @@ npm install @basedchef/contextkit
 3. https://contextkit.pro/ai-agents
 4. https://contextkit.pro/benchmarks
 5. https://contextkit.pro/examples
-6. https://contextkit.pro/api-reference
-7. https://contextkit.pro/playground
-8. https://contextkit.pro/x402
-9. https://contextkit.pro/pricing
-10. https://contextkit.pro/contact-dev
-11. https://contextkit.pro/llms-full.txt
-12. https://contextkit.pro/docs.md
-13. https://contextkit.pro/api-reference.md
-14. https://contextkit.pro/x402.md
+6. https://contextkit.pro/benchmarks.md
+7. https://contextkit.pro/examples.md
+8. https://contextkit.pro/api-reference
+9. https://contextkit.pro/playground
+10. https://contextkit.pro/x402
+11. https://contextkit.pro/pricing
+12. https://contextkit.pro/contact-dev
+13. https://contextkit.pro/llms-full.txt
+14. https://contextkit.pro/docs.md
+15. https://contextkit.pro/api-reference.md
+16. https://contextkit.pro/x402.md
 
 ## Crawl Notes
 

@@ -46,6 +46,8 @@ It does not optimize for generic prose summaries. It optimizes for machine-usabl
 - Markdown docs: https://contextkit.pro/docs.md
 - Markdown API reference: https://contextkit.pro/api-reference.md
 - Markdown x402 guide: https://contextkit.pro/x402.md
+- Markdown benchmarks: https://contextkit.pro/benchmarks.md
+- Markdown examples: https://contextkit.pro/examples.md
 - OpenAPI JSON: https://contextkit.pro/openapi.json
 - Sitemap: https://contextkit.pro/sitemap.xml
 - Robots: https://contextkit.pro/robots.txt
@@ -119,10 +121,11 @@ Use mode: memory-enrichment for stable and evolving memory records.
 
 ## Benchmark Highlights
 
-- Compact summarize example: 1,690 input tokens to 330 output tokens, about 80% reduction.
-- Micro summarize example: 1,357 input tokens to about 35 output tokens, about 97% reduction.
-- Compress context example: 190 input tokens to 67 output tokens, about 65% reduction.
-- Long-context precompute example: 2,710 input tokens to 663 output tokens, about 76% reduction.
+- Summarize micro: 1,357 input tokens to 35 output tokens, about 97% reduction.
+- Summarize compact: 1,690 input tokens to 330 output tokens, about 80% reduction.
+- Compress context: 190 input tokens to 67 output tokens, about 65% reduction.
+- Handoff: 612 input tokens to 184 output tokens, about 70% reduction.
+- Long-context precompute: 2,710 input tokens to 663 output tokens, about 76% reduction.
 
 ## Example Pages
 

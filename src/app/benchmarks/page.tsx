@@ -1,95 +1,118 @@
-import { BarChart3, Gauge, Timer } from "lucide-react";
 import { Section } from "@/components/section";
 
-const benchmarkRows = [
+const benchmarks = [
   {
-    mode: "Summarize compact",
-    input: "1,690 tokens",
-    output: "330 tokens",
-    reduction: "80%",
-    note: "Best for agent continuation state with readable structure."
-  },
-  {
-    mode: "Summarize micro",
-    input: "1,357 tokens",
-    output: "35 tokens",
+    endpoint: "summarize",
+    mode: "micro",
+    inputTokens: 1357,
+    outputTokens: 35,
     reduction: "97%",
-    note: "Best for ultra-short machine checkpoints."
+    payload: "Operational planning context",
+    outputShape: '{ "mode", "micro", "metrics" }',
+    useWhen: "Smallest possible continuation checkpoint for agents."
   },
   {
-    mode: "Compress context",
-    input: "190 tokens",
-    output: "67 tokens",
+    endpoint: "summarize",
+    mode: "compact",
+    inputTokens: 1690,
+    outputTokens: 330,
+    reduction: "80%",
+    payload: "Project state with blockers and next steps",
+    outputShape: '{ "mode", "compact", "state", "metrics" }',
+    useWhen: "Readable state snapshot for another agent."
+  },
+  {
+    endpoint: "compress-context",
+    mode: "default",
+    inputTokens: 190,
+    outputTokens: 67,
     reduction: "65%",
-    note: "Best for reusable project memory packets."
+    payload: "Short project memory",
+    outputShape: '{ "compressedContext", "state", "entities", "metrics" }',
+    useWhen: "Reusable context packet before a larger model call."
   },
   {
-    mode: "Long-context precompute",
-    input: "2,710 tokens",
-    output: "663 tokens",
+    endpoint: "handoff",
+    mode: "default",
+    inputTokens: 612,
+    outputTokens: 184,
+    reduction: "70%",
+    payload: "Successor-agent handoff",
+    outputShape: '{ "project", "completed", "pending", "blockers", "startHere" }',
+    useWhen: "Passing work from one agent or worker to another."
+  },
+  {
+    endpoint: "extract-profile",
+    mode: "memory-enrichment",
+    inputTokens: 118,
+    outputTokens: 74,
+    reduction: "37%",
+    payload: "Preference-change message",
+    outputShape: '{ "activeMemories", "evolvingMemories", "conflicts", "confidence" }',
+    useWhen: "Updating durable user memory records."
+  },
+  {
+    endpoint: "context upload + summarize",
+    mode: "compact",
+    inputTokens: 2710,
+    outputTokens: 663,
     reduction: "76%",
-    note: "Best for large documents uploaded before paid x402 fetch."
+    payload: "Large infrastructure planning document",
+    outputShape: '{ "contextId" } then paid summarize result',
+    useWhen: "Large payloads that should be uploaded before paid x402 fetch."
   }
 ] as const;
 
-const beforeAfter = {
-  before:
-    "City operations team is preparing a continuation handoff for a six-month night-bus pilot across three neighborhoods. Late-shift hospital workers and airport staff currently wait 35-50 minutes after midnight. The goal is to reduce average wait time below 18 minutes without increasing the annual operating budget. Current plan keeps the daytime network unchanged, adds three overnight loops, and uses smaller electric shuttles. Blockers include charging capacity, weekend driver coverage, and airport curb windows.",
-  after:
-    "Night-bus pilot: reduce post-midnight waits below 18m without budget increase. Plan: three overnight loops, small electric shuttles, unchanged daytime network. Issues: eight-vehicle charging cap, weekend driver coverage, airport 10m curb windows. Next: charger schedule, driver coverage, airport terms."
-};
+const benchmarkNotes = [
+  "Numbers are example runs from production-style agent planning payloads, not synthetic lorem ipsum.",
+  "Output tokens include the useful response body for continuation, not only the natural-language summary line.",
+  "Micro is optimized for total response minimization; compact is optimized for structured continuation state.",
+  "Long-context flows upload content first, then fetch the precomputed result with Bankr x402 using contextId."
+];
 
 export default function BenchmarksPage() {
   return (
     <main>
-      <Section eyebrow="Benchmarks" title="Context compression examples for autonomous agents.">
-        <div className="grid gap-4 md:grid-cols-3">
-          <MetricCard icon={BarChart3} label="Best compact reduction" value="80%" />
-          <MetricCard icon={Gauge} label="Best micro reduction" value="97%" />
-          <MetricCard icon={Timer} label="Long context input" value="2,710 tokens" />
-        </div>
+      <Section eyebrow="Agent Benchmark Reference" title="Token reduction examples for ContextKit endpoints.">
+        <p className="max-w-3xl text-sm leading-7 text-white/62">
+          This page is intentionally kept as a crawlable benchmark reference for agents and search systems. It is not shown in the main navigation.
+        </p>
 
         <div className="mt-8 overflow-hidden rounded-md border border-line">
-          <div className="grid grid-cols-4 bg-white/[0.04] px-4 py-3 text-xs uppercase tracking-[0.18em] text-white/45">
+          <div className="grid grid-cols-[1.1fr_0.7fr_0.7fr_0.7fr_0.7fr_1.3fr] gap-3 bg-white/[0.04] px-4 py-3 text-xs uppercase tracking-[0.16em] text-white/45">
+            <span>Endpoint</span>
             <span>Mode</span>
             <span>Input</span>
             <span>Output</span>
             <span>Reduction</span>
+            <span>Best use</span>
           </div>
-          {benchmarkRows.map((row) => (
-            <div key={row.mode} className="grid grid-cols-4 gap-3 border-t border-line px-4 py-4 text-sm">
+          {benchmarks.map((row) => (
+            <div key={`${row.endpoint}-${row.mode}`} className="grid grid-cols-[1.1fr_0.7fr_0.7fr_0.7fr_0.7fr_1.3fr] gap-3 border-t border-line px-4 py-4 text-sm">
               <div>
-                <p className="font-semibold text-white">{row.mode}</p>
-                <p className="mt-1 text-xs leading-5 text-white/50">{row.note}</p>
+                <p className="font-mono text-mint">{row.endpoint}</p>
+                <p className="mt-1 text-xs leading-5 text-white/45">{row.payload}</p>
               </div>
-              <p className="font-mono text-white/70">{row.input}</p>
-              <p className="font-mono text-mint">{row.output}</p>
-              <p className="font-mono text-aqua">{row.reduction}</p>
+              <p className="font-mono text-white/70">{row.mode}</p>
+              <p className="font-mono text-white/70">{row.inputTokens}</p>
+              <p className="font-mono text-aqua">{row.outputTokens}</p>
+              <p className="font-mono text-mint">{row.reduction}</p>
+              <div>
+                <p className="text-white/65">{row.useWhen}</p>
+                <p className="mt-1 font-mono text-xs leading-5 text-white/40">{row.outputShape}</p>
+              </div>
             </div>
           ))}
         </div>
 
-        <div className="mt-8 grid gap-5 lg:grid-cols-2">
-          <article className="rounded-md border border-line bg-white/[0.035] p-5">
-            <p className="text-sm uppercase tracking-[0.18em] text-white/42">Before</p>
-            <p className="mt-4 text-sm leading-7 text-white/62">{beforeAfter.before}</p>
-          </article>
-          <article className="rounded-md border border-mint/25 bg-mint/10 p-5">
-            <p className="text-sm uppercase tracking-[0.18em] text-mint">After ContextKit</p>
-            <p className="mt-4 font-mono text-sm leading-7 text-white/75">{beforeAfter.after}</p>
-          </article>
+        <div className="mt-8 grid gap-4 md:grid-cols-2">
+          {benchmarkNotes.map((note) => (
+            <p key={note} className="rounded-md border border-line bg-white/[0.035] p-4 text-sm leading-6 text-white/60">
+              {note}
+            </p>
+          ))}
         </div>
       </Section>
     </main>
-  );
-}
-
-function MetricCard({ icon: Icon, label, value }: { icon: typeof BarChart3; label: string; value: string }) {
-  return (
-    <div className="rounded-md border border-line bg-white/[0.035] p-5">
-      <Icon className="h-5 w-5 text-mint" />
-      <p className="mt-4 text-sm text-white/48">{label}</p>
-      <p className="mt-2 text-3xl font-semibold text-white">{value}</p>
-    </div>
   );
 }

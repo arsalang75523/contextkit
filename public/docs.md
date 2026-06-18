@@ -84,7 +84,9 @@ ContextKit-Request-Id: req_...
 - https://contextkit.pro/
 - https://contextkit.pro/docs
 - https://contextkit.pro/benchmarks
+- https://contextkit.pro/benchmarks.md
 - https://contextkit.pro/examples
+- https://contextkit.pro/examples.md
 - https://contextkit.pro/api-reference
 - https://contextkit.pro/playground
 - https://contextkit.pro/pricing
