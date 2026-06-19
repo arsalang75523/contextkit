@@ -6,7 +6,8 @@ const nextConfig: NextConfig = {
     const publicPreviewHeaders = [
       { key: "Access-Control-Allow-Origin", value: "*" },
       { key: "Access-Control-Allow-Methods", value: "GET, HEAD, OPTIONS" },
-      { key: "Access-Control-Allow-Headers", value: "Content-Type, User-Agent" }
+      { key: "Access-Control-Allow-Headers", value: "Content-Type, User-Agent, X-Requested-With, Accept, Range" },
+      { key: "Access-Control-Max-Age", value: "86400" }
     ];
 
     return [
