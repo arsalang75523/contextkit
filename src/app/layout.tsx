@@ -29,14 +29,25 @@ export const metadata: Metadata = {
     title: `${site.name} | ${site.tagline}`,
     description: site.description,
     siteName: site.name,
-    images: [{ url: `${site.url}/social-card-v3.jpg`, width: 1200, height: 630, alt: "ContextKit API platform" }],
+    images: [
+      {
+        url: `${site.url}/social-card-v4.jpg`,
+        secureUrl: `${site.url}/social-card-v4.jpg`,
+        width: 1200,
+        height: 630,
+        alt: "ContextKit memory layer for AI agents",
+        type: "image/jpeg"
+      }
+    ],
     type: "website"
   },
   twitter: {
     card: "summary_large_image",
+    site: "@contextkitpro",
+    creator: "@contextkitpro",
     title: `${site.name} | ${site.tagline}`,
     description: site.description,
-    images: [`${site.url}/social-card-v3.jpg`]
+    images: [{ url: `${site.url}/social-card-v4.jpg`, alt: "ContextKit memory layer for AI agents" }]
   },
   verification: {
     google: "3AQtlnuucvn6SHCRA6eJkv40xZtJARUNlgF2LZyglko"
