@@ -28,7 +28,6 @@ export const metadata: Metadata = {
   openGraph: {
     title: `${site.name} | ${site.tagline}`,
     description: site.description,
-    url: site.url,
     siteName: site.name,
     images: [{ url: `${site.url}/social-card-v3.jpg`, width: 1200, height: 630, alt: "ContextKit API platform" }],
     type: "website"
