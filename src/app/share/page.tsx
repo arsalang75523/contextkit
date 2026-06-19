@@ -3,6 +3,8 @@ import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/button";
 import { site } from "@/lib/site";
 
+const socialImageUrl = `${site.url}/social-card-v6.jpg?card=twitter-root-v7`;
+
 export const metadata: Metadata = {
   title: `${site.name} | ${site.tagline}`,
   description: site.description,
@@ -12,8 +14,8 @@ export const metadata: Metadata = {
     siteName: site.name,
     images: [
       {
-        url: `${site.url}/social-card-v6.jpg`,
-        secureUrl: `${site.url}/social-card-v6.jpg`,
+        url: socialImageUrl,
+        secureUrl: socialImageUrl,
         width: 2400,
         height: 1200,
         alt: "ContextKit memory layer for AI agents",
@@ -28,10 +30,10 @@ export const metadata: Metadata = {
     creator: "@contextkitpro",
     title: `${site.name} | ${site.tagline}`,
     description: site.description,
-    images: [{ url: `${site.url}/social-card-v6.jpg`, alt: "ContextKit memory layer for AI agents" }]
+    images: [{ url: socialImageUrl, alt: "ContextKit memory layer for AI agents" }]
   },
   other: {
-    "twitter:image:src": `${site.url}/social-card-v6.jpg`,
+    "twitter:image:src": socialImageUrl,
     "twitter:image:width": "2400",
     "twitter:image:height": "1200",
     "twitter:image:type": "image/jpeg"

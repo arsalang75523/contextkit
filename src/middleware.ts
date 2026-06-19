@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-const publicPreviewPaths = new Set(["/", "/share", "/social-card-v6.jpg"]);
+const publicPreviewPaths = new Set(["/", "/share", "/share-card", "/social-card-v6.jpg"]);
 const publicPreviewHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, HEAD, OPTIONS",
@@ -30,12 +30,12 @@ export function middleware(request: NextRequest) {
       socialPreviewCrawlerPattern.test(request.headers.get("user-agent") ?? "")
     ) {
       const shareUrl = request.nextUrl.clone();
-      shareUrl.pathname = "/share";
+      shareUrl.pathname = "/share-card";
       const response = NextResponse.rewrite(shareUrl);
       for (const [key, value] of Object.entries(noStorePreviewHeaders)) {
         response.headers.set(key, value);
       }
-      response.headers.set("X-ContextKit-Preview-Rewrite", "/share");
+      response.headers.set("X-ContextKit-Preview-Rewrite", "/share-card");
       return response;
     }
 
@@ -57,5 +57,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/", "/share", "/social-card-v6.jpg", "/dashboard/:path*"]
+  matcher: ["/", "/share", "/share-card", "/social-card-v6.jpg", "/dashboard/:path*"]
 };

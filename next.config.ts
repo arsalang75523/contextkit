@@ -9,6 +9,12 @@ const nextConfig: NextConfig = {
       { key: "Access-Control-Allow-Headers", value: "Content-Type, User-Agent, X-Requested-With, Accept, Range" },
       { key: "Access-Control-Max-Age", value: "86400" }
     ];
+    const socialImageHeaders = [
+      ...publicPreviewHeaders,
+      { key: "Cache-Control", value: "no-store, no-cache, max-age=0, must-revalidate" },
+      { key: "Pragma", value: "no-cache" },
+      { key: "Expires", value: "0" }
+    ];
 
     return [
       {
@@ -21,7 +27,7 @@ const nextConfig: NextConfig = {
       },
       {
         source: "/social-card-v:version(\\d+).jpg",
-        headers: publicPreviewHeaders
+        headers: socialImageHeaders
       }
     ];
   },
