@@ -49,6 +49,12 @@ export const metadata: Metadata = {
     description: site.description,
     images: [{ url: `${site.url}/social-card-v4.jpg`, alt: "ContextKit memory layer for AI agents" }]
   },
+  other: {
+    "twitter:image:src": `${site.url}/social-card-v4.jpg`,
+    "twitter:image:width": "1200",
+    "twitter:image:height": "630",
+    "twitter:image:type": "image/jpeg"
+  },
   verification: {
     google: "3AQtlnuucvn6SHCRA6eJkv40xZtJARUNlgF2LZyglko"
   }

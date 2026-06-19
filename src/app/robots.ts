@@ -15,7 +15,8 @@ export default function robots(): MetadataRoute.Robots {
     "CCBot",
     "DuckAssistBot",
     "Bytespider",
-    "PetalBot"
+    "PetalBot",
+    "Twitterbot"
   ];
 
   return {
@@ -34,10 +35,13 @@ export default function robots(): MetadataRoute.Robots {
           "/examples",
           "/examples.md",
           "/docs",
+          "/share",
           "/api-reference",
           "/playground",
           "/pricing",
           "/x402",
+          "/social-card-v4.jpg",
+          "/social-card-v4.png",
           "/openapi.json",
           "/llms.txt",
           "/llms-full.txt",
