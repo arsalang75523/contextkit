@@ -7,6 +7,7 @@ const publicPreviewHeaders = {
   "Access-Control-Allow-Headers": "Content-Type, User-Agent, X-Requested-With, Accept, Range",
   "Access-Control-Max-Age": "86400"
 };
+const socialPreviewCrawlerPattern = /twitterbot|facebookexternalhit|linkedinbot|slackbot|discordbot/i;
 
 export function middleware(request: NextRequest) {
   if (publicPreviewPaths.has(request.nextUrl.pathname)) {
@@ -15,6 +16,21 @@ export function middleware(request: NextRequest) {
         status: 204,
         headers: publicPreviewHeaders
       });
+    }
+
+    if (
+      request.nextUrl.pathname === "/" &&
+      ["GET", "HEAD"].includes(request.method) &&
+      socialPreviewCrawlerPattern.test(request.headers.get("user-agent") ?? "")
+    ) {
+      const shareUrl = request.nextUrl.clone();
+      shareUrl.pathname = "/share";
+      const response = NextResponse.rewrite(shareUrl);
+      for (const [key, value] of Object.entries(publicPreviewHeaders)) {
+        response.headers.set(key, value);
+      }
+      response.headers.set("X-ContextKit-Preview-Rewrite", "/share");
+      return response;
     }
 
     const response = NextResponse.next();
