@@ -7,6 +7,12 @@ const publicPreviewHeaders = {
   "Access-Control-Allow-Headers": "Content-Type, User-Agent, X-Requested-With, Accept, Range",
   "Access-Control-Max-Age": "86400"
 };
+const noStorePreviewHeaders = {
+  ...publicPreviewHeaders,
+  "Cache-Control": "no-store, no-cache, max-age=0, must-revalidate",
+  Pragma: "no-cache",
+  Expires: "0"
+};
 const socialPreviewCrawlerPattern = /twitterbot|facebookexternalhit|linkedinbot|slackbot|discordbot/i;
 
 export function middleware(request: NextRequest) {
@@ -26,7 +32,7 @@ export function middleware(request: NextRequest) {
       const shareUrl = request.nextUrl.clone();
       shareUrl.pathname = "/share";
       const response = NextResponse.rewrite(shareUrl);
-      for (const [key, value] of Object.entries(publicPreviewHeaders)) {
+      for (const [key, value] of Object.entries(noStorePreviewHeaders)) {
         response.headers.set(key, value);
       }
       response.headers.set("X-ContextKit-Preview-Rewrite", "/share");
