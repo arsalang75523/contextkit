@@ -30,14 +30,14 @@ export const metadata: Metadata = {
     description: site.description,
     url: site.url,
     siteName: site.name,
-    images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: "ContextKit API platform" }],
+    images: [{ url: "/og-card-v2.png", width: 1200, height: 630, alt: "ContextKit API platform" }],
     type: "website"
   },
   twitter: {
     card: "summary_large_image",
     title: `${site.name} | ${site.tagline}`,
     description: site.description,
-    images: ["/twitter-image"]
+    images: ["/twitter-card-v2.png"]
   },
   verification: {
     google: "3AQtlnuucvn6SHCRA6eJkv40xZtJARUNlgF2LZyglko"
