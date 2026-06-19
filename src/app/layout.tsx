@@ -31,10 +31,10 @@ export const metadata: Metadata = {
     siteName: site.name,
     images: [
       {
-        url: `${site.url}/social-card-v5.jpg`,
-        secureUrl: `${site.url}/social-card-v5.jpg`,
-        width: 1200,
-        height: 600,
+        url: `${site.url}/social-card-v6.jpg`,
+        secureUrl: `${site.url}/social-card-v6.jpg`,
+        width: 2400,
+        height: 1200,
         alt: "ContextKit memory layer for AI agents",
         type: "image/jpeg"
       }
@@ -47,12 +47,12 @@ export const metadata: Metadata = {
     creator: "@contextkitpro",
     title: `${site.name} | ${site.tagline}`,
     description: site.description,
-    images: [{ url: `${site.url}/social-card-v5.jpg`, alt: "ContextKit memory layer for AI agents" }]
+    images: [{ url: `${site.url}/social-card-v6.jpg`, alt: "ContextKit memory layer for AI agents" }]
   },
   other: {
-    "twitter:image:src": `${site.url}/social-card-v5.jpg`,
-    "twitter:image:width": "1200",
-    "twitter:image:height": "600",
+    "twitter:image:src": `${site.url}/social-card-v6.jpg`,
+    "twitter:image:width": "2400",
+    "twitter:image:height": "1200",
     "twitter:image:type": "image/jpeg"
   },
   verification: {
