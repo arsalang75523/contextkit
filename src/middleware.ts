@@ -15,6 +15,15 @@ const noStorePreviewHeaders = {
 };
 const socialPreviewCrawlerPattern = /twitterbot|facebookexternalhit|linkedinbot|slackbot|discordbot/i;
 
+function isProgrammaticPreviewRequest(request: NextRequest) {
+  const accept = request.headers.get("accept")?.trim();
+  const fetchDestination = request.headers.get("sec-fetch-dest");
+
+  // Server-side card validators commonly use the Fetch default Accept header.
+  // Browsers send an HTML Accept value plus Sec-Fetch-Dest: document instead.
+  return accept === "*/*" && !fetchDestination;
+}
+
 export function middleware(request: NextRequest) {
   if (publicPreviewPaths.has(request.nextUrl.pathname)) {
     if (request.method === "OPTIONS") {
@@ -27,7 +36,7 @@ export function middleware(request: NextRequest) {
     if (
       request.nextUrl.pathname === "/" &&
       ["GET", "HEAD"].includes(request.method) &&
-      socialPreviewCrawlerPattern.test(request.headers.get("user-agent") ?? "")
+      (socialPreviewCrawlerPattern.test(request.headers.get("user-agent") ?? "") || isProgrammaticPreviewRequest(request))
     ) {
       const shareUrl = request.nextUrl.clone();
       shareUrl.pathname = "/share-card";
