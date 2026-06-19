@@ -5,7 +5,7 @@ import "./globals.css";
 import { site } from "@/lib/site";
 
 // Keep a new, stable cache key for social crawlers when the card artwork changes.
-const socialImageUrl = `${site.url}/social-card-v6.jpg?card=twitter-root-v7`;
+const socialImageUrl = `${site.url}/social-card-v6.jpg?card=twitter-root-v8`;
 
 export const metadata: Metadata = {
   metadataBase: new URL(site.url),

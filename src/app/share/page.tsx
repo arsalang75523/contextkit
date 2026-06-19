@@ -3,7 +3,7 @@ import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/button";
 import { site } from "@/lib/site";
 
-const socialImageUrl = `${site.url}/social-card-v6.jpg?card=twitter-root-v7`;
+const socialImageUrl = `${site.url}/social-card-v6.jpg?card=twitter-root-v8`;
 
 export const metadata: Metadata = {
   title: `${site.name} | ${site.tagline}`,

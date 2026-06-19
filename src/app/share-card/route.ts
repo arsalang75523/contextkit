@@ -2,7 +2,7 @@ const siteUrl = "https://contextkit.pro";
 const title = "ContextKit | Context Infrastructure for AI Agents.";
 const description =
   "Reduce token costs, compress conversations, and enable seamless agent handoffs using x402-powered APIs for Bankr and autonomous AI agents.";
-const imageUrl = `${siteUrl}/social-card-v6.jpg?card=twitter-root-v7`;
+const imageUrl = `${siteUrl}/social-card-v6.jpg?card=twitter-root-v8`;
 
 const headers = {
   "Content-Type": "text/html; charset=utf-8",
@@ -12,7 +12,7 @@ const headers = {
   "Access-Control-Allow-Origin": "*"
 };
 
-function cardHtml() {
+function cardHtml(cardUrl: string) {
   return `<!doctype html>
 <html lang="en">
   <head>
@@ -20,10 +20,9 @@ function cardHtml() {
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>${title}</title>
     <meta name="description" content="${description}">
-    <link rel="canonical" href="${siteUrl}/">
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="ContextKit">
-    <meta property="og:url" content="${siteUrl}/">
+    <meta property="og:url" content="${cardUrl}">
     <meta property="og:title" content="${title}">
     <meta property="og:description" content="${description}">
     <meta property="og:image" content="${imageUrl}">
@@ -45,8 +44,13 @@ function cardHtml() {
 </html>`;
 }
 
-export function GET() {
-  return new Response(cardHtml(), { headers });
+function previewUrl(request: Request) {
+  const query = new URL(request.url).search;
+  return `${siteUrl}/${query}`;
+}
+
+export function GET(request: Request) {
+  return new Response(cardHtml(previewUrl(request)), { headers });
 }
 
 export function HEAD() {
