@@ -40,6 +40,7 @@ export default function robots(): MetadataRoute.Robots {
           "/playground",
           "/pricing",
           "/x402",
+          "/social-card-v5.jpg",
           "/social-card-v4.jpg",
           "/social-card-v4.png",
           "/openapi.json",

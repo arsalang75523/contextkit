@@ -1,0 +1,51 @@
+<svg width="1200" height="600" viewBox="0 0 1200 600" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1200" y2="600" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#07110D"/>
+      <stop offset="0.55" stop-color="#0B1612"/>
+      <stop offset="1" stop-color="#101917"/>
+    </linearGradient>
+    <radialGradient id="glowA" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(150 115) rotate(30) scale(300 210)">
+      <stop stop-color="#73F3C3" stop-opacity="0.34"/>
+      <stop offset="1" stop-color="#73F3C3" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glowB" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(1015 120) rotate(180) scale(240 190)">
+      <stop stop-color="#67D8FF" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#67D8FF" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="1200" height="600" fill="#07110D"/>
+  <rect width="1200" height="600" fill="url(#bg)"/>
+  <rect width="1200" height="600" fill="url(#glowA)"/>
+  <rect width="1200" height="600" fill="url(#glowB)"/>
+
+  <rect x="70" y="58" width="1060" height="484" rx="28" fill="#0A120F" stroke="#29453D" stroke-width="2"/>
+
+  <circle cx="132" cy="122" r="10" fill="#73F3C3"/>
+  <text x="158" y="132" fill="#73F3C3" font-family="Arial, Helvetica, sans-serif" font-size="30" font-weight="700">ContextKit</text>
+
+  <text x="116" y="238" fill="#F3FFF9" font-family="Arial, Helvetica, sans-serif" font-size="72" font-weight="700">Memory Layer</text>
+  <text x="116" y="318" fill="#F3FFF9" font-family="Arial, Helvetica, sans-serif" font-size="72" font-weight="700">for AI Agents</text>
+
+  <text x="116" y="392" fill="#C7D5D0" font-family="Arial, Helvetica, sans-serif" font-size="32">
+    <tspan x="116" dy="0">x402-paid context compression, handoffs, profile memory,</tspan>
+    <tspan x="116" dy="42">API credits, and TypeScript SDK for autonomous workflows.</tspan>
+  </text>
+
+  <g font-family="Arial, Helvetica, sans-serif" font-size="24" fill="#DBEFE8">
+    <rect x="116" y="474" width="150" height="46" rx="23" fill="#151F1C" stroke="#33403B"/>
+    <text x="150" y="504">summarize</text>
+
+    <rect x="286" y="474" width="142" height="46" rx="23" fill="#151F1C" stroke="#33403B"/>
+    <text x="321" y="504">compress</text>
+
+    <rect x="448" y="474" width="128" height="46" rx="23" fill="#151F1C" stroke="#33403B"/>
+    <text x="481" y="504">handoff</text>
+
+    <rect x="596" y="474" width="116" height="46" rx="23" fill="#151F1C" stroke="#33403B"/>
+    <text x="629" y="504">profile</text>
+  </g>
+
+  <text x="940" y="505" fill="#97AAA3" font-family="Arial, Helvetica, sans-serif" font-size="24">contextkit.pro</text>
+</svg>
