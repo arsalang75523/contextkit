@@ -40,7 +40,11 @@ export function middleware(request: NextRequest) {
     }
 
     const response = NextResponse.next();
-    for (const [key, value] of Object.entries(publicPreviewHeaders)) {
+    const responseHeaders =
+      request.nextUrl.pathname === "/" && ["GET", "HEAD"].includes(request.method)
+        ? noStorePreviewHeaders
+        : publicPreviewHeaders;
+    for (const [key, value] of Object.entries(responseHeaders)) {
       response.headers.set(key, value);
     }
     return response;
