@@ -28,8 +28,8 @@ function cardHtml(cardUrl: string) {
     <meta property="og:image" content="${imageUrl}">
     <meta property="og:image:secure_url" content="${imageUrl}">
     <meta property="og:image:type" content="image/jpeg">
-    <meta property="og:image:width" content="2400">
-    <meta property="og:image:height" content="1200">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
     <meta property="og:image:alt" content="ContextKit memory layer for AI agents">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:site" content="@contextkitpro">
@@ -39,6 +39,8 @@ function cardHtml(cardUrl: string) {
     <meta name="twitter:image" content="${imageUrl}">
     <meta name="twitter:image:src" content="${imageUrl}">
     <meta name="twitter:image:alt" content="ContextKit memory layer for AI agents">
+    <meta name="twitter:image:width" content="1200">
+    <meta name="twitter:image:height" content="630">
   </head>
   <body>ContextKit</body>
 </html>`;

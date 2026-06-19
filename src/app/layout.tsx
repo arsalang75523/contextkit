@@ -36,8 +36,8 @@ export const metadata: Metadata = {
       {
         url: socialImageUrl,
         secureUrl: socialImageUrl,
-        width: 2400,
-        height: 1200,
+        width: 1200,
+        height: 630,
         alt: "ContextKit memory layer for AI agents",
         type: "image/jpeg"
       }
@@ -54,8 +54,8 @@ export const metadata: Metadata = {
   },
   other: {
     "twitter:image:src": socialImageUrl,
-    "twitter:image:width": "2400",
-    "twitter:image:height": "1200",
+    "twitter:image:width": "1200",
+    "twitter:image:height": "630",
     "twitter:image:type": "image/jpeg"
   },
   verification: {
