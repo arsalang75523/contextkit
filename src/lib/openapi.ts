@@ -80,7 +80,7 @@ const summarizeResponse = z.union([
     risks: z.array(z.string()).optional(),
     metrics: z.object({
       inputTokens: z.number(),
-      compactTokens: z.number(),
+      outputTokens: z.number(),
       stateTokens: z.number(),
       totalOutputTokens: z.number(),
       reductionPercent: z.number(),

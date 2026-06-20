@@ -43,7 +43,7 @@ type SummarizeState = {
 
 type FullSummarizeMetrics = {
   inputTokens: number;
-  compactTokens: number;
+  outputTokens: number;
   stateTokens: number;
   totalOutputTokens: number;
   reductionPercent: number;

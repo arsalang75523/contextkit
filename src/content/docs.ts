@@ -15,7 +15,7 @@ export const endpoints = [
         blockers: ["Limited depot charging capacity", "Weekend driver coverage unresolved"],
         next: ["Finalize charger schedule", "Confirm weekend coverage", "Negotiate airport windows"]
       },
-      metrics: { inputTokens: 190, compactTokens: 31, stateTokens: 45, totalOutputTokens: 76, reductionPercent: 60, latencyMs: 4200 }
+      metrics: { inputTokens: 190, outputTokens: 31, stateTokens: 45, totalOutputTokens: 76, reductionPercent: 60, latencyMs: 4200 }
     }
   },
   {
