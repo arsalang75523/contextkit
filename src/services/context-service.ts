@@ -36,8 +36,9 @@ export class ContextService {
     const openQuestions = arrayOfStrings(output.openQuestions);
     const risks = arrayOfStrings(output.risks);
     const compactFacts = groundedCompactFacts(stateValue, actionItems);
+    const resolvedGoal = completeGoalText(stateValue.goal);
     const extendedFacts = [
-      stateValue.goal ? `Goal: ${compactFactText(stateValue.goal, 18)}` : "",
+      resolvedGoal ? `Goal: ${compactFactText(resolvedGoal, 18)}` : "",
       ...compactFacts,
       ...openQuestions.map((item) => `Open: ${item}`),
       ...risks.map((item) => `Risk: ${item}`)
@@ -365,7 +366,7 @@ function durableGoalFromMessages(messages: ConversationRequest["messages"]) {
     .sort((a, b) => durableGoalScore(b) - durableGoalScore(a))[0] ?? "";
 }
 
-function explicitGoalFromMessages(messages: ConversationRequest["messages"]) {
+export function explicitGoalFromMessages(messages: ConversationRequest["messages"]) {
   const goalPattern = /\b(?:the\s+)?(?:goal|objective|aim|purpose)\s*(?:is|:|=)\s*(.+?)(?=[.!?](?:\s|$)|$)/i;
 
   for (const message of messages) {
