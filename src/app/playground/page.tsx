@@ -98,7 +98,18 @@ curl -X POST "https://contextkit.pro/api/context/upload-text?${params.toString()
                 : undefined
           })
         });
-        const result = (await response.json()) as Record<string, unknown>;
+        const result = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+        if (!response.ok) {
+          const error = result.error && typeof result.error === "object" ? result.error as Record<string, unknown> : {};
+          setRunResult({
+            error: String(error.message ?? "ContextKit could not complete this playground request."),
+            code: String(error.code ?? "playground_request_failed"),
+            status: response.status,
+            requestId: error.requestId ?? null,
+            quota: result.quota ?? null
+          });
+          return;
+        }
         setRunResult(result);
       } catch (err) {
         setRunResult({ error: err instanceof Error ? err.message : "Request failed." });

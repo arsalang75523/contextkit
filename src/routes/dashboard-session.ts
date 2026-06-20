@@ -173,7 +173,13 @@ dashboardSessionRoutes.post("/playground/run", zValidator("json", playgroundRunS
   const request: ConversationRequest = { messages: sanitizeMessages(body.messages), mode: body.endpoint === "summarize" ? body.mode : undefined };
   const startedAt = Date.now();
   const service = new ContextService({ env: c.env ?? {}, requestId: c.get("requestId") });
-  const result = await runPlaygroundEndpoint(service, body.endpoint, request);
+  let result;
+  try {
+    result = await runPlaygroundEndpoint(service, body.endpoint, request);
+  } catch (error) {
+    await releaseDailyQuota(c, "playground-quota", ownerId);
+    throw error;
+  }
   const output = JSON.stringify(result);
   const inputTokens = estimateTokens(request.messages as ConversationMessage[]);
   const outputTokens = estimateTokens(output);
@@ -403,6 +409,14 @@ async function consumeDailyQuota(c: Context<AppBindings>, namespace: string, own
   const next = used + 1;
   await kv.set(key, next, 36 * 60 * 60);
   return { allowed: true, used: next, remaining: Math.max(0, limit - next), limit, resetAt: nextUtcDayIso() };
+}
+
+async function releaseDailyQuota(c: Context<AppBindings>, namespace: string, ownerId: string) {
+  const day = new Date().toISOString().slice(0, 10);
+  const key = `${namespace}:${ownerId}:${day}`;
+  const kv = new AppKV((c.env ?? {}).CONTEXTKIT_KV);
+  const used = (await kv.get<number>(key)) ?? 0;
+  if (used > 0) await kv.set(key, used - 1, 36 * 60 * 60);
 }
 
 async function runPlaygroundEndpoint(service: ContextService, endpoint: string, request: ConversationRequest) {

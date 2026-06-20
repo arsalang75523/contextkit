@@ -27,15 +27,14 @@ export class ContextService {
     const mode = summarizeMode(request.mode);
     const output = await new BankrLlmClient({ env: this.serviceContext.env ?? {} }).generateJson("summarize", request.messages, mode);
     const inputTokens = estimateTokens(request.messages);
-    const stateValue = promoteExplicitContinuityBlockers(
-      dedupeSummaryState(withLlmGoalFallback(summarizeState(output.state), output))
-    );
+    const stateValue = promoteExplicitContinuityBlockers(normalizeSummaryState(
+      dedupeSummaryState(withLlmGoalFallback(summarizeState(output.state), output, request.messages))
+    ));
     const responseState = extractedContinuityState(stateValue);
     const keyDecisions = arrayOfStrings(output.keyDecisions);
     const actionItems = arrayOfStrings(output.actionItems);
     const openQuestions = arrayOfStrings(output.openQuestions);
     const risks = arrayOfStrings(output.risks);
-    const microFacts = strategicMicroFacts(stateValue, output);
     const compactFacts = groundedCompactFacts(stateValue, actionItems);
     const extendedFacts = [
       stateValue.goal ? `Goal: ${compactFactText(stateValue.goal, 18)}` : "",
@@ -43,7 +42,11 @@ export class ContextService {
       ...openQuestions.map((item) => `Open: ${item}`),
       ...risks.map((item) => `Risk: ${item}`)
     ].filter(Boolean);
-    let micro = microCapsule(enforceBudget(usefulMicroCandidate(String(output.micro ?? ""), stateValue), microFacts, inputTokens, 0.16, 42));
+    const needsMicro = mode === "micro" || mode === "debug";
+    const microFacts = needsMicro ? strategicMicroFacts(stateValue, output) : [];
+    let micro = needsMicro
+      ? microCapsule(enforceBudget(usefulMicroCandidate(String(output.micro ?? ""), stateValue), microFacts, inputTokens, 0.16, 42))
+      : "";
     const compact = compactSummaryParagraph(enforceBudget("", compactFacts, inputTokens, 0.4, 50));
     const extendedCandidate = extendWithMissingOperationalFacts(
       String(output.extended ?? output.summary ?? compact),
@@ -331,12 +334,44 @@ function summarizeState(value: unknown) {
   };
 }
 
-function withLlmGoalFallback(stateValue: ReturnType<typeof summarizeState>, output: Record<string, unknown>) {
-  if (completeGoalText(stateValue.goal)) return stateValue;
+function withLlmGoalFallback(
+  stateValue: ReturnType<typeof summarizeState>,
+  output: Record<string, unknown>,
+  messages: ConversationRequest["messages"]
+) {
+  if (completeGoalText(stateValue.goal) && !isTransientGoal(stateValue.goal)) return stateValue;
+  const outputGoal = llmGeneratedGoal(output);
+  const messageGoal = durableGoalFromMessages(messages);
   return {
     ...stateValue,
-    goal: llmGeneratedGoal(output) || stateValue.goal
+    goal: !isTransientGoal(outputGoal)
+      ? outputGoal || messageGoal || stateValue.goal
+      : messageGoal || outputGoal || stateValue.goal
   };
+}
+
+function isTransientGoal(value: string) {
+  return /^(test|verify|validate|configure|implement|fix|resolve|update|debug)\b/i.test(normalizeSummary(value));
+}
+
+function durableGoalFromMessages(messages: ConversationRequest["messages"]) {
+  const candidates = messages
+    .flatMap((message) => normalizeSummary(message.content).split(/(?<=[.!?])\s+|\n+/))
+    .map((candidate) => completeGoalText(candidate))
+    .filter((candidate) => candidate && !isTransientGoal(candidate));
+
+  return candidates
+    .sort((a, b) => durableGoalScore(b) - durableGoalScore(a))[0] ?? "";
+}
+
+function durableGoalScore(value: string) {
+  const text = normalizeSummary(value);
+  let score = 0;
+  if (/\b(goal|objective|aim|purpose|outcome)\b/i.test(text)) score += 6;
+  if (/\b(launch|build|create|ship|deliver)\b/i.test(text)) score += 4;
+  if (/\b(product|platform|app|service|saas|mvp)\b/i.test(text)) score += 3;
+  if (wordCount(text) < 4 || wordCount(text) > 32) score -= 3;
+  return score;
 }
 
 function llmGeneratedGoal(output: Record<string, unknown>) {
@@ -373,6 +408,41 @@ function dedupeSummaryState(stateValue: ReturnType<typeof summarizeState>) {
     priorities,
     nextSteps
   };
+}
+
+function normalizeSummaryState(stateValue: ReturnType<typeof summarizeState>) {
+  const actionLikeBlockers = stateValue.blockers.filter(isActionLikeStateItem);
+  const blockers = stateValue.blockers.filter((item) => !isActionLikeStateItem(item));
+
+  return {
+    ...stateValue,
+    status: canonicalStatusText(stateValue.status),
+    blockers: uniqueStrings([...blockers, ...actionLikeBlockers.map(actionBlockerText).filter(Boolean)]),
+    nextSteps: uniqueStrings([...stateValue.nextSteps, ...actionLikeBlockers])
+  };
+}
+
+function canonicalStatusText(value: string) {
+  return normalizeSummary(value)
+    .replace(/\bbuilds passing\b/gi, "Build passes")
+    .replace(/\bproduction build passing\b/gi, "Production build passes")
+    .trim();
+}
+
+function isActionLikeStateItem(value: string) {
+  return /^(test|verify|validate|implement|configure|resolve|fix|update|add|remove|create|build|launch|deploy|set up|set)$/i.test(normalizeSummary(value).split(/\s+/).slice(0, 2).join(" "))
+    || /^(test|verify|validate|implement|configure|resolve|fix|update|add|remove|create|build|launch|deploy)\b/i.test(normalizeSummary(value));
+}
+
+function actionBlockerText(value: string) {
+  const text = normalizeSummary(value).replace(/[.!?]$/, "");
+  const match = text.match(/^(test|verify|validate|implement|configure|resolve|fix|update|add|remove|create|build|launch|deploy)\s+(.+)$/i);
+  if (!match) return "";
+  const action = match[1].toLowerCase();
+  const subject = match[2];
+  if (action === "test" || action === "verify" || action === "validate") return `Unverified: ${subject}`;
+  if (action === "implement" || action === "add" || action === "create" || action === "build") return `Incomplete: ${subject}`;
+  return `Pending: ${subject}`;
 }
 
 function promoteExplicitContinuityBlockers(stateValue: ReturnType<typeof summarizeState>) {
@@ -627,6 +697,7 @@ function completeStateText(value: string) {
 
 function completeGoalText(value: string) {
   const cleaned = normalizeSummary(value)
+    .replace(/^(?:goal|objective|aim|purpose):\s*/i, "")
     .replace(/\b(because|since|therefore|so that|in order to)\b.*?(?=\.|;|$)/gi, "")
     .replace(/\s*[,;:([–-]\s*$/g, "")
     .replace(/\s+/g, " ")
@@ -747,8 +818,7 @@ function strategicMicroFacts(stateValue: ReturnType<typeof summarizeState>, outp
   const blockers = selectOperationalFragments(stateValue.blockers, 2, 5, goalLike);
   const dependencies = selectOperationalFragments([
     ...stateValue.priorities,
-    ...stateValue.decisions,
-    ...stateValue.nextSteps
+    ...stateValue.decisions
   ], 2, 5, [...goalLike, ...blockers]);
   const worldview = selectWorldviewFragments([
     stateValue.status,
@@ -813,6 +883,8 @@ function microAnchorFragment(value: string, kind: "dep" | "next") {
   if (!fragment) return "";
   if (kind === "dep") {
     return fragment
+      .replace(/^unverified:\s*(.+)$/i, "$1 unverified")
+      .replace(/^incomplete:\s*(.+)$/i, "$1 incomplete")
       .replace(/^unverified:\s*(?:verify\s+)?S(\d+\/\d+) frames$/i, "S$1 unverified")
       .replace(/^S(\d+\/\d+) frames unverified$/i, "S$1 unverified")
       .replace(/^undecided:\s*(?:whether\s+)?glass buttons.*$/i, "buttons undecided");
@@ -926,6 +998,7 @@ function microFragmentPreservingNumbers(value: string, maxWords: number) {
 function microGoalFragment(value: string) {
   const compacted = compactMicroLanguage(value)
     .replace(/\b(premium|dark-tech|experience|implementation|interaction)\b/gi, "")
+    .replace(/\bwith passwordless auth\b.*$/i, "")
     .replace(/\s+/g, " ")
     .trim();
   return microFragmentPreservingNumbers(compacted, 8);
@@ -934,6 +1007,7 @@ function microGoalFragment(value: string) {
 function compactMicroLanguage(value: string) {
   return normalizeSummary(value)
     .replace(/\bproduction build passing\b/gi, "build passes")
+    .replace(/\bbuilds passing\b/gi, "build passes")
     .replace(/\bscenario\s+(\d+)\s+(?:and|&)\s+(\d+)\b/gi, "S$1/$2")
     .replace(/\bscenario\s+(\d+)\/(\d+)\b/gi, "S$1/$2")
     .replace(/\bframe-by-frame animation quality unconfirmed\b/gi, "frames unverified")
