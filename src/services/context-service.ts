@@ -928,14 +928,13 @@ function compactSummaryParagraph(value: string) {
 }
 
 function groundedCompactFacts(stateValue: ReturnType<typeof summarizeState>, actionItems: string[]) {
-  const goal = compactFactText(stateValue.goal, 12);
   const status = compactStatusText(stateValue.status);
   const blockers = selectGroundedCompactItems(stateValue.blockers, 2, 9);
   const decisions = selectGroundedCompactItems(stateValue.decisions, 1, 9, blockers);
   const next = selectGroundedCompactItems([...stateValue.nextSteps, ...actionItems], 2, 7, [...blockers, ...decisions]);
 
   return uniqueStrings([
-    goal ? `Goal: ${goal}` : "",
+    // state.goal is the canonical goal field; compact must not spend tokens repeating it.
     status ? `Status: ${status}` : "",
     blockers.length ? `Open: ${blockers.join(", ")}` : "",
     decisions.length ? `Decisions: ${decisions.join(", ")}` : "",
