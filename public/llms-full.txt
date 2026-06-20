@@ -38,6 +38,7 @@ It does not optimize for generic prose summaries. It optimizes for machine-usabl
 - Pricing: https://contextkit.pro/pricing
 - x402: https://contextkit.pro/x402
 - Contact dev: https://contextkit.pro/contact-dev
+- MCP endpoint: https://contextkit.pro/mcp
 
 ## Plain Text And Machine-Readable Docs
 
@@ -69,6 +70,25 @@ Best for developers building ContextKit into TypeScript apps.
 ```bash
 npm install @basedchef/contextkit
 ```
+
+### Hosted MCP
+
+Best for remote MCP-compatible agent hosts.
+
+Endpoint: https://contextkit.pro/mcp
+
+Authentication: `Authorization: Bearer <CONTEXTKIT_API_KEY>`
+
+The key must have `context:write`. Paid MCP generation tools spend the same account credits as direct API calls. MCP is stateless, rate-limited, and exposes only execution and read utilities:
+
+- `contextkit_summarize`
+- `contextkit_compress_context`
+- `contextkit_handoff`
+- `contextkit_extract_profile`
+- `contextkit_estimate_tokens`
+- `contextkit_get_credits`
+
+MCP intentionally excludes API-key management, webhook writes, admin actions, credit grants, internal service access, Bankr credentials, and payment-wallet controls. Never put an admin token, internal token, Bankr credential, wallet secret, or dashboard password in an MCP configuration.
 
 ## Paid Endpoints
 

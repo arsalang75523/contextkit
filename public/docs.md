@@ -31,6 +31,33 @@ Install:
 npm install @basedchef/contextkit
 ```
 
+### Hosted MCP
+
+For remote MCP-compatible agent hosts, connect to:
+
+```txt
+https://contextkit.pro/mcp
+```
+
+Use a dedicated dashboard-created API key with `context:write` and account credits. A compatible client configuration looks like:
+
+```json
+{
+  "mcpServers": {
+    "contextkit": {
+      "url": "https://contextkit.pro/mcp",
+      "headers": {
+        "Authorization": "Bearer <CONTEXTKIT_API_KEY>"
+      }
+    }
+  }
+}
+```
+
+MCP tools: `contextkit_summarize`, `contextkit_compress_context`, `contextkit_handoff`, `contextkit_extract_profile`, `contextkit_estimate_tokens`, and `contextkit_get_credits`.
+
+MCP has no admin, key-management, internal-token, Bankr-wallet, or webhook-write tool. Never provide any admin or Bankr secret to an MCP client.
+
 ## Core Endpoints
 
 - POST /api/summarize: summarize long conversations into micro, compact, extended, or debug continuation state.

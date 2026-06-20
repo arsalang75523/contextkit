@@ -14,6 +14,29 @@ Authorization: Bearer <CONTEXTKIT_API_KEY>
 
 Bankr-hosted x402 routes do not require a ContextKit API key.
 
+## MCP Server
+
+Remote MCP endpoint: `https://contextkit.pro/mcp`
+
+ContextKit MCP uses Streamable HTTP and the same bearer API key authentication as direct API calls. Use a dedicated key with `context:write` and account credits for paid tools.
+
+```json
+{
+  "mcpServers": {
+    "contextkit": {
+      "url": "https://contextkit.pro/mcp",
+      "headers": {
+        "Authorization": "Bearer <CONTEXTKIT_API_KEY>"
+      }
+    }
+  }
+}
+```
+
+Tools: `contextkit_summarize`, `contextkit_compress_context`, `contextkit_handoff`, `contextkit_extract_profile`, `contextkit_estimate_tokens`, `contextkit_get_credits`.
+
+The MCP server intentionally has no tool for admin actions, credits grants, API-key creation or revocation, webhook writes, or internal service access.
+
 ## POST /api/summarize
 
 Price: $0.05

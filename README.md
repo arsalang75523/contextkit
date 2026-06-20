@@ -37,6 +37,10 @@ Dashboard users can create API keys and buy account credits. Direct `/api/*` rou
 
 Advanced developers can install `@basedchef/contextkit` for typed API calls, credit checks, webhook verification, and optional x402 fallback handling.
 
+### 4. Hosted MCP
+
+Agent hosts can connect to the stateless Streamable HTTP MCP endpoint at `https://contextkit.pro/mcp`. MCP uses a normal dashboard-created API key with `context:write` and spends the same account credits as direct API calls.
+
 ## Paid Endpoints
 
 | Endpoint | Bankr service | Purpose | Price |
@@ -179,6 +183,40 @@ Dashboard paths:
 ```
 
 Create API keys from `/dashboard/keys`. New keys are shown once. Store them safely.
+
+## MCP Server
+
+ContextKit includes a secure remote MCP server for autonomous agent hosts:
+
+```txt
+https://contextkit.pro/mcp
+```
+
+Create a dedicated live API key in `/dashboard/keys` with `context:write`, top up credits in `/dashboard/credits`, then add the endpoint to a compatible Streamable HTTP MCP client:
+
+```json
+{
+  "mcpServers": {
+    "contextkit": {
+      "url": "https://contextkit.pro/mcp",
+      "headers": {
+        "Authorization": "Bearer <CONTEXTKIT_API_KEY>"
+      }
+    }
+  }
+}
+```
+
+Available MCP tools:
+
+- `contextkit_summarize`
+- `contextkit_compress_context`
+- `contextkit_handoff`
+- `contextkit_extract_profile` with `extract-profile` or `memory-enrichment` mode
+- `contextkit_estimate_tokens`
+- `contextkit_get_credits`
+
+MCP is stateless and rate-limited. It does not expose API-key management, webhook writes, admin actions, payment-wallet controls, internal forwarding, or any server secret. Never place `CONTEXTKIT_ADMIN_TOKEN`, `CONTEXTKIT_INTERNAL_TOKEN`, Bankr credentials, or a dashboard password in an MCP configuration.
 
 ## API Key Credits
 

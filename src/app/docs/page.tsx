@@ -21,6 +21,17 @@ const directApiExample = directApiCurl("/api/summarize", summarizePayload);
 
 const sdkInstall = `npm install @basedchef/contextkit`;
 
+const mcpConfig = `{
+  "mcpServers": {
+    "contextkit": {
+      "url": "https://contextkit.pro/mcp",
+      "headers": {
+        "Authorization": "Bearer <CONTEXTKIT_API_KEY>"
+      }
+    }
+  }
+}`;
+
 const sdkClient = `import { ContextKit } from "@basedchef/contextkit";
 
 const client = new ContextKit({
@@ -151,6 +162,7 @@ const navItems = [
   "Access Paths",
   "Bankr Hosted x402",
   "Dashboard And Keys",
+  "MCP",
   "Long Context",
   "API Credits",
   "Direct API",
@@ -190,6 +202,7 @@ export default function DocsPage() {
                 <InfoCard title="Bankr-hosted x402" body="Best for users and autonomous agents. Run a Bankr x402 command, approve payment, and receive JSON. No ContextKit API key or SDK required." />
                 <InfoCard title="API key + credits" body="Best for server integrations. Use dashboard-created API keys and account credits to call direct /api routes without Bankr on every request." />
                 <InfoCard title="TypeScript SDK" body="Best for app developers. The SDK wraps direct API routes, attaches API keys, returns typed JSON, verifies webhooks, and can optionally handle x402 fallback." />
+                <InfoCard title="Hosted MCP" body="Best for agent hosts. Connect one Streamable HTTP MCP server with a scoped API key; tools use the same account credits and API policy as direct calls." />
               </div>
             </DocSection>
 
@@ -233,6 +246,37 @@ export default function DocsPage() {
               </div>
               <div className="mt-4 rounded-md border border-aqua/20 bg-aqua/10 p-4 text-sm leading-6 text-white/65">
                 Create and revoke API keys in <code>/dashboard/keys</code>. Use API keys with <code>Authorization: Bearer &lt;CONTEXTKIT_API_KEY&gt;</code>.
+              </div>
+            </DocSection>
+
+            <DocSection id="mcp" title="MCP">
+              <p>
+                ContextKit exposes a secure, stateless Streamable HTTP MCP server at <code>https://contextkit.pro/mcp</code>. It is built for agent hosts that support remote MCP servers and uses a normal ContextKit API key.
+              </p>
+              <div className="mt-4 grid gap-3 md:grid-cols-3">
+                <InfoCard title="1. Create a dedicated key" body="Create a separate live API key in Dashboard with context:write. Do not reuse an admin, internal, Bankr, or personal secret." />
+                <InfoCard title="2. Add credits" body="Paid MCP tools spend the same account credits as direct API and SDK requests. Top up from Dashboard before long-running agent use." />
+                <InfoCard title="3. Connect your host" body="Add the endpoint and Authorization header to a compatible remote MCP client. The exact config file name can differ by client." />
+              </div>
+              <div className="mt-4 grid gap-4 lg:grid-cols-2">
+                <div>
+                  <h3 className="mb-2 font-semibold text-white">Connection configuration</h3>
+                  <CodeBlock code={mcpConfig} />
+                </div>
+                <div className="rounded-md border border-line bg-white/[0.035] p-5 text-sm leading-6 text-white/65">
+                  <h3 className="font-semibold text-white">Available tools</h3>
+                  <ul className="mt-3 space-y-2 font-mono text-xs text-white/65">
+                    <li>contextkit_summarize</li>
+                    <li>contextkit_compress_context</li>
+                    <li>contextkit_handoff</li>
+                    <li>contextkit_extract_profile</li>
+                    <li>contextkit_estimate_tokens</li>
+                    <li>contextkit_get_credits</li>
+                  </ul>
+                </div>
+              </div>
+              <div className="mt-4 rounded-md border border-mint/20 bg-mint/10 p-4 text-sm leading-6 text-white/65">
+                MCP accepts only scoped API keys and exposes no admin, internal-forwarder, payment-wallet, key-management, or webhook-write operation. Requests are stateless, rate limited, non-cacheable, and use ContextKit&apos;s existing API-key, credit, analytics, and 402 safeguards.
               </div>
             </DocSection>
 
@@ -407,6 +451,7 @@ curl https://contextkit.pro/api/public/metrics`} />
                 {[
                   "Use Bankr-hosted x402 for the simplest public paid calls.",
                   "Use dashboard-created API keys for server integrations.",
+                  "Use a dedicated context:write API key for MCP; never put admin, internal, or Bankr secrets in an MCP client.",
                   "Top up API credits before SDK paid endpoint calls.",
                   "Use <CONTEXTKIT_API_KEY> placeholders in public docs and repos.",
                   "Use /dashboard/keys for key creation and revocation.",

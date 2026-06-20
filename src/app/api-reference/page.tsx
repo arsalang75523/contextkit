@@ -8,7 +8,7 @@ export default function ApiReferencePage() {
   return (
     <main>
       <Section eyebrow="Get Started" title="Choose the right ContextKit access path.">
-        <div className="mb-6 grid gap-4 md:grid-cols-2">
+        <div className="mb-6 grid gap-4 md:grid-cols-3">
           <div className="rounded-md border border-mint/25 bg-mint/10 p-5">
             <h2 className="font-semibold text-white">Main path: Bankr-hosted x402</h2>
             <p className="mt-2 text-sm leading-6 text-white/62">Best for new users, operators, and autonomous agents. Run a Bankr x402 command, approve USDC payment in Bankr, and receive JSON. No ContextKit API key, npm install, or SDK required.</p>
@@ -16,6 +16,10 @@ export default function ApiReferencePage() {
           <a href="/dashboard/login" className="rounded-md border border-aqua/25 bg-aqua/10 p-5 transition hover:border-aqua/60">
             <h2 className="font-semibold text-white">Developer path: SDK + API key</h2>
             <p className="mt-2 text-sm leading-6 text-white/62">Use the TypeScript SDK or direct curl with a dashboard API key. API keys connect accounts to credits, analytics, webhooks, token estimates, memory enrichment, and key management. If credits exist, paid endpoints run without Bankr; otherwise direct routes return an x402 payment challenge.</p>
+          </a>
+          <a href="/docs#mcp" className="rounded-md border border-white/15 bg-white/[0.035] p-5 transition hover:border-mint/40">
+            <h2 className="font-semibold text-white">Agent host path: MCP</h2>
+            <p className="mt-2 text-sm leading-6 text-white/62">Connect a scoped API key to ContextKit&apos;s stateless Streamable HTTP MCP endpoint. Tools use the same credits, limits, and API safeguards as direct calls.</p>
           </a>
         </div>
         <GetStartedCard />

@@ -18,6 +18,7 @@ Full LLM Index: https://contextkit.pro/llms-full.txt
 Markdown Docs: https://contextkit.pro/docs.md
 Markdown API Reference: https://contextkit.pro/api-reference.md
 Markdown x402 Guide: https://contextkit.pro/x402.md
+MCP Endpoint: https://contextkit.pro/mcp
 
 ## Primary Use Cases
 
@@ -28,6 +29,17 @@ Markdown x402 Guide: https://contextkit.pro/x402.md
 - Enrich long-term memory with stable preferences and evolving facts.
 - Let autonomous agents pay per request through Bankr-hosted x402 endpoints.
 - Let apps use direct API-key credits without per-request Bankr approval.
+- Let remote MCP-compatible agent hosts use ContextKit through a scoped API key.
+
+## MCP
+
+ContextKit provides a stateless Streamable HTTP MCP server at https://contextkit.pro/mcp.
+
+- Authentication: `Authorization: Bearer <CONTEXTKIT_API_KEY>`.
+- Required scope: `context:write`.
+- Billing: paid generation tools spend normal account credits; insufficient credits return a safe payment error.
+- Tools: `contextkit_summarize`, `contextkit_compress_context`, `contextkit_handoff`, `contextkit_extract_profile`, `contextkit_estimate_tokens`, `contextkit_get_credits`.
+- Never configure admin tokens, internal tokens, Bankr credentials, wallet secrets, or dashboard passwords in an MCP client.
 
 ## Paid Bankr x402 Endpoints
 
