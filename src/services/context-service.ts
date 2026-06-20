@@ -340,13 +340,14 @@ function withLlmGoalFallback(
   messages: ConversationRequest["messages"]
 ) {
   if (completeGoalText(stateValue.goal) && !isTransientGoal(stateValue.goal)) return stateValue;
-  const outputGoal = llmGeneratedGoal(output);
+  // A source sentence such as "The goal is ..." is more trustworthy than a
+  // partially filled LLM state or a compact status line.
+  const explicitGoal = explicitGoalFromMessages(messages);
   const messageGoal = durableGoalFromMessages(messages);
+  const outputGoal = llmGeneratedGoal(output);
   return {
     ...stateValue,
-    goal: !isTransientGoal(outputGoal)
-      ? outputGoal || messageGoal || stateValue.goal
-      : messageGoal || outputGoal || stateValue.goal
+    goal: explicitGoal || messageGoal || outputGoal || stateValue.goal
   };
 }
 
@@ -364,6 +365,18 @@ function durableGoalFromMessages(messages: ConversationRequest["messages"]) {
     .sort((a, b) => durableGoalScore(b) - durableGoalScore(a))[0] ?? "";
 }
 
+function explicitGoalFromMessages(messages: ConversationRequest["messages"]) {
+  const goalPattern = /\b(?:the\s+)?(?:goal|objective|aim|purpose)\s*(?:is|:|=)\s*(.+?)(?=[.!?](?:\s|$)|$)/i;
+
+  for (const message of messages) {
+    const match = message.content.match(goalPattern);
+    const goal = completeGoalText(match?.[1] ?? "").replace(/^to\s+/i, "");
+    if (goal && !isTransientGoal(goal)) return goal;
+  }
+
+  return "";
+}
+
 function durableGoalScore(value: string) {
   const text = normalizeSummary(value);
   let score = 0;
@@ -377,8 +390,11 @@ function durableGoalScore(value: string) {
 function llmGeneratedGoal(output: Record<string, unknown>) {
   const candidates = [output.micro, output.compact, output.extended, output.summary];
   for (const candidate of candidates) {
-    const goal = completeGoalText(String(candidate ?? ""));
-    if (goal) return goal;
+    const raw = normalizeSummary(String(candidate ?? ""));
+    // A status-only compact sentence is not an acceptable goal fallback.
+    if (!/^(?:goal|objective|aim|purpose):|\b(?:launch|build|create|ship|deliver|reduce|increase|stabilize|enable)\b/i.test(raw)) continue;
+    const goal = completeGoalText(raw);
+    if (goal && !isTransientGoal(goal)) return goal;
   }
   return "";
 }
@@ -702,7 +718,7 @@ function completeGoalText(value: string) {
     .replace(/\s*[,;:([–-]\s*$/g, "")
     .replace(/\s+/g, " ")
     .trim();
-  if (!cleaned || /^unknown$/i.test(cleaned) || hasInvalidStateEnding(cleaned)) return "";
+  if (!cleaned || /^(?:goal\s+)?(?:unknown|not stated|not specified|not provided|n\/a)$/i.test(cleaned) || hasInvalidStateEnding(cleaned)) return "";
   if (wordCount(cleaned) <= 36) return cleaned.replace(/[.!?]$/, "");
 
   const completeParts = splitCompleteThoughts(cleaned);
@@ -815,7 +831,7 @@ function strategicMicroFacts(stateValue: ReturnType<typeof summarizeState>, outp
   const goal = microGoalFragment(stateValue.goal);
   const goalLike = [goal, stateValue.goal].filter(Boolean);
   const status = selectMicroStatusFragments([stateValue.status], 1, 5);
-  const blockers = selectOperationalFragments(stateValue.blockers, 2, 5, goalLike);
+  const blockers = selectOperationalFragments(stateValue.blockers, 2, 8, goalLike);
   const dependencies = selectOperationalFragments([
     ...stateValue.priorities,
     ...stateValue.decisions
@@ -827,7 +843,7 @@ function strategicMicroFacts(stateValue: ReturnType<typeof summarizeState>, outp
     ...stateValue.priorities,
     ...stateValue.nextSteps
   ].filter((item) => !containsEquivalent([...goalLike, ...blockers, ...dependencies], item)), 1, 5);
-  const nextActions = selectActionFragments(stateValue.nextSteps, 2, 5, goalLike);
+  const nextActions = selectActionFragments(stateValue.nextSteps, 2, 8, goalLike);
   const llmMicro = usefulMicroCandidate(String(output.micro ?? ""), stateValue);
   return canonicalMicroFacts({
     state: status[0] ?? worldview[0] ?? blockers[0] ?? "",
@@ -839,14 +855,13 @@ function strategicMicroFacts(stateValue: ReturnType<typeof summarizeState>, outp
 }
 
 function canonicalMicroFacts(parts: { state: string; blockers: string[]; next: string[]; goal: string; llmMicro: string }) {
-  if (!parts.goal || parts.blockers.length < 2 || parts.next.length < 2) {
-    throw new Error("micro_semantic_anchor_missing");
-  }
+  const blockers = requiredMicroPair(parts.blockers, "dep");
+  const next = requiredMicroPair(parts.next, "next");
   const values = [
-    ["state", parts.state],
-    ["dep", joinMicroPair(parts.blockers, "dep")],
-    ["next", joinMicroPair(parts.next, "next")],
-    ["goal", parts.goal]
+    ["state", parts.state || "status not stated"],
+    ["dep", joinMicroPair(blockers, "dep")],
+    ["next", joinMicroPair(next, "next")],
+    ["goal", parts.goal || "goal not stated"]
   ] as const;
   const facts = values
     .map(([label, value]) => {
@@ -865,6 +880,13 @@ function canonicalMicroFacts(parts: { state: string; blockers: string[]; next: s
   ]).filter((item) => item && item !== "unknown").slice(0, 4);
 }
 
+function requiredMicroPair(values: string[], kind: "dep" | "next") {
+  const unavailable = kind === "dep"
+    ? ["blocker not stated", "second blocker not stated"]
+    : ["next action not stated", "second next action not stated"];
+  return uniqueStrings([...values, ...unavailable]).slice(0, 2);
+}
+
 function fillMicroPair(primary: string[], fallback: string[]) {
   const values = uniqueStrings([...primary, ...fallback]).filter(Boolean).slice(0, 2);
   return values;
@@ -879,7 +901,7 @@ function joinMicroPair(values: string[], kind: "dep" | "next") {
 }
 
 function microAnchorFragment(value: string, kind: "dep" | "next") {
-  const fragment = microFragmentPreservingNumbers(value, 6);
+  const fragment = microFragmentPreservingNumbers(value, 8);
   if (!fragment) return "";
   if (kind === "dep") {
     return fragment
@@ -898,7 +920,8 @@ function microAnchorFragment(value: string, kind: "dep" | "next") {
 
 function hasRequiredMicroAnchors(value: string) {
   const text = normalizeSummary(value);
-  return /\bgoal:[^;]+/i.test(text)
+  return /\bstate:[^;]+/i.test(text)
+    && /\bgoal:[^;]+/i.test(text)
     && /\bdep:[^;]+\/[^;]+/i.test(text)
     && /\bnext:[^;]+\/[^;]+/i.test(text);
 }
@@ -1001,7 +1024,9 @@ function microGoalFragment(value: string) {
     .replace(/\bwith passwordless auth\b.*$/i, "")
     .replace(/\s+/g, " ")
     .trim();
-  return microFragmentPreservingNumbers(compacted, 8);
+  // Goals often carry the only numeric or budget constraint. Give that anchor
+  // enough room to remain complete instead of dropping it and failing micro.
+  return microFragmentPreservingNumbers(compacted, 14);
 }
 
 function compactMicroLanguage(value: string) {
