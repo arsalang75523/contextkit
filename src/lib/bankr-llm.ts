@@ -12,6 +12,19 @@ export class BankrLlmClient {
     return this.generateJsonFromPrompt(endpoint, buildContextPrompt(endpoint, messages, mode));
   }
 
+  async generateSummaryGoal(messages: ConversationMessage[]): Promise<JsonObject> {
+    return this.generateJsonFromPrompt("summarize", [
+      {
+        role: "system",
+        content: "Extract the single durable goal from this conversation for an autonomous-agent continuation state. Return only valid JSON: {\"goal\":\"string\"}. The goal must be grounded in the conversation and preserve concrete targets, limits, and scope. Do not return unknown, a status, a blocker, or a next action. If no sentence explicitly says goal/objective/aim/target, infer only the directly requested outcome from the source."
+      },
+      {
+        role: "user",
+        content: JSON.stringify({ conversation: messages })
+      }
+    ]);
+  }
+
   async generateJsonFromPrompt(endpoint: ContextEndpoint, promptMessages: readonly { role: string; content: string }[]): Promise<JsonObject> {
     const env = readEnv(this.context);
     if (!env.bankrLlmKey) {

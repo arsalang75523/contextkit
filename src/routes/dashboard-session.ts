@@ -4,7 +4,7 @@ import { zValidator } from "@hono/zod-validator";
 import { ApiKeyService } from "@/services/api-key-service";
 import { AccountService } from "@/services/account-service";
 import { AnalyticsService } from "@/services/analytics-service";
-import { ContextService, explicitGoalFromMessages } from "@/services/context-service";
+import { ContextService } from "@/services/context-service";
 import { CryptoTopUpService } from "@/services/crypto-topup-service";
 import { AppKV } from "@/storage/app-kv";
 import { createId } from "@/utils/id";
@@ -173,12 +173,9 @@ dashboardSessionRoutes.post("/playground/run", zValidator("json", playgroundRunS
   const request: ConversationRequest = { messages: sanitizeMessages(body.messages), mode: body.endpoint === "summarize" ? body.mode : undefined };
   const startedAt = Date.now();
   const service = new ContextService({ env: c.env ?? {}, requestId: c.get("requestId") });
-  let result: unknown;
+  let result;
   try {
     result = await runPlaygroundEndpoint(service, body.endpoint, request);
-    if (body.endpoint === "summarize") {
-      result = repairPlaygroundSummaryGoal(result, request.messages);
-    }
   } catch (error) {
     await releaseDailyQuota(c, "playground-quota", ownerId);
     throw error;
@@ -430,34 +427,6 @@ async function runPlaygroundEndpoint(service: ContextService, endpoint: string, 
   }
   if (endpoint === "memory-enrichment") return service.memoryEnrichment(request);
   return service.summarize(request);
-}
-
-function repairPlaygroundSummaryGoal(result: unknown, messages: ConversationMessage[]) {
-  if (!result || typeof result !== "object") return result;
-  const summary = result as Record<string, unknown>;
-  if (summary.mode === "micro" || !summary.state || typeof summary.state !== "object") return result;
-
-  const state = summary.state as Record<string, unknown>;
-  if (String(state.goal ?? "").trim().toLowerCase() !== "unknown") return result;
-
-  const goal = explicitGoalFromMessages(messages);
-  if (!goal) return result;
-
-  const repaired = {
-    ...summary,
-    state: { ...state, goal }
-  };
-
-  if (summary.mode !== "extended") return repaired;
-
-  const extended = String(summary.extended ?? "").trim();
-  const repairedExtended = /\bGoal:\s*(?=\.|;|$)/i.test(extended)
-    ? extended.replace(/\bGoal:\s*(?=\.|;|$)/i, `Goal: ${goal}`)
-    : /\bGoal:/i.test(extended)
-      ? extended
-      : `Goal: ${goal}. ${extended}`.trim();
-
-  return { ...repaired, extended: repairedExtended };
 }
 
 function nextUtcDayIso() {

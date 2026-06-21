@@ -25,10 +25,12 @@ export class ContextService {
   async summarize(request: ConversationRequest): Promise<SummarizeResponse> {
     const startedAt = Date.now();
     const mode = summarizeMode(request.mode);
-    const output = await new BankrLlmClient({ env: this.serviceContext.env ?? {} }).generateJson("summarize", request.messages, mode);
+    const llm = new BankrLlmClient({ env: this.serviceContext.env ?? {} });
+    let output = await llm.generateJson("summarize", request.messages, mode);
+    output = await repairMissingSummaryGoal(llm, output, request.messages);
     const inputTokens = estimateTokens(request.messages);
     const stateValue = promoteExplicitContinuityBlockers(normalizeSummaryState(
-      dedupeSummaryState(withLlmGoalFallback(summarizeState(output.state), output, request.messages))
+      dedupeSummaryState(withLlmGoalFallback(summarizeState(output.state), output))
     ));
     const responseState = extractedContinuityState(stateValue);
     const keyDecisions = arrayOfStrings(output.keyDecisions);
@@ -337,67 +339,40 @@ function summarizeState(value: unknown) {
 
 function withLlmGoalFallback(
   stateValue: ReturnType<typeof summarizeState>,
-  output: Record<string, unknown>,
-  messages: ConversationRequest["messages"]
+  output: Record<string, unknown>
 ) {
-  if (completeGoalText(stateValue.goal) && !isTransientGoal(stateValue.goal)) return stateValue;
-  // A source sentence such as "The goal is ..." is more trustworthy than a
-  // partially filled LLM state or a compact status line.
-  const explicitGoal = explicitGoalFromMessages(messages);
-  const messageGoal = durableGoalFromMessages(messages);
-  const outputGoal = llmGeneratedGoal(output);
-  return {
-    ...stateValue,
-    goal: explicitGoal || messageGoal || outputGoal || stateValue.goal
-  };
+  const goal = llmGeneratedGoal(output);
+  if (!goal) throw new Error("summary_goal_missing");
+  return { ...stateValue, goal };
 }
 
 function isTransientGoal(value: string) {
   return /^(test|verify|validate|configure|implement|fix|resolve|update|debug)\b/i.test(normalizeSummary(value));
 }
 
-function durableGoalFromMessages(messages: ConversationRequest["messages"]) {
-  const candidates = messages
-    .flatMap((message) => normalizeSummary(message.content).split(/(?<=[.!?])\s+|\n+/))
-    .map((candidate) => completeGoalText(candidate))
-    .filter((candidate) => candidate && !isTransientGoal(candidate));
-
-  return candidates
-    .sort((a, b) => durableGoalScore(b) - durableGoalScore(a))[0] ?? "";
-}
-
-export function explicitGoalFromMessages(messages: ConversationRequest["messages"]) {
-  const goalPattern = /\b(?:the\s+)?(?:goal|objective|aim|purpose)\s*(?:is|:|=)\s*(.+?)(?=[.!?](?:\s|$)|$)/i;
-
-  for (const message of messages) {
-    const match = message.content.match(goalPattern);
-    const goal = completeGoalText(match?.[1] ?? "").replace(/^to\s+/i, "");
-    if (goal && !isTransientGoal(goal)) return goal;
-  }
-
-  return "";
-}
-
-function durableGoalScore(value: string) {
-  const text = normalizeSummary(value);
-  let score = 0;
-  if (/\b(goal|objective|aim|purpose|outcome)\b/i.test(text)) score += 6;
-  if (/\b(launch|build|create|ship|deliver)\b/i.test(text)) score += 4;
-  if (/\b(product|platform|app|service|saas|mvp)\b/i.test(text)) score += 3;
-  if (wordCount(text) < 4 || wordCount(text) > 32) score -= 3;
-  return score;
-}
-
 function llmGeneratedGoal(output: Record<string, unknown>) {
-  const candidates = [output.micro, output.compact, output.extended, output.summary];
+  const state = output.state && typeof output.state === "object" ? output.state as Record<string, unknown> : {};
+  const candidates = [state.goal, output.goal];
   for (const candidate of candidates) {
-    const raw = normalizeSummary(String(candidate ?? ""));
-    // A status-only compact sentence is not an acceptable goal fallback.
-    if (!/^(?:goal|objective|aim|purpose):|\b(?:launch|build|create|ship|deliver|reduce|increase|stabilize|enable)\b/i.test(raw)) continue;
-    const goal = completeGoalText(raw);
+    const goal = completeGoalText(String(candidate ?? ""));
     if (goal && !isTransientGoal(goal)) return goal;
   }
   return "";
+}
+
+async function repairMissingSummaryGoal(
+  llm: BankrLlmClient,
+  output: Record<string, unknown>,
+  messages: ConversationRequest["messages"]
+) {
+  if (llmGeneratedGoal(output)) return output;
+
+  const repair = await llm.generateSummaryGoal(messages);
+  const goal = llmGeneratedGoal(repair);
+  if (!goal) throw new Error("summary_goal_missing");
+
+  const state = output.state && typeof output.state === "object" ? output.state as Record<string, unknown> : {};
+  return { ...output, state: { ...state, goal } };
 }
 
 function extractedContinuityState(stateValue: ReturnType<typeof summarizeState>) {
