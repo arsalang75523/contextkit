@@ -30,7 +30,8 @@ export class ContextService {
     let output = await llm.generateJson("summarize", request.messages, mode);
     output = await repairMissingSummaryGoal(llm, output, request.messages);
     const inputTokens = estimateTokens(request.messages);
-    const wordLimits = summarizeWordLimits(request.messages);
+    const wordLimits = summarizeWordLimits(request.messages, mode);
+    const tokenBudgets = summarizeTokenBudgets(inputTokens);
     const stateValue = promoteExplicitContinuityBlockers(normalizeSummaryState(
       dedupeSummaryState(withLlmGoalFallback(summarizeState(output.state), output))
     ), wordLimits.stateItem);
@@ -48,16 +49,16 @@ export class ContextService {
       ...risks.map((item) => `Risk: ${item}`)
     ].filter(Boolean);
     const needsMicro = mode === "micro" || mode === "debug";
-    const microFacts = needsMicro ? strategicMicroFacts(stateValue, output) : [];
+    const microFacts = needsMicro ? strategicMicroFacts(stateValue, output, wordLimits, tokenBudgets.micro) : [];
     let micro = needsMicro
-      ? microCapsule(enforceBudget(usefulMicroCandidate(String(output.micro ?? ""), stateValue), microFacts, inputTokens, 0.16, 42))
+      ? microCapsule(enforceBudget(usefulMicroCandidate(String(output.micro ?? ""), stateValue, tokenBudgets.micro), microFacts, inputTokens, 0.16), tokenBudgets.micro)
       : "";
-    const compact = compactSummaryParagraph(enforceBudget("", compactFacts, inputTokens, 0.4, 50));
-    const extendedCandidate = extendWithMissingOperationalFacts(
-      String(output.extended ?? output.summary ?? compact),
-      extendedFacts
-    );
-    const extended = extendedParagraph(enforceBudget(extendedCandidate, extendedFacts, inputTokens, 0.6, 180));
+    const compact = compactSummaryParagraph(enforceBudget("", compactFacts, inputTokens, 0.4), tokenBudgets.compact);
+    const llmExtended = String(output.extended ?? output.summary ?? compact);
+    const extendedCandidate = hasBrokenExtendedText(llmExtended)
+      ? extendedFacts.join("; ")
+      : extendWithMissingOperationalFacts(llmExtended, extendedFacts, tokenBudgets.extended);
+    const extended = extendedParagraph(enforceBudget(extendedCandidate, extendedFacts, inputTokens, 0.6), tokenBudgets.extended);
     const summary = compact || micro || extended;
     let microTokens = estimateTokens(micro);
     const compactTokens = estimateTokens(compact);
@@ -390,20 +391,38 @@ type SummarizeWordLimits = {
   compactAction: number;
 };
 
-function summarizeWordLimits(messages: ConversationRequest["messages"]): SummarizeWordLimits {
+function summarizeWordLimits(messages: ConversationRequest["messages"], mode: ReturnType<typeof summarizeMode>): SummarizeWordLimits {
   const inputWords = Math.max(1, messages.reduce((total, message) => total + wordCount(message.content), 0));
+  const percentages = mode === "micro"
+    ? { goal: 0.05, state: 0.04, item: 0.03 }
+    : mode === "compact"
+      ? { goal: 0.10, state: 0.08, item: 0.06 }
+      : { goal: 0.15, state: 0.12, item: 0.09 };
+
   return {
-    goal: proportionalWordLimit(inputWords, 0.05, 8, 36),
-    status: proportionalWordLimit(inputWords, 0.04, 6, 28),
-    stateItem: proportionalWordLimit(inputWords, 0.04, 6, 28),
-    nextItem: proportionalWordLimit(inputWords, 0.04, 6, 28),
-    compactItem: proportionalWordLimit(inputWords, 0.03, 5, 20),
-    compactAction: proportionalWordLimit(inputWords, 0.03, 5, 20)
+    goal: proportionalWordLimit(inputWords, percentages.goal),
+    status: proportionalWordLimit(inputWords, percentages.state),
+    stateItem: proportionalWordLimit(inputWords, percentages.state),
+    nextItem: proportionalWordLimit(inputWords, percentages.state),
+    compactItem: proportionalWordLimit(inputWords, percentages.item),
+    compactAction: proportionalWordLimit(inputWords, percentages.item)
   };
 }
 
-function proportionalWordLimit(inputWords: number, percentage: number, minimum: number, safetyMaximum: number) {
-  return Math.min(safetyMaximum, Math.max(minimum, Math.ceil(inputWords * percentage)));
+function proportionalWordLimit(inputWords: number, percentage: number) {
+  return Math.max(1, Math.ceil(inputWords * percentage));
+}
+
+function summarizeTokenBudgets(inputTokens: number) {
+  return {
+    micro: proportionalTokenBudget(inputTokens, 0.16),
+    compact: proportionalTokenBudget(inputTokens, 0.4),
+    extended: proportionalTokenBudget(inputTokens, 0.6)
+  };
+}
+
+function proportionalTokenBudget(inputTokens: number, percentage: number) {
+  return Math.max(8, Math.floor(inputTokens * percentage));
 }
 
 function extractedContinuityState(
@@ -704,24 +723,21 @@ function conciseSingleStateText(value: string, maxWords: number) {
   const cleaned = completeStateText(value, maxWords);
   if (!cleaned) return "";
   if (wordCount(cleaned) <= maxWords) return cleaned.replace(/[.!?]$/, "");
-  return microFragment(cleaned, maxWords)
-    || completeTextWithinBudget(cleaned, maxWords).replace(/[.!?]$/, "")
-    || truncateWords(cleaned, maxWords);
+  return completeTextWithinBudget(cleaned, maxWords).replace(/[.!?]$/, "") || cleaned;
 }
 
 function conciseGoalText(value: string, maxWords: number) {
   const cleaned = completeGoalText(value);
   if (!cleaned) return "";
   if (wordCount(cleaned) <= maxWords) return cleaned;
-  return microFragment(cleaned, maxWords)
-    || completeTextWithinBudget(cleaned, maxWords).replace(/[.!?]$/, "")
-    || truncateWords(cleaned, maxWords);
+  return completeTextWithinBudget(cleaned, maxWords).replace(/[.!?]$/, "") || cleaned;
 }
 
 function truncateWords(value: string, maxWords: number) {
   const words = normalizeSummary(value).split(/\s+/).filter(Boolean);
   if (words.length <= maxWords) return words.join(" ");
-  return `${words.slice(0, maxWords).join(" ")}...`;
+  // Semantic integrity wins when no complete phrase fits the relative budget.
+  return normalizeSummary(value);
 }
 
 function statePriorityScore(value: string) {
@@ -772,10 +788,7 @@ function conciseStateText(value: string, maxWords: number) {
   const compact = completeParts.find((part) => wordCount(part) >= 3 && wordCount(part) <= maxWords);
   if (compact) return compact;
 
-  const clause = cleaned.split(/\s*[,;]\s*/).find((part) => wordCount(part) >= 3 && wordCount(part) <= maxWords);
-  return clause
-    ? clause.replace(/\s*[,;:([–-]\s*$/g, "").trim()
-    : truncateWords(cleaned, maxWords);
+  return truncateWords(cleaned, maxWords);
 }
 
 function wordCount(value: string) {
@@ -783,10 +796,17 @@ function wordCount(value: string) {
 }
 
 function hasInvalidStateEnding(value: string) {
-  return /(?:,|:|\(|\band\b|\bor\b|\bwith\b|\bincluding\b|\bsuch as\b)$/i.test(value.trim());
+  const text = normalizeSummary(value);
+  if (hasTruncatedText(text)) return true;
+  const ending = text.replace(/[.!?]+$/, "").trim();
+  return /(?:,|:|\(|\band\b|\bor\b|\bwith\b|\bunder\b|\bfor\b|\bfrom\b|\bto\b|\bof\b|\bin\b|\bon\b|\bat\b|\bby\b|\binto\b|\bthrough\b|\bwithin\b|\bwithout\b|\bincluding\b|\bsuch as\b|\bsatisfying\b|\bmeeting\b|\bensuring\b|\baddressing\b|\bsupporting\b|\bcovering\b)$/i.test(ending);
 }
 
-function microCapsule(value: string) {
+function hasTruncatedText(value: string) {
+  return /(?:\.{2,}|…)\s*$/u.test(normalizeSummary(value));
+}
+
+function microCapsule(value: string, maxTokens: number) {
   const cleaned = normalizeSummary(value)
     .replace(/\b(Blocker|Decision|Priority|Status):\s*/gi, "")
     .replace(/\b(because|since|therefore|so that|in order to)\b.*?(?=\.|;|$)/gi, "")
@@ -796,7 +816,7 @@ function microCapsule(value: string) {
     .replace(/(?:^|;\s*)\w+:\s*$/g, "")
     .trim();
   const sanitized = sanitizeMicroParts(cleaned);
-  const trimmed = hasRequiredMicroAnchors(sanitized) ? sanitized : completeTextWithinBudget(sanitized, 56);
+  const trimmed = completeTextWithinBudget(sanitized, maxTokens);
   if (!trimmed) return "";
   return /[.!?]$/.test(trimmed) ? trimmed : `${trimmed}.`;
 }
@@ -810,16 +830,17 @@ function sanitizeMicroParts(value: string) {
 }
 
 function optimizedMicroCheckpoint(candidate: string, facts: string[], inputTokens: number, compactOutputTokens: number) {
+  const maxTokens = proportionalTokenBudget(inputTokens, 0.16);
   const candidates = [
-    microCapsule(candidate),
-    microCapsule(facts.join("; "))
+    microCapsule(candidate, maxTokens),
+    microCapsule(facts.join("; "), maxTokens)
   ].filter(Boolean);
 
   for (const value of uniqueStrings(candidates)) {
     if (hasRequiredMicroAnchors(value) && microResponseTokens(value, inputTokens) < compactOutputTokens) return value;
   }
 
-  const structural = microCapsule(facts.join("; "));
+  const structural = microCapsule(facts.join("; "), maxTokens);
   if (hasRequiredMicroAnchors(structural)) return structural;
   return uniqueStrings(candidates).find(hasRequiredMicroAnchors) ?? structural;
 }
@@ -837,7 +858,7 @@ function microResponseTokens(micro: string, inputTokens: number) {
   }));
 }
 
-function usefulMicroCandidate(value: string, stateValue: ReturnType<typeof summarizeState>) {
+function usefulMicroCandidate(value: string, stateValue: ReturnType<typeof summarizeState>, maxTokens: number) {
   const cleaned = normalizeSummary(value);
   if (!cleaned || cleaned === "unknown" || semanticallyBrokenMicroFragment(cleaned)) return "";
   const stateSignals = [
@@ -852,55 +873,63 @@ function usefulMicroCandidate(value: string, stateValue: ReturnType<typeof summa
   const hasCapsuleSeparators = /[;:|]/.test(cleaned);
   const isGoalOnly = Boolean(goal) && (candidate === goal || goal.includes(candidate) || candidate.includes(goal)) && !hasOperationalSignal;
   const isTooGeneric = wordCount(cleaned) <= 5 || /^(generate|build|create|summarize|analyze|plan)\b.{0,40}$/i.test(cleaned);
-  const isTooLong = estimateTokens(cleaned) > 28 || wordCount(cleaned) > 32;
+  const isTooLong = estimateTokens(cleaned) > maxTokens;
   const hasFiller = /\b(initial instruction received|core capabilities are in place|awaiting execution|work is active|execution is moving through active refinement|progress depends on resolving active issues)\b/i.test(cleaned);
   if (isTooLong || hasFiller) return "";
   return hasOperationalSignal || hasCapsuleSeparators ? cleaned : isGoalOnly || isTooGeneric ? "" : cleaned;
 }
 
-function strategicMicroFacts(stateValue: ReturnType<typeof summarizeState>, output: Record<string, unknown>) {
-  const goal = microGoalFragment(stateValue.goal);
+function strategicMicroFacts(
+  stateValue: ReturnType<typeof summarizeState>,
+  output: Record<string, unknown>,
+  limits: SummarizeWordLimits,
+  maxTokens: number
+) {
+  const goal = microGoalFragment(stateValue.goal, limits.goal);
   const goalLike = [goal, stateValue.goal].filter(Boolean);
-  const status = selectMicroStatusFragments([stateValue.status], 1, 5);
-  const blockers = selectOperationalFragments(stateValue.blockers, 2, 8, goalLike);
+  const status = selectMicroStatusFragments([stateValue.status], 1, limits.status);
+  const blockers = selectOperationalFragments(stateValue.blockers, 2, limits.stateItem, goalLike);
   const dependencies = selectOperationalFragments([
     ...stateValue.priorities,
     ...stateValue.decisions
-  ], 2, 5, [...goalLike, ...blockers]);
+  ], 2, limits.compactItem, [...goalLike, ...blockers]);
   const worldview = selectWorldviewFragments([
     stateValue.status,
     ...stateValue.blockers,
     ...stateValue.decisions,
     ...stateValue.priorities,
     ...stateValue.nextSteps
-  ].filter((item) => !containsEquivalent([...goalLike, ...blockers, ...dependencies], item)), 1, 5);
-  const nextActions = selectActionFragments(stateValue.nextSteps, 2, 8, goalLike);
-  const llmMicro = usefulMicroCandidate(String(output.micro ?? ""), stateValue);
+  ].filter((item) => !containsEquivalent([...goalLike, ...blockers, ...dependencies], item)), 1, limits.compactItem);
+  const nextActions = selectActionFragments(stateValue.nextSteps, 2, limits.nextItem, goalLike);
+  const llmMicro = usefulMicroCandidate(String(output.micro ?? ""), stateValue, maxTokens);
   return canonicalMicroFacts({
     state: status[0] ?? worldview[0] ?? blockers[0] ?? "",
     blockers: fillMicroPair(blockers, dependencies),
     next: fillMicroPair(nextActions, dependencies),
     goal,
     llmMicro
-  });
+  }, limits);
 }
 
-function canonicalMicroFacts(parts: { state: string; blockers: string[]; next: string[]; goal: string; llmMicro: string }) {
+function canonicalMicroFacts(
+  parts: { state: string; blockers: string[]; next: string[]; goal: string; llmMicro: string },
+  limits: SummarizeWordLimits
+) {
   const blockers = requiredMicroPair(parts.blockers, "dep");
   const next = requiredMicroPair(parts.next, "next");
   const values = [
     ["state", parts.state || "status not stated"],
-    ["dep", joinMicroPair(blockers, "dep")],
-    ["next", joinMicroPair(next, "next")],
+    ["dep", joinMicroPair(blockers, "dep", limits.stateItem)],
+    ["next", joinMicroPair(next, "next", limits.nextItem)],
     ["goal", parts.goal || "goal not stated"]
   ] as const;
   const facts = values
     .map(([label, value]) => {
       const fragment = label === "goal"
-        ? microGoalFragment(value)
+        ? microGoalFragment(value, limits.goal)
         : label === "dep" || label === "next"
           ? value
-          : microFragmentPreservingNumbers(value, 5);
+          : microFragmentPreservingNumbers(value, limits.status);
       return fragment ? `${label}:${fragment}` : "";
     })
     .filter(Boolean);
@@ -923,16 +952,16 @@ function fillMicroPair(primary: string[], fallback: string[]) {
   return values;
 }
 
-function joinMicroPair(values: string[], kind: "dep" | "next") {
+function joinMicroPair(values: string[], kind: "dep" | "next", maxWords: number) {
   return values
-    .map((item) => microAnchorFragment(item, kind))
+    .map((item) => microAnchorFragment(item, kind, maxWords))
     .filter(Boolean)
     .slice(0, 2)
     .join("/");
 }
 
-function microAnchorFragment(value: string, kind: "dep" | "next") {
-  const fragment = microFragmentPreservingNumbers(value, 8);
+function microAnchorFragment(value: string, kind: "dep" | "next", maxWords: number) {
+  const fragment = microFragmentPreservingNumbers(value, maxWords);
   if (!fragment) return "";
   if (kind === "dep") {
     return fragment
@@ -1049,7 +1078,7 @@ function microFragmentPreservingNumbers(value: string, maxWords: number) {
   return numericClause && wordCount(numericClause) <= maxWords + 2 ? numericClause : fragment;
 }
 
-function microGoalFragment(value: string) {
+function microGoalFragment(value: string, maxWords: number) {
   const compacted = compactMicroLanguage(value)
     .replace(/\b(premium|dark-tech|experience|implementation|interaction)\b/gi, "")
     .replace(/\bwith passwordless auth\b.*$/i, "")
@@ -1057,7 +1086,7 @@ function microGoalFragment(value: string) {
     .trim();
   // Goals often carry the only numeric or budget constraint. Give that anchor
   // enough room to remain complete instead of dropping it and failing micro.
-  return microFragmentPreservingNumbers(compacted, 14);
+  return microFragmentPreservingNumbers(compacted, maxWords);
 }
 
 function compactMicroLanguage(value: string) {
@@ -1133,13 +1162,13 @@ function normalizeMicroFact(value: string) {
   return normalizeComparable(value.replace(/^(ctx|no|next):\s*/i, ""));
 }
 
-function compactSummaryParagraph(value: string) {
+function compactSummaryParagraph(value: string, maxTokens: number) {
   const withoutFiller = normalizeSummary(value)
     .replace(/\b(because|since|therefore|so that|in order to)\b.*?(?=\.|;|$)/gi, "")
     .replace(/\b(core capabilities are in place|the primary risk is|phase is complete|work is active|awaiting execution|execution is moving through active refinement|progress depends on resolving active issues)\b\.?/gi, "")
     .replace(/[|]+/g, "; ")
     .replace(/\s*;\s*/g, "; ");
-  const trimmed = completeTextWithinBudget(withoutFiller, 50);
+  const trimmed = completeTextWithinBudget(withoutFiller, maxTokens);
   if (!trimmed) return "";
   return /[.!?]$/.test(trimmed) ? trimmed : `${trimmed}.`;
 }
@@ -1178,7 +1207,10 @@ function compactFactText(value: string, maxWords: number) {
   if (words.length <= maxWords && isCompleteCompactFact(text)) return text.replace(/[.!?]$/, "");
   const completeClause = splitCompleteThoughts(text)
     .find((part) => wordCount(part) <= maxWords && isCompleteCompactFact(part));
-  return completeClause?.replace(/[.!?]$/, "") ?? truncateWords(text, maxWords);
+  if (completeClause) return completeClause.replace(/[.!?]$/, "");
+
+  const fallback = truncateWords(text, maxWords);
+  return isCompleteCompactFact(fallback) ? fallback.replace(/[.!?]$/, "") : "";
 }
 
 function compactKnownFact(value: string) {
@@ -1190,7 +1222,7 @@ function compactKnownFact(value: string) {
 
 function isCompleteCompactFact(value: string) {
   const text = normalizeSummary(value);
-  if (!text || endsWithDanglingWord(text) || /\b(is|are|was|were|be|been|being|each)$/i.test(text)) return false;
+  if (!text || hasInvalidStateEnding(text) || endsWithDanglingWord(text) || /\b(is|are|was|were|be|been|being|each)$/i.test(text)) return false;
   if (/\bwith\s+\d+\s+(?:frames?|items?|steps?|routes?)(?:\s+each)?$/i.test(text)) return false;
   return !/^(?:hero|component|implementation|work|project)(?:\s+(?:component|implementation|work))?$/i.test(text);
 }
@@ -1234,12 +1266,13 @@ function compactActionText(value: string, maxWords: number) {
     .replace(/[.!?]$/, "")
     .trim();
   if (!text) return "";
-  return wordCount(text) <= maxWords && isCompleteCompactFact(text)
-    ? text
-    : truncateWords(text, maxWords);
+  if (wordCount(text) <= maxWords && isCompleteCompactFact(text)) return text;
+
+  const fallback = truncateWords(text, maxWords);
+  return isCompleteCompactFact(fallback) ? fallback : "";
 }
 
-function extendedParagraph(value: string) {
+function extendedParagraph(value: string, maxTokens: number) {
   const withoutReplay = normalizeSummary(value)
     .replace(/\b(first|then|after that|previously|earlier|later|finally)\b[:,]?\s*/gi, "")
     .replace(/\b(because|since|therefore|so that|in order to)\b.*?(?=\.|;|$)/gi, "")
@@ -1249,13 +1282,18 @@ function extendedParagraph(value: string) {
     .filter((part) => !/^(?:hero|component|implementation|work|project)(?:\s+(?:component|implementation|work))?\.?$/i.test(part))
     .map((part) => part.replace(/[.!?]+$/, ""))
     .join(". ");
-  const trimmed = completeTextWithinBudget(withoutLowSignalFragments, 200);
+  const trimmed = completeTextWithinBudget(withoutLowSignalFragments, maxTokens);
   if (!trimmed) return "";
   return /[.!?]$/.test(trimmed) ? trimmed : `${trimmed}.`;
 }
 
-function extendWithMissingOperationalFacts(candidate: string, facts: string[]) {
-  const cleaned = extendedParagraph(candidate);
+function hasBrokenExtendedText(value: string) {
+  const sentences = normalizeSummary(value).split(/(?<=[.!?])\s+/).filter(Boolean);
+  return sentences.some((sentence) => hasInvalidStateEnding(sentence));
+}
+
+function extendWithMissingOperationalFacts(candidate: string, facts: string[], maxTokens: number) {
+  const cleaned = extendedParagraph(candidate, maxTokens);
   const operational = facts.filter((fact) => /^(Goal|Open|Next):/i.test(fact));
   const missing = operational.filter((fact) => {
     const keywords = normalizeComparable(fact)
@@ -1300,7 +1338,9 @@ function splitCompleteThoughts(value: string) {
 }
 
 function endsWithDanglingWord(value: string) {
-  return /\b(and|or|with|for|to|from|by|using|including|because|while|after|before|without|within|into|between|across|around|through|throughout|under|over|near|among|against|of|the|a|an|is|are|was|were|be|been|being|each)$/i.test(value);
+  const text = normalizeSummary(value);
+  if (hasTruncatedText(text)) return true;
+  return /\b(and|or|with|for|to|from|by|using|including|because|while|after|before|without|within|into|between|across|around|through|throughout|under|over|near|among|against|of|the|a|an|is|are|was|were|be|been|being|each)$/i.test(text.replace(/[.!?]+$/, "").trim());
 }
 
 function compressedState(value: unknown) {
