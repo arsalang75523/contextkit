@@ -69,6 +69,81 @@ body {
   animation: stream-cursor-blink 0.85s steps(2, start) infinite;
 }
 
+.agent-hero {
+  background:
+    radial-gradient(circle at 72% 42%, rgba(104, 216, 255, 0.08), transparent 22rem),
+    radial-gradient(circle at 8% 16%, rgba(115, 243, 195, 0.09), transparent 26rem);
+}
+
+.agent-grid {
+  background-image:
+    linear-gradient(rgba(219, 255, 239, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(219, 255, 239, 0.045) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(ellipse 82% 70% at 55% 40%, black 25%, transparent 86%);
+}
+
+.agent-orb {
+  filter: blur(44px);
+  opacity: 0.36;
+}
+
+.agent-orb-one {
+  background: radial-gradient(circle, rgba(115, 243, 195, 0.38), transparent 66%);
+  animation: agent-drift 13s ease-in-out infinite alternate;
+}
+
+.agent-orb-two {
+  background: radial-gradient(circle, rgba(104, 216, 255, 0.27), transparent 67%);
+  animation: agent-drift 16s ease-in-out infinite alternate-reverse;
+}
+
+.agent-console {
+  position: relative;
+}
+
+.agent-console::before {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  content: "";
+  background: linear-gradient(125deg, rgba(255, 255, 255, 0.055), transparent 26%, transparent 75%, rgba(115, 243, 195, 0.04));
+}
+
+.agent-radar {
+  background:
+    linear-gradient(90deg, transparent 49.5%, rgba(115, 243, 195, 0.12) 50%, transparent 50.5%),
+    linear-gradient(transparent 49.5%, rgba(115, 243, 195, 0.12) 50%, transparent 50.5%);
+}
+
+.agent-radar::after {
+  position: absolute;
+  inset: 0;
+  content: "";
+  background: conic-gradient(from 0deg, transparent 0 66%, rgba(115, 243, 195, 0.16) 72%, transparent 78%);
+  transform-origin: center;
+  animation: agent-scan 6s linear infinite;
+}
+
+.agent-cta {
+  position: relative;
+  background:
+    linear-gradient(105deg, rgba(115, 243, 195, 0.14), rgba(104, 216, 255, 0.075) 48%, rgba(255, 123, 107, 0.08)),
+    #0a0f0d;
+}
+
+.agent-cta::after {
+  position: absolute;
+  right: -6rem;
+  bottom: -9rem;
+  width: 24rem;
+  height: 24rem;
+  border: 1px solid rgba(115, 243, 195, 0.2);
+  border-radius: 9999px;
+  box-shadow: 0 0 0 3rem rgba(115, 243, 195, 0.035), 0 0 0 6rem rgba(115, 243, 195, 0.02);
+  content: "";
+}
+
 @keyframes stream-line-in {
   to {
     opacity: 1;
@@ -79,5 +154,22 @@ body {
 @keyframes stream-cursor-blink {
   50% {
     opacity: 0.18;
+  }
+}
+
+@keyframes agent-drift {
+  from { transform: translate3d(-1rem, -0.6rem, 0) scale(0.96); }
+  to { transform: translate3d(1.2rem, 1rem, 0) scale(1.05); }
+}
+
+@keyframes agent-scan {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .agent-orb-one,
+  .agent-orb-two,
+  .agent-radar::after {
+    animation: none;
   }
 }
