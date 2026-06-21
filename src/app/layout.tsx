@@ -78,27 +78,31 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <body>
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} />
         <div className="fixed inset-0 -z-10 grid-bg" />
-        <header className="sticky top-0 z-40 border-b border-line bg-ink/78 backdrop-blur-xl">
-          <nav className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4">
-            <Link href="/" className="flex items-center gap-3">
-              <span className="grid h-9 w-9 place-items-center rounded-md border border-mint/30 bg-mint/10 shadow-glow">
-                <Activity className="h-5 w-5 text-mint" />
+        <header className="sticky top-0 z-40 border-b border-line bg-ink/80 shadow-[0_12px_40px_rgba(0,0,0,0.18)] backdrop-blur-xl">
+          <nav className="mx-auto flex h-[62px] max-w-7xl items-center justify-between gap-4 px-5">
+            <Link href="/" className="group flex shrink-0 items-center gap-3">
+              <span className="relative grid h-9 w-9 place-items-center rounded-xl border border-mint/30 bg-mint/[0.09] transition group-hover:border-mint/65 group-hover:bg-mint/[0.14]">
+                <Activity className="h-[18px] w-[18px] text-mint" />
+                <span className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full border-2 border-ink bg-mint" />
               </span>
-              <span className="font-semibold tracking-wide">{site.name}</span>
+              <span>
+                <span className="block text-sm font-semibold tracking-[0.08em] text-white">{site.name}</span>
+                <span className="hidden font-mono text-[9px] uppercase tracking-[0.15em] text-white/38 sm:block">agent continuity layer</span>
+              </span>
             </Link>
-            <div className="hidden items-center gap-7 text-sm text-white/70 md:flex">
+            <div className="hidden items-center rounded-full border border-line bg-white/[0.025] px-1 py-1 text-sm text-white/68 lg:flex">
               {site.nav.map((item) => (
-                <Link key={item.href} href={item.href} className="transition hover:text-white">
+                <Link key={item.href} href={item.href} className="rounded-full px-3 py-1.5 transition hover:bg-white/[0.07] hover:text-white">
                   {item.label}
                 </Link>
               ))}
             </div>
             <Link
               href="https://github.com/arsalang75523/contextkit"
-              className="inline-flex h-10 items-center gap-2 rounded-md border border-line px-3 text-sm text-white/80 transition hover:border-mint/40 hover:text-white"
+              className="inline-flex h-9 shrink-0 items-center gap-2 rounded-lg border border-mint/25 bg-mint/[0.07] px-3 text-sm text-mint transition hover:border-mint/65 hover:bg-mint/15 hover:text-white"
             >
               <Github className="h-4 w-4" />
-              GitHub
+              <span className="hidden sm:inline">GitHub</span>
             </Link>
           </nav>
         </header>
