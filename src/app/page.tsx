@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { ArrowRight, Bot, BrainCircuit, Cable, CircleDollarSign, FileJson, Gauge, KeyRound, Webhook } from "lucide-react";
+import { ArrowRight, Bot, BrainCircuit, Cable, Check, CircleDollarSign, Copy, FileJson, Gauge, KeyRound, Webhook } from "lucide-react";
 import { Architecture } from "@/components/architecture";
 import { Button } from "@/components/button";
 import { GetStartedCard } from "@/components/get-started-card";
@@ -69,6 +69,7 @@ export default function HomePage() {
                 View GitHub
               </Button>
             </div>
+            <McpEndpointCard />
           </motion.div>
           <motion.div
             initial={{ opacity: 0, scale: 0.96 }}
@@ -135,6 +136,38 @@ export default function HomePage() {
         </div>
       </section>
     </main>
+  );
+}
+
+function McpEndpointCard() {
+  const [copied, setCopied] = useState(false);
+  const endpoint = "https://contextkit.pro/mcp";
+
+  async function copyEndpoint() {
+    await navigator.clipboard.writeText(endpoint);
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1400);
+  }
+
+  return (
+    <div className="mt-7 max-w-2xl rounded-md border border-aqua/25 bg-aqua/[0.07] p-4 shadow-glow">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-xs font-medium uppercase tracking-[0.18em] text-aqua">Remote MCP</p>
+          <code className="mt-2 block break-all font-mono text-sm text-white">{endpoint}</code>
+        </div>
+        <div className="flex shrink-0 gap-2">
+          <button type="button" onClick={copyEndpoint} className="inline-flex h-10 items-center gap-2 rounded-md border border-aqua/35 bg-ink/55 px-3 text-sm text-aqua transition hover:border-aqua hover:text-white">
+            {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+            {copied ? "Copied" : "Copy"}
+          </button>
+          <Link href="/mcp-guide" className="inline-flex h-10 items-center gap-2 rounded-md bg-aqua px-3 text-sm font-medium text-ink transition hover:bg-mint">
+            MCP Guide <ArrowRight className="h-4 w-4" />
+          </Link>
+        </div>
+      </div>
+      <p className="mt-3 text-sm text-white/60">Connect with OAuth in Streamable HTTP IDEs, or use the terminal with a scoped ContextKit API key.</p>
+    </div>
   );
 }
 

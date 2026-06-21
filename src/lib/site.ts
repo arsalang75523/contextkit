@@ -7,6 +7,7 @@ export const site = {
   nav: [
     { href: "/contact-dev", label: "Contact Dev" },
     { href: "/docs", label: "Docs" },
+    { href: "/mcp-guide", label: "MCP" },
     { href: "/api-reference", label: "API" },
     { href: "/demo", label: "Demo" },
     { href: "/playground", label: "Playground" },
