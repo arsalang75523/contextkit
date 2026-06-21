@@ -367,12 +367,16 @@ async function repairMissingSummaryGoal(
 ) {
   if (llmGeneratedGoal(output)) return output;
 
-  const repair = await llm.generateSummaryGoal(messages);
-  const goal = llmGeneratedGoal(repair);
-  if (!goal) throw new Error("summary_goal_missing");
+  for (let attempt = 1; attempt <= 2; attempt += 1) {
+    const repair = await llm.generateSummaryGoal(messages, attempt);
+    const goal = llmGeneratedGoal(repair);
+    if (!goal) continue;
 
-  const state = output.state && typeof output.state === "object" ? output.state as Record<string, unknown> : {};
-  return { ...output, state: { ...state, goal } };
+    const state = output.state && typeof output.state === "object" ? output.state as Record<string, unknown> : {};
+    return { ...output, state: { ...state, goal } };
+  }
+
+  throw new Error("summary_goal_missing");
 }
 
 function extractedContinuityState(stateValue: ReturnType<typeof summarizeState>) {
@@ -693,13 +697,18 @@ function completeGoalText(value: string) {
     .replace(/\b(because|since|therefore|so that|in order to)\b.*?(?=\.|;|$)/gi, "")
     .replace(/\s*[,;:([–-]\s*$/g, "")
     .replace(/\s+/g, " ")
+    .replace(/[.!?]+$/, "")
     .trim();
-  if (!cleaned || /^(?:goal\s+)?(?:unknown|not stated|not specified|not provided|n\/a)$/i.test(cleaned) || hasInvalidStateEnding(cleaned)) return "";
-  if (wordCount(cleaned) <= 36) return cleaned.replace(/[.!?]$/, "");
+  if (!cleaned || isMissingGoalPlaceholder(cleaned) || hasInvalidStateEnding(cleaned)) return "";
+  if (wordCount(cleaned) <= 36) return cleaned;
 
   const completeParts = splitCompleteThoughts(cleaned);
   const compact = completeParts.find((part) => wordCount(part) >= 3 && wordCount(part) <= 36);
   return compact ? compact.replace(/[.!?]$/, "") : cleaned.replace(/[.!?]$/, "");
+}
+
+function isMissingGoalPlaceholder(value: string) {
+  return /^(?:unknown(?:\s+(?:goal|objective|target))?|(?:goal|objective|target)\s+unknown|not\s+(?:stated|specified|provided|available|applicable)|n\/?a|none|insufficient\s+(?:context|information)|not\s+enough\s+information)$/i.test(value);
 }
 
 function conciseStateText(value: string) {

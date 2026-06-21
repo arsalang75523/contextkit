@@ -12,11 +12,14 @@ export class BankrLlmClient {
     return this.generateJsonFromPrompt(endpoint, buildContextPrompt(endpoint, messages, mode));
   }
 
-  async generateSummaryGoal(messages: ConversationMessage[]): Promise<JsonObject> {
+  async generateSummaryGoal(messages: ConversationMessage[], attempt = 1): Promise<JsonObject> {
+    const retryInstruction = attempt > 1
+      ? " Your previous goal was invalid. Return one concrete durable outcome now; unknown and placeholder values are forbidden."
+      : "";
     return this.generateJsonFromPrompt("summarize", [
       {
         role: "system",
-        content: "Extract the single durable goal from this conversation for an autonomous-agent continuation state. Return only valid JSON: {\"goal\":\"string\"}. The goal must be grounded in the conversation and preserve concrete targets, limits, and scope. Do not return unknown, a status, a blocker, or a next action. If no sentence explicitly says goal/objective/aim/target, infer only the directly requested outcome from the source."
+        content: `Extract the single durable goal from this conversation for an autonomous-agent continuation state. Return only valid JSON: {"goal":"string"}. The goal must be grounded in the conversation and preserve concrete targets, limits, and scope. Do not return unknown, a status, a blocker, or a next action. If no sentence explicitly says goal/objective/aim/target, infer only the directly requested outcome from the source.${retryInstruction}`
       },
       {
         role: "user",
