@@ -192,6 +192,8 @@ ContextKit includes a secure remote MCP server for autonomous agent hosts:
 https://contextkit.pro/mcp
 ```
 
+Hosts with an OAuth-based connector flow can add this URL and choose **Connect**. ContextKit supports MCP OAuth discovery, dynamic client registration, PKCE, dashboard sign-in, and explicit account consent. No manual client ID is required.
+
 Create a dedicated live API key in `/dashboard/keys` with `context:write`, top up credits in `/dashboard/credits`, then add the endpoint to a compatible Streamable HTTP MCP client:
 
 ```json

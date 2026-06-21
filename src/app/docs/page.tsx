@@ -251,12 +251,12 @@ export default function DocsPage() {
 
             <DocSection id="mcp" title="MCP">
               <p>
-                ContextKit exposes a secure, stateless Streamable HTTP MCP server at <code>https://contextkit.pro/mcp</code>. It is built for agent hosts that support remote MCP servers and uses a normal ContextKit API key.
+                ContextKit exposes a secure, stateless Streamable HTTP MCP server at <code>https://contextkit.pro/mcp</code>. OAuth-capable Connector UIs can use Connect directly; ContextKit handles MCP OAuth discovery, dynamic registration, PKCE, dashboard sign-in, and account consent.
               </p>
               <div className="mt-4 grid gap-3 md:grid-cols-3">
-                <InfoCard title="1. Create a dedicated key" body="Create a separate live API key in Dashboard with context:write. Do not reuse an admin, internal, Bankr, or personal secret." />
+                <InfoCard title="1. Connector UI" body="Add https://contextkit.pro/mcp and select Connect. Sign in to ContextKit, review the requested permission, and approve it. No client ID is needed." />
                 <InfoCard title="2. Add credits" body="Paid MCP tools spend the same account credits as direct API and SDK requests. Top up from Dashboard before long-running agent use." />
-                <InfoCard title="3. Connect your host" body="Add the endpoint and Authorization header to a compatible remote MCP client. The exact config file name can differ by client." />
+                <InfoCard title="3. CLI or backend" body="Use a dedicated API key with context:write in the Authorization header when your MCP host does not offer OAuth Connect." />
               </div>
               <div className="mt-4 grid gap-4 lg:grid-cols-2">
                 <div>

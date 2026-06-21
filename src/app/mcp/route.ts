@@ -3,6 +3,7 @@ import { createContextKitMcpServer } from "@/lib/mcp-server";
 import { ApiKeyService } from "@/services/api-key-service";
 import { AppKV } from "@/storage/app-kv";
 import { createId } from "@/utils/id";
+import { McpOAuthService, oauthChallenge } from "@/lib/mcp-oauth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -35,11 +36,12 @@ async function handleMcpRequest(request: Request) {
 
   if (!isTrustedHost(request)) return jsonError("host_not_allowed", "Host is not allowed.", 421, request);
 
-  const apiKey = readBearerToken(request);
-  if (!apiKey) return jsonError("unauthorized", "Authorization: Bearer <CONTEXTKIT_API_KEY> is required.", 401, request);
+  const credential = readBearerToken(request);
+  if (!credential) return unauthorized(request, "Authorization: Bearer <CONTEXTKIT_API_KEY> or OAuth access token is required.");
 
-  const record = await new ApiKeyService().authenticate(apiKey);
-  if (!record) return jsonError("invalid_api_key", "API key is invalid or revoked.", 401, request);
+  const resolved = await resolveApiKey(credential);
+  if (!resolved) return unauthorized(request, "OAuth access token or API key is invalid, expired, or revoked.");
+  const { apiKey, record } = resolved;
   if (!record.scopes.includes("context:write")) {
     return jsonError("insufficient_scope", "API key requires context:write.", 403, request);
   }
@@ -72,6 +74,25 @@ async function handleMcpRequest(request: Request) {
   } catch {
     return jsonError("mcp_request_failed", "ContextKit MCP could not process this request.", 500, request);
   }
+}
+
+async function resolveApiKey(credential: string) {
+  const apiKeys = new ApiKeyService();
+  const directRecord = await apiKeys.authenticate(credential);
+  if (directRecord) return { apiKey: credential, record: directRecord };
+
+  const oauthAccess = await new McpOAuthService().resolveAccessToken(credential);
+  if (!oauthAccess) return null;
+  const oauthRecord = await apiKeys.authenticate(oauthAccess.apiKey);
+  if (!oauthRecord) return null;
+  return { apiKey: oauthAccess.apiKey, record: oauthRecord };
+}
+
+function unauthorized(request: Request, message: string) {
+  const response = jsonError("unauthorized", message, 401, request);
+  const headers = new Headers(response.headers);
+  headers.set("WWW-Authenticate", oauthChallenge(request));
+  return new Response(response.body, { status: response.status, headers });
 }
 
 function readBearerToken(request: Request) {

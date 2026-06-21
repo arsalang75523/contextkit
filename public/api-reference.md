@@ -18,7 +18,7 @@ Bankr-hosted x402 routes do not require a ContextKit API key.
 
 Remote MCP endpoint: `https://contextkit.pro/mcp`
 
-ContextKit MCP uses Streamable HTTP and the same bearer API key authentication as direct API calls. Use a dedicated key with `context:write` and account credits for paid tools.
+ContextKit MCP uses Streamable HTTP. OAuth-capable Connector UIs can use the Connect flow directly through MCP OAuth discovery and PKCE. CLI and backend clients can continue to use a dedicated bearer API key with `context:write` and account credits for paid tools.
 
 ```json
 {

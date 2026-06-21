@@ -63,7 +63,7 @@ export default function DashboardLoginPage() {
       setResultMode(mode);
       return;
     }
-    window.location.href = "/dashboard";
+    window.location.href = authenticationDestination();
   }
 
   async function resendVerification() {
@@ -187,4 +187,10 @@ export default function DashboardLoginPage() {
       </section>
     </main>
   );
+}
+
+function authenticationDestination() {
+  const returnTo = new URLSearchParams(window.location.search).get("returnTo");
+  // OAuth redirects are the only non-dashboard destination accepted here.
+  return returnTo?.startsWith("/oauth/authorize?") ? returnTo : "/dashboard";
 }

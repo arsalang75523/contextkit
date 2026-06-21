@@ -39,6 +39,8 @@ For remote MCP-compatible agent hosts, connect to:
 https://contextkit.pro/mcp
 ```
 
+OAuth-capable Connector UIs can use **Connect** directly. ContextKit supports MCP OAuth discovery, dynamic client registration, PKCE, dashboard sign-in, and explicit consent; a manual client ID is not required.
+
 Use a dedicated dashboard-created API key with `context:write` and account credits. A compatible client configuration looks like:
 
 ```json
