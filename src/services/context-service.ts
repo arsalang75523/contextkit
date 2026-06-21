@@ -36,6 +36,9 @@ export class ContextService {
       dedupeSummaryState(withLlmGoalFallback(summarizeState(output.state), output))
     ), wordLimits.stateItem);
     const responseState = extractedContinuityState(stateValue, wordLimits, this.serviceContext.requestId);
+    const stateTokens = estimateTokens(JSON.stringify(responseState));
+    const compactTextBudget = availableSummaryTokens(tokenBudgets.compact, stateTokens);
+    const extendedTextBudget = availableSummaryTokens(tokenBudgets.extended, stateTokens);
     const keyDecisions = arrayOfStrings(output.keyDecisions);
     const actionItems = arrayOfStrings(output.actionItems);
     const openQuestions = arrayOfStrings(output.openQuestions);
@@ -53,17 +56,22 @@ export class ContextService {
     let micro = needsMicro
       ? microCapsule(enforceBudget(usefulMicroCandidate(String(output.micro ?? ""), stateValue, tokenBudgets.micro), microFacts, inputTokens, 0.16), tokenBudgets.micro)
       : "";
-    const compact = compactSummaryParagraph(enforceBudget("", compactFacts, inputTokens, 0.4), tokenBudgets.compact);
+    const compact = compactSummaryParagraph(
+      enforceBudget("", compactFacts, inputTokens, 0.4, compactTextBudget),
+      compactTextBudget
+    );
     const llmExtended = String(output.extended ?? output.summary ?? compact);
     const extendedCandidate = hasBrokenExtendedText(llmExtended)
       ? extendedFacts.join("; ")
-      : extendWithMissingOperationalFacts(llmExtended, extendedFacts, tokenBudgets.extended);
-    const extended = extendedParagraph(enforceBudget(extendedCandidate, extendedFacts, inputTokens, 0.6), tokenBudgets.extended);
+      : extendWithMissingOperationalFacts(llmExtended, extendedFacts, extendedTextBudget);
+    const extended = extendedParagraph(
+      enforceBudget(extendedCandidate, extendedFacts, inputTokens, 0.6, extendedTextBudget),
+      extendedTextBudget
+    );
     const summary = compact || micro || extended;
     let microTokens = estimateTokens(micro);
     const compactTokens = estimateTokens(compact);
     const extendedTokens = estimateTokens(extended);
-    const stateTokens = estimateTokens(JSON.stringify(responseState));
     const selectedTokens = mode === "extended" ? extendedTokens : mode === "compact" ? compactTokens : microTokens;
     const totalOutputTokens = selectedTokens + stateTokens;
     const metrics = {
@@ -389,6 +397,8 @@ type SummarizeWordLimits = {
   nextItem: number;
   compactItem: number;
   compactAction: number;
+  blockerCount: number;
+  nextCount: number;
 };
 
 function summarizeWordLimits(messages: ConversationRequest["messages"], mode: ReturnType<typeof summarizeMode>): SummarizeWordLimits {
@@ -398,6 +408,7 @@ function summarizeWordLimits(messages: ConversationRequest["messages"], mode: Re
     : mode === "compact"
       ? { goal: 0.10, state: 0.08, item: 0.06 }
       : { goal: 0.15, state: 0.12, item: 0.09 };
+  const itemCounts = mode === "compact" ? { blockers: 2, next: 2 } : { blockers: 3, next: 3 };
 
   return {
     goal: proportionalWordLimit(inputWords, percentages.goal),
@@ -405,7 +416,9 @@ function summarizeWordLimits(messages: ConversationRequest["messages"], mode: Re
     stateItem: proportionalWordLimit(inputWords, percentages.state),
     nextItem: proportionalWordLimit(inputWords, percentages.state),
     compactItem: proportionalWordLimit(inputWords, percentages.item),
-    compactAction: proportionalWordLimit(inputWords, percentages.item)
+    compactAction: proportionalWordLimit(inputWords, percentages.item),
+    blockerCount: itemCounts.blockers,
+    nextCount: itemCounts.next
   };
 }
 
@@ -425,13 +438,18 @@ function proportionalTokenBudget(inputTokens: number, percentage: number) {
   return Math.max(8, Math.floor(inputTokens * percentage));
 }
 
+function availableSummaryTokens(totalBudget: number, stateTokens: number) {
+  // Preserve a minimum viable text response for very small requests.
+  return Math.max(8, totalBudget - stateTokens);
+}
+
 function extractedContinuityState(
   stateValue: ReturnType<typeof summarizeState>,
   limits: SummarizeWordLimits,
   requestId: string
 ) {
-  const blockers = conciseStateList(stateValue.blockers, 3, limits.stateItem);
-  const next = conciseStateList(stateValue.nextSteps, 3, limits.nextItem, blockers);
+  const blockers = conciseStateList(stateValue.blockers, limits.blockerCount, limits.stateItem);
+  const next = conciseStateList(stateValue.nextSteps, limits.nextCount, limits.nextItem, blockers);
   const goal = conciseGoalText(stateValue.goal, limits.goal);
   if (!goal) {
     log("warn", "LLM goal was lost during response normalization", {
@@ -441,7 +459,7 @@ function extractedContinuityState(
   }
   return {
     goal: goal || "unknown",
-    status: conciseSingleStateText(stateValue.status, limits.status) || "unknown",
+    status: conciseStatusText(stateValue.status, limits.status) || "unknown",
     blockers,
     next
   };
@@ -499,15 +517,46 @@ function actionBlockerText(value: string) {
 }
 
 function promoteExplicitContinuityBlockers(stateValue: ReturnType<typeof summarizeState>, maxWords: number) {
-  const continuityBlockers = stateValue.nextSteps
-    .filter((item) => /^(verify|validate|decide)\b/i.test(normalizeSummary(item)))
-    .map((item) => continuityBlockerText(item, maxWords))
-    .filter(Boolean);
+  const blockers = [...stateValue.blockers];
+
+  for (const nextStep of stateValue.nextSteps) {
+    if (!/^(verify|validate|decide)\b/i.test(normalizeSummary(nextStep))) continue;
+    const continuityBlocker = continuityBlockerText(nextStep, maxWords);
+    if (!continuityBlocker || hasEquivalentContinuityItem(blockers, continuityBlocker)) continue;
+    blockers.push(continuityBlocker);
+  }
 
   return {
     ...stateValue,
-    blockers: uniqueStrings([...stateValue.blockers, ...continuityBlockers])
+    blockers: uniqueStrings(blockers)
   };
+}
+
+function hasEquivalentContinuityItem(items: string[], candidate: string) {
+  const candidateKey = continuityComparable(candidate);
+  if (!candidateKey) return false;
+  return items.some((item) => {
+    const itemKey = continuityComparable(item);
+    if (itemKey === candidateKey || itemKey.includes(candidateKey) || candidateKey.includes(itemKey)) return true;
+
+    const candidateWords = candidateKey.split(" ").filter((word) => word.length > 2);
+    const itemWords = new Set(itemKey.split(" ").filter((word) => word.length > 2));
+    const overlap = candidateWords.filter((word) => itemWords.has(word)).length;
+    return candidateWords.length >= 3 && overlap >= 2 && overlap / candidateWords.length >= 0.66;
+  });
+}
+
+function continuityComparable(value: string) {
+  return normalizeComparable(value)
+    .replace(/^(?:unverified|verification pending|incomplete|pending|decision pending)\s+/i, "")
+    .replace(/\b(?:electronic health record|electronic record|ehr)\b/gi, "ehr")
+    .replace(/\binteroperability\b/gi, "integration")
+    .replace(/\b(?:incompatibility|incompatible)\b/gi, "incompatible")
+    .replace(/\bsoftware compatibility issues?\b/gi, "incompatible software")
+    .replace(/\bsoftware platforms?\b/gi, "software")
+    .replace(/\b(?:process|processes|workflow|protocol|model|schedule|plan|require|requires|requirement|validation|validate|verification|verify|pending|unverified|incomplete|resolve|issues?)\b/gi, "")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 function continuityBlockerText(value: string, maxWords: number) {
@@ -724,6 +773,15 @@ function conciseSingleStateText(value: string, maxWords: number) {
   if (!cleaned) return "";
   if (wordCount(cleaned) <= maxWords) return cleaned.replace(/[.!?]$/, "");
   return completeTextWithinBudget(cleaned, maxWords).replace(/[.!?]$/, "") || cleaned;
+}
+
+function conciseStatusText(value: string, maxWords: number) {
+  const normalized = normalizeSummary(value);
+  const phase = normalized.match(/\b(planning|design|implementation|development|testing|deployment|launch)\s+phase\s+(?:is\s+)?(nearing completion|complete|active|ongoing|blocked|ready)\b/i);
+  const snapshot = phase
+    ? `${phase[1]} phase ${phase[2]}`
+    : splitCompleteThoughts(normalized)[0] || normalized;
+  return conciseSingleStateText(snapshot, maxWords);
 }
 
 function conciseGoalText(value: string, maxWords: number) {
@@ -1228,7 +1286,7 @@ function isCompleteCompactFact(value: string) {
 }
 
 function compactStatusText(status: string, maxWords: number) {
-  const text = compactFactText(status, maxWords);
+  const text = compactFactText(conciseStatusText(status, maxWords), maxWords);
   if (!text || /^(work active|active|in progress|initial instruction received|awaiting execution|core capabilities)$/i.test(text)) return "";
   if (/\b(core capabilities are in place|phase is complete|work is active|awaiting execution)\b/i.test(text)) return "";
   return text;
