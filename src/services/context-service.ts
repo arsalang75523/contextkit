@@ -2,6 +2,7 @@ import { BankrLlmClient } from "@/lib/bankr-llm";
 import { dispatchWebhook } from "@/webhooks/dispatcher";
 import { createId } from "@/utils/id";
 import { estimateReduction, estimateTokens } from "@/utils/tokens";
+import { log } from "@/lib/logger";
 import type {
   CompressContextResponse,
   ContextEndpoint,
@@ -29,18 +30,19 @@ export class ContextService {
     let output = await llm.generateJson("summarize", request.messages, mode);
     output = await repairMissingSummaryGoal(llm, output, request.messages);
     const inputTokens = estimateTokens(request.messages);
+    const wordLimits = summarizeWordLimits(request.messages);
     const stateValue = promoteExplicitContinuityBlockers(normalizeSummaryState(
       dedupeSummaryState(withLlmGoalFallback(summarizeState(output.state), output))
-    ));
-    const responseState = extractedContinuityState(stateValue);
+    ), wordLimits.stateItem);
+    const responseState = extractedContinuityState(stateValue, wordLimits, this.serviceContext.requestId);
     const keyDecisions = arrayOfStrings(output.keyDecisions);
     const actionItems = arrayOfStrings(output.actionItems);
     const openQuestions = arrayOfStrings(output.openQuestions);
     const risks = arrayOfStrings(output.risks);
-    const compactFacts = groundedCompactFacts(stateValue, actionItems);
+    const compactFacts = groundedCompactFacts(stateValue, actionItems, wordLimits);
     const resolvedGoal = completeGoalText(stateValue.goal);
     const extendedFacts = [
-      resolvedGoal ? `Goal: ${compactFactText(resolvedGoal, 18)}` : "",
+      resolvedGoal ? `Goal: ${compactFactText(resolvedGoal, wordLimits.goal)}` : "",
       ...compactFacts,
       ...openQuestions.map((item) => `Open: ${item}`),
       ...risks.map((item) => `Risk: ${item}`)
@@ -379,12 +381,48 @@ async function repairMissingSummaryGoal(
   throw new Error("summary_goal_missing");
 }
 
-function extractedContinuityState(stateValue: ReturnType<typeof summarizeState>) {
-  const blockers = conciseStateList(stateValue.blockers, 3, 14);
-  const next = conciseStateList(stateValue.nextSteps, 3, 12, blockers);
+type SummarizeWordLimits = {
+  goal: number;
+  status: number;
+  stateItem: number;
+  nextItem: number;
+  compactItem: number;
+  compactAction: number;
+};
+
+function summarizeWordLimits(messages: ConversationRequest["messages"]): SummarizeWordLimits {
+  const inputWords = Math.max(1, messages.reduce((total, message) => total + wordCount(message.content), 0));
   return {
-    goal: conciseGoalText(stateValue.goal) || "unknown",
-    status: conciseSingleStateText(stateValue.status, 14) || "unknown",
+    goal: proportionalWordLimit(inputWords, 0.05, 8, 36),
+    status: proportionalWordLimit(inputWords, 0.04, 6, 28),
+    stateItem: proportionalWordLimit(inputWords, 0.04, 6, 28),
+    nextItem: proportionalWordLimit(inputWords, 0.04, 6, 28),
+    compactItem: proportionalWordLimit(inputWords, 0.03, 5, 20),
+    compactAction: proportionalWordLimit(inputWords, 0.03, 5, 20)
+  };
+}
+
+function proportionalWordLimit(inputWords: number, percentage: number, minimum: number, safetyMaximum: number) {
+  return Math.min(safetyMaximum, Math.max(minimum, Math.ceil(inputWords * percentage)));
+}
+
+function extractedContinuityState(
+  stateValue: ReturnType<typeof summarizeState>,
+  limits: SummarizeWordLimits,
+  requestId: string
+) {
+  const blockers = conciseStateList(stateValue.blockers, 3, limits.stateItem);
+  const next = conciseStateList(stateValue.nextSteps, 3, limits.nextItem, blockers);
+  const goal = conciseGoalText(stateValue.goal, limits.goal);
+  if (!goal) {
+    log("warn", "LLM goal was lost during response normalization", {
+      requestId,
+      goalLength: stateValue.goal.length
+    });
+  }
+  return {
+    goal: goal || "unknown",
+    status: conciseSingleStateText(stateValue.status, limits.status) || "unknown",
     blockers,
     next
   };
@@ -441,10 +479,10 @@ function actionBlockerText(value: string) {
   return `Pending: ${subject}`;
 }
 
-function promoteExplicitContinuityBlockers(stateValue: ReturnType<typeof summarizeState>) {
+function promoteExplicitContinuityBlockers(stateValue: ReturnType<typeof summarizeState>, maxWords: number) {
   const continuityBlockers = stateValue.nextSteps
     .filter((item) => /^(verify|validate|decide)\b/i.test(normalizeSummary(item)))
-    .map((item) => continuityBlockerText(item))
+    .map((item) => continuityBlockerText(item, maxWords))
     .filter(Boolean);
 
   return {
@@ -453,7 +491,7 @@ function promoteExplicitContinuityBlockers(stateValue: ReturnType<typeof summari
   };
 }
 
-function continuityBlockerText(value: string) {
+function continuityBlockerText(value: string, maxWords: number) {
   const action = normalizeSummary(value).match(/^(verify|validate|decide)\b/i)?.[1].toLowerCase();
   const focus = normalizeSummary(value)
     .replace(/^(verify|validate|decide)\b\s*/i, "")
@@ -461,7 +499,7 @@ function continuityBlockerText(value: string) {
     .replace(/^whether\s+/i, "")
     .replace(/[.!?]$/, "")
     .trim();
-  const concise = conciseSingleStateText(focus, 12);
+  const concise = conciseSingleStateText(focus, maxWords);
   if (!concise) return "";
   return action === "decide" ? `Decision pending: ${concise}` : `Verification pending: ${concise}`;
 }
@@ -663,17 +701,27 @@ function conciseStateList(items: string[], limit: number, maxWords: number, excl
 }
 
 function conciseSingleStateText(value: string, maxWords: number) {
-  const cleaned = completeStateText(value);
+  const cleaned = completeStateText(value, maxWords);
   if (!cleaned) return "";
   if (wordCount(cleaned) <= maxWords) return cleaned.replace(/[.!?]$/, "");
-  return microFragment(cleaned, maxWords) || completeTextWithinBudget(cleaned, maxWords).replace(/[.!?]$/, "");
+  return microFragment(cleaned, maxWords)
+    || completeTextWithinBudget(cleaned, maxWords).replace(/[.!?]$/, "")
+    || truncateWords(cleaned, maxWords);
 }
 
-function conciseGoalText(value: string) {
+function conciseGoalText(value: string, maxWords: number) {
   const cleaned = completeGoalText(value);
   if (!cleaned) return "";
-  if (wordCount(cleaned) <= 18) return cleaned;
-  return microFragment(cleaned, 18) || completeTextWithinBudget(cleaned, 18).replace(/[.!?]$/, "");
+  if (wordCount(cleaned) <= maxWords) return cleaned;
+  return microFragment(cleaned, maxWords)
+    || completeTextWithinBudget(cleaned, maxWords).replace(/[.!?]$/, "")
+    || truncateWords(cleaned, maxWords);
+}
+
+function truncateWords(value: string, maxWords: number) {
+  const words = normalizeSummary(value).split(/\s+/).filter(Boolean);
+  if (words.length <= maxWords) return words.join(" ");
+  return `${words.slice(0, maxWords).join(" ")}...`;
 }
 
 function statePriorityScore(value: string) {
@@ -685,8 +733,8 @@ function statePriorityScore(value: string) {
   return score;
 }
 
-function completeStateText(value: string) {
-  const cleaned = conciseStateText(value);
+function completeStateText(value: string, maxWords: number) {
+  const cleaned = conciseStateText(value, maxWords);
   if (!cleaned || cleaned === "unknown" || hasInvalidStateEnding(cleaned)) return "";
   return cleaned;
 }
@@ -700,18 +748,14 @@ function completeGoalText(value: string) {
     .replace(/[.!?]+$/, "")
     .trim();
   if (!cleaned || isMissingGoalPlaceholder(cleaned) || hasInvalidStateEnding(cleaned)) return "";
-  if (wordCount(cleaned) <= 36) return cleaned;
-
-  const completeParts = splitCompleteThoughts(cleaned);
-  const compact = completeParts.find((part) => wordCount(part) >= 3 && wordCount(part) <= 36);
-  return compact ? compact.replace(/[.!?]$/, "") : cleaned.replace(/[.!?]$/, "");
+  return cleaned;
 }
 
 function isMissingGoalPlaceholder(value: string) {
   return /^(?:unknown(?:\s+(?:goal|objective|target))?|(?:goal|objective|target)\s+unknown|not\s+(?:stated|specified|provided|available|applicable)|n\/?a|none|insufficient\s+(?:context|information)|not\s+enough\s+information)$/i.test(value);
 }
 
-function conciseStateText(value: string) {
+function conciseStateText(value: string, maxWords: number) {
   const cleaned = normalizeSummary(value)
     .replace(/\b(because|since|therefore|so that|in order to)\b.*?(?=\.|;|$)/gi, "")
     .replace(/\b(including|such as)\b.*?(?=\.|;|$)/gi, "")
@@ -722,14 +766,16 @@ function conciseStateText(value: string) {
     .replace(/\s+/g, " ")
     .trim();
   if (!cleaned) return "";
-  if (wordCount(cleaned) <= 20) return cleaned;
+  if (wordCount(cleaned) <= maxWords) return cleaned;
 
   const completeParts = splitCompleteThoughts(cleaned);
-  const compact = completeParts.find((part) => wordCount(part) >= 3 && wordCount(part) <= 20);
+  const compact = completeParts.find((part) => wordCount(part) >= 3 && wordCount(part) <= maxWords);
   if (compact) return compact;
 
-  const clause = cleaned.split(/\s*[,;]\s*/).find((part) => wordCount(part) >= 3 && wordCount(part) <= 20);
-  return clause ? clause.replace(/\s*[,;:([–-]\s*$/g, "").trim() : "";
+  const clause = cleaned.split(/\s*[,;]\s*/).find((part) => wordCount(part) >= 3 && wordCount(part) <= maxWords);
+  return clause
+    ? clause.replace(/\s*[,;:([–-]\s*$/g, "").trim()
+    : truncateWords(cleaned, maxWords);
 }
 
 function wordCount(value: string) {
@@ -1098,13 +1144,17 @@ function compactSummaryParagraph(value: string) {
   return /[.!?]$/.test(trimmed) ? trimmed : `${trimmed}.`;
 }
 
-function groundedCompactFacts(stateValue: ReturnType<typeof summarizeState>, actionItems: string[]) {
-  const status = compactStatusText(stateValue.status);
-  const blockers = selectGroundedCompactItems(stateValue.blockers, 2, 9);
-  const decisions = selectGroundedCompactItems(stateValue.decisions, 1, 9, blockers);
-  const next = selectGroundedCompactNextItems([...stateValue.nextSteps, ...actionItems], 2, 7, [...blockers, ...decisions]);
+function groundedCompactFacts(
+  stateValue: ReturnType<typeof summarizeState>,
+  actionItems: string[],
+  limits: SummarizeWordLimits
+) {
+  const status = compactStatusText(stateValue.status, limits.status);
+  const blockers = selectGroundedCompactItems(stateValue.blockers, 2, limits.compactItem);
+  const decisions = selectGroundedCompactItems(stateValue.decisions, 1, limits.compactItem, blockers);
+  const next = selectGroundedCompactNextItems([...stateValue.nextSteps, ...actionItems], 2, limits.compactAction, [...blockers, ...decisions]);
   const explicitNext = uniqueStrings([...stateValue.nextSteps, ...actionItems])
-    .map((item) => compactActionText(item, 7))
+    .map((item) => compactActionText(item, limits.compactAction))
     .filter(Boolean);
   const resolvedNext = uniqueStrings([...explicitNext, ...next]).slice(0, 2);
 
@@ -1128,7 +1178,7 @@ function compactFactText(value: string, maxWords: number) {
   if (words.length <= maxWords && isCompleteCompactFact(text)) return text.replace(/[.!?]$/, "");
   const completeClause = splitCompleteThoughts(text)
     .find((part) => wordCount(part) <= maxWords && isCompleteCompactFact(part));
-  return completeClause?.replace(/[.!?]$/, "") ?? "";
+  return completeClause?.replace(/[.!?]$/, "") ?? truncateWords(text, maxWords);
 }
 
 function compactKnownFact(value: string) {
@@ -1145,8 +1195,8 @@ function isCompleteCompactFact(value: string) {
   return !/^(?:hero|component|implementation|work|project)(?:\s+(?:component|implementation|work))?$/i.test(text);
 }
 
-function compactStatusText(status: string) {
-  const text = compactFactText(status, 9);
+function compactStatusText(status: string, maxWords: number) {
+  const text = compactFactText(status, maxWords);
   if (!text || /^(work active|active|in progress|initial instruction received|awaiting execution|core capabilities)$/i.test(text)) return "";
   if (/\b(core capabilities are in place|phase is complete|work is active|awaiting execution)\b/i.test(text)) return "";
   return text;
@@ -1183,7 +1233,10 @@ function compactActionText(value: string, maxWords: number) {
     .replace(/^confirm\s+footer strategy:.*$/i, "Confirm footer structure")
     .replace(/[.!?]$/, "")
     .trim();
-  return wordCount(text) <= maxWords && isCompleteCompactFact(text) ? text : "";
+  if (!text) return "";
+  return wordCount(text) <= maxWords && isCompleteCompactFact(text)
+    ? text
+    : truncateWords(text, maxWords);
 }
 
 function extendedParagraph(value: string) {
