@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { Play, RotateCcw, Terminal } from "lucide-react";
+import { type ReactNode, useMemo, useState } from "react";
+import { CircleDollarSign, FileText, Network, Play, RotateCcw, Sparkles, Terminal, Zap } from "lucide-react";
 import { CodeBlock } from "@/components/code-block";
 import { endpoints } from "@/content/docs";
 import { bankrHostedUrl, bankrX402Command } from "@/lib/bankr-x402";
@@ -120,155 +120,62 @@ curl -X POST "https://contextkit.pro/api/context/upload-text?${params.toString()
   }
 
   return (
-    <main className="px-5 py-16">
-      <div className="mx-auto max-w-7xl">
-        <p className="text-sm uppercase tracking-[0.22em] text-mint">Interactive Playground</p>
-        <h1 className="mt-4 text-4xl font-semibold text-white md:text-6xl">Test ContextKit like a real user.</h1>
-        <p className="mt-4 max-w-3xl leading-7 text-white/65">
-          New users do not need a ContextKit API key to call the paid AI endpoints. They copy the Bankr x402 command, run it from a Bankr-authenticated terminal or agent, approve the USDC payment, and receive JSON back.
-        </p>
+    <main className="relative min-h-screen overflow-hidden px-5 py-8 md:py-10">
+      <div className="agent-grid pointer-events-none absolute inset-0 opacity-50" />
+      <div className="pointer-events-none absolute -left-44 top-36 h-[32rem] w-[32rem] rounded-full bg-mint/[0.07] blur-[105px]" />
+      <div className="pointer-events-none absolute -right-48 top-80 h-[30rem] w-[30rem] rounded-full bg-aqua/[0.07] blur-[105px]" />
+      <div className="relative mx-auto max-w-7xl">
+        <section className="overflow-hidden rounded-[1.55rem] border border-white/[0.13] bg-carbon/80 shadow-[0_24px_90px_rgba(0,0,0,0.3)] backdrop-blur-xl">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-3 font-mono text-[10px] uppercase tracking-[0.16em] text-white/42 sm:px-7"><span className="flex items-center gap-2"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-mint" /> Playground / live execution</span><span className="hidden sm:inline">sandboxed agent context runner</span><span className="text-aqua">3 runs / day</span></div>
+          <div className="grid gap-7 px-6 py-8 sm:px-9 lg:grid-cols-[1.1fr_0.9fr] lg:px-12 lg:py-10">
+            <div><div className="inline-flex items-center gap-2 rounded-full border border-mint/25 bg-mint/[0.07] px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.16em] text-mint"><Sparkles className="h-3.5 w-3.5" /> Interactive Playground</div><h1 className="mt-5 text-balance text-4xl font-semibold leading-[0.98] tracking-[-0.05em] text-white sm:text-5xl">Run an agent context task before you wire it in.</h1><p className="mt-4 max-w-2xl leading-7 text-white/60">Paste plain text, select the operation, and inspect the real ContextKit response. Production agents can use the generated Bankr x402 request with no ContextKit API key.</p></div>
+            <div className="grid content-start gap-px overflow-hidden rounded-2xl border border-line bg-line"><PlaygroundStep icon={<FileText className="h-4 w-4" />} title="Paste natural text" text="No JSON, escaping, or message formatting." /><PlaygroundStep icon={<Zap className="h-4 w-4" />} title="Run a real request" text="Authenticated accounts receive 3 live runs daily." /><PlaygroundStep icon={<CircleDollarSign className="h-4 w-4" />} title="Copy the paid path" text="Bankr settles USDC then returns JSON." /></div>
+          </div>
+        </section>
 
-        <div className="mt-8 grid gap-4 md:grid-cols-3">
-          {[
-            ["1. Login once", "The live playground runs from your dashboard session and is limited to 3 real AI requests per account per day."],
-            ["2. Paste text", "Paste normal text on the left. No JSON, escaping, or message formatting required."],
-            ["3. Production path", "For unlimited paid agent traffic, copy the Bankr-hosted x402 command and let Bankr handle payment."]
-          ].map(([title, text]) => (
-            <div key={title} className="rounded-md border border-line bg-white/[0.035] p-4">
-              <h2 className="font-semibold text-white">{title}</h2>
-              <p className="mt-2 text-sm leading-6 text-white/60">{text}</p>
-            </div>
-          ))}
-        </div>
-
-        <div className="mt-10 grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.85fr)]">
-          <section className="min-w-0 rounded-md border border-line bg-white/[0.035] p-5">
-            <div className="mb-4 rounded-md border border-aqua/20 bg-aqua/10 p-4 text-sm leading-6 text-white/65">
-              Pick one service below. <span className="text-aqua">Summarize</span> is selected by default because it is the easiest first test. The other services are here too; clicking them changes the paid endpoint and command.
-            </div>
-            <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <div className="mt-6 grid gap-5 lg:grid-cols-[minmax(0,1.04fr)_minmax(0,0.96fr)]">
+          <section className="min-w-0 rounded-[1.45rem] border border-line bg-white/[0.03] p-5 sm:p-6">
+            <div className="flex flex-col gap-3 border-b border-line pb-5 sm:flex-row sm:items-start sm:justify-between"><div><p className="font-mono text-[10px] uppercase tracking-[0.16em] text-mint">01 / Context composer</p><h2 className="mt-2 text-xl font-semibold text-white">Choose an operation, then give it context.</h2></div><span className="grid h-10 w-10 place-items-center rounded-xl border border-mint/25 bg-mint/[0.07]"><Network className="h-4 w-4 text-mint" /></span></div>
+            <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
               {playgroundEndpoints.map((item) => (
                 <button
                   key={item.slug}
                   type="button"
                   onClick={() => setEndpoint(item.slug)}
-                  className={`min-w-0 rounded-md border px-3 py-2 text-xs transition xl:text-sm ${endpoint === item.slug ? "border-mint bg-mint/10 text-mint" : "border-line text-white/65 hover:text-white"}`}
+                  className={`min-w-0 rounded-xl border px-3 py-3 text-left text-xs transition xl:text-sm ${endpoint === item.slug ? "border-mint/50 bg-mint/[0.1] text-mint shadow-[inset_0_0_20px_rgba(115,243,195,0.05)]" : "border-line bg-ink/35 text-white/60 hover:border-white/25 hover:text-white"}`}
                 >
-                  <span className="block break-words">{item.slug}</span>
+                  <span className="block break-words font-medium">{item.slug}</span>
+                  <span className="mt-1 block font-mono text-[10px] text-white/35">{item.price}</span>
                 </button>
               ))}
             </div>
             {endpoint === "summarize" ? (
-              <div className="mb-4 rounded-md border border-mint/20 bg-mint/10 p-4">
-                <h2 className="font-semibold text-white">Summarize modes</h2>
-                <p className="mt-1 text-sm leading-6 text-white/60">
-                  Micro is the default for agents. Compact balances context and size. Extended is human-readable. Debug returns the full diagnostic payload.
-                </p>
-                <div className="mt-4 grid w-full grid-cols-2 gap-2 sm:grid-cols-4">
+              <div className="mt-5 rounded-xl border border-mint/20 bg-mint/[0.055] p-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"><div><h2 className="font-semibold text-white">Summarize mode</h2><p className="mt-1 max-w-xl text-sm leading-6 text-white/57">Micro is optimized for agents, compact balances detail and cost, extended reads like a handoff.</p></div><span className="font-mono text-[10px] uppercase tracking-[0.15em] text-mint">selected: {summaryMode}</span></div>
+                <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
                   {(["micro", "compact", "extended", "debug"] as const).map((mode) => (
-                    <button
-                      key={mode}
-                      type="button"
-                      onClick={() => setSummaryMode(mode)}
-                      className={`min-w-0 rounded-md border px-3 py-2 text-xs transition sm:text-sm ${summaryMode === mode ? "border-mint bg-mint/20 text-mint" : "border-line text-white/60 hover:text-white"}`}
-                    >
-                      {mode}
-                    </button>
+                    <button key={mode} type="button" onClick={() => setSummaryMode(mode)} className={`rounded-lg border px-3 py-2 text-xs transition sm:text-sm ${summaryMode === mode ? "border-mint bg-mint/15 text-mint" : "border-line text-white/58 hover:text-white"}`}>{mode}</button>
                   ))}
                 </div>
               </div>
             ) : null}
             {endpoint === "extract-profile" || endpoint === "memory-enrichment" ? (
-              <div className="mb-4 rounded-md border border-mint/20 bg-mint/10 p-4">
-                <h2 className="font-semibold text-white">Profile modes</h2>
-                <p className="mt-1 text-sm leading-6 text-white/60">
-                  Bankr uses <code>contextkit-profile</code> for both. Default is extract-profile; memory enrichment runs with <code>{'mode:"memory-enrichment"'}</code>.
-                </p>
-                <div className="mt-4 grid w-full grid-cols-2 gap-2">
-                  {(["extract-profile", "memory-enrichment"] as const).map((mode) => (
-                    <button
-                      key={mode}
-                      type="button"
-                      onClick={() => setProfileMode(mode)}
-                      className={`min-w-0 rounded-md border px-3 py-2 text-xs transition sm:text-sm ${selectedProfileMode === mode ? "border-mint bg-mint/20 text-mint" : "border-line text-white/60 hover:text-white"}`}
-                    >
-                      {mode}
-                    </button>
-                  ))}
-                </div>
+              <div className="mt-5 rounded-xl border border-mint/20 bg-mint/[0.055] p-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"><div><h2 className="font-semibold text-white">Profile mode</h2><p className="mt-1 text-sm leading-6 text-white/57">Hosted Bankr calls use <code>contextkit-profile</code> for both profile and memory extraction.</p></div><span className="font-mono text-[10px] uppercase tracking-[0.15em] text-mint">{selectedProfileMode}</span></div>
+                <div className="mt-4 grid grid-cols-2 gap-2">{(["extract-profile", "memory-enrichment"] as const).map((mode) => <button key={mode} type="button" onClick={() => setProfileMode(mode)} className={`rounded-lg border px-3 py-2 text-xs transition sm:text-sm ${selectedProfileMode === mode ? "border-mint bg-mint/15 text-mint" : "border-line text-white/58 hover:text-white"}`}>{mode}</button>)}</div>
               </div>
             ) : null}
-            <textarea
-              value={input}
-              onChange={(event) => setInput(event.target.value)}
-              placeholder="Paste any conversation, project notes, document, or handoff context here."
-              className="min-h-[430px] w-full resize-y rounded-md border border-line bg-ink/70 p-4 text-sm leading-7 text-white outline-none focus:border-mint/60"
-            />
-            <div className="mt-4 rounded-md border border-line bg-carbon/60 p-4">
-              <div className="flex flex-col gap-3 sm:flex-row">
-                <button type="button" onClick={runLivePlayground} disabled={isRunning} className="inline-flex h-11 items-center justify-center gap-2 rounded-md bg-aqua px-5 text-sm font-medium text-ink disabled:cursor-not-allowed disabled:opacity-60">
-                  {isRunning ? <Spinner /> : <Play className="h-4 w-4" />} {isRunning ? "Running..." : "Run full process"}
-                </button>
-                <button type="button" onClick={() => setInput(seed)} className="inline-flex h-11 items-center justify-center gap-2 rounded-md border border-line px-5 text-sm text-white/75">
-                  <RotateCcw className="h-4 w-4" /> Reset
-                </button>
-              </div>
-            </div>
+            <label className="mt-5 block"><span className="mb-2 flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.16em] text-white/42"><span>Source context</span><span>{input.length.toLocaleString()} characters</span></span><textarea value={input} onChange={(event) => setInput(event.target.value)} placeholder="Paste any conversation, project notes, document, or handoff context here." className="min-h-[390px] w-full resize-y rounded-xl border border-line bg-ink/75 p-4 text-sm leading-7 text-white outline-none transition placeholder:text-white/28 focus:border-mint/60 focus:shadow-[0_0_0_3px_rgba(115,243,195,0.08)]" /></label>
+            <div className="mt-4 flex flex-col gap-3 rounded-xl border border-line bg-carbon/65 p-3 sm:flex-row"><button type="button" onClick={runLivePlayground} disabled={isRunning} className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-lg bg-aqua px-5 text-sm font-semibold text-ink transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60">{isRunning ? <Spinner /> : <Play className="h-4 w-4" />}{isRunning ? "Running ContextKit..." : "Run live request"}</button><button type="button" onClick={() => setInput(seed)} className="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-line px-5 text-sm text-white/72 transition hover:border-white/25 hover:text-white"><RotateCcw className="h-4 w-4" /> Reset sample</button></div>
           </section>
-          <section className="min-w-0 space-y-5 rounded-md border border-line bg-carbon/72 p-5">
-            <div className="min-w-0 overflow-hidden rounded-md border border-mint/25 bg-mint/10 p-4">
-              <p className="break-all font-mono text-sm leading-6 text-mint">{bankrHostedUrl(active.slug)}</p>
-              <p className="mt-2 text-sm text-white/60">
-                {active.price} via Bankr-hosted x402. This is the real paid endpoint for <span className="text-mint">{active.slug}</span>. No ContextKit API key is required for this hosted paid endpoint.
-              </p>
-              {active.slug === "memory-enrichment" ? (
-                <p className="mt-3 rounded border border-aqua/25 bg-aqua/10 p-3 text-sm leading-6 text-aqua">
-                  Memory enrichment is priced at <code>$0.04</code>. Hosted Bankr calls use <code>contextkit-profile</code> with <code>{'mode:"memory-enrichment"'}</code>; direct API-key usage can still call <code>/api/memory-enrichment</code>.
-                </p>
-              ) : null}
+          <section className="min-w-0 space-y-5 rounded-[1.45rem] border border-line bg-carbon/72 p-5 sm:p-6">
+            <div className="overflow-hidden rounded-xl border border-mint/25 bg-mint/[0.06]">
+              <div className="flex items-center justify-between border-b border-mint/15 px-4 py-3"><span className="font-mono text-[10px] uppercase tracking-[0.16em] text-mint">02 / Active endpoint</span><span className="rounded-full border border-mint/20 bg-mint/[0.08] px-2 py-1 font-mono text-[10px] text-mint">{active.price}</span></div>
+              <div className="p-4"><p className="break-all font-mono text-sm leading-6 text-mint">{bankrHostedUrl(active.slug)}</p><p className="mt-3 text-sm leading-6 text-white/60">This is the real paid endpoint for <span className="text-mint">{active.slug}</span>. The playground runs from your dashboard session; production traffic uses Bankr-hosted x402.</p></div>
             </div>
-            <div>
-              <p className="mb-3 text-sm uppercase tracking-[0.18em] text-white/45">Live ContextKit response</p>
-              <p className="mb-3 text-sm leading-6 text-white/55">
-                This calls <code>/api/playground/run</code> with your current dashboard session. Limit: 3 real AI runs per account per day.
-              </p>
-              <CodeBlock code={JSON.stringify(runResult ?? { status: "Login, paste messages, then click Run full process." }, null, 2)} />
-            </div>
-            <div>
-              <div className="mb-3 flex items-center gap-2 text-sm uppercase tracking-[0.18em] text-white/45">
-                <Terminal className="h-4 w-4" /> Copyable paid request
-              </div>
-              <p className="mb-3 text-sm leading-6 text-white/55">
-                Copy this command into a terminal where <code>bankr login</code> is already configured. Bankr will ask for payment approval, then return the ContextKit JSON response.
-              </p>
-              {needsJsonWrappedInput(active.slug) ? (
-                <p className="mb-3 rounded-md border border-aqua/20 bg-aqua/10 p-3 text-sm leading-6 text-aqua">
-                  This endpoint receives your text as a JSON message payload so extraction does not return empty results.
-                </p>
-              ) : null}
-              <CodeBlock code={command} />
-            </div>
-            <div>
-              <div className="mb-3 flex items-center gap-2 text-sm uppercase tracking-[0.18em] text-white/45">
-                <Terminal className="h-4 w-4" /> Copyable long context request
-              </div>
-              <p className="mb-3 text-sm leading-6 text-white/55">
-                For long content, paste the text into <code>long-context.txt</code>, upload and precompute it first, then replace <code>ctx_REPLACE_ME</code> with the returned <code>contextId</code>.
-              </p>
-              <div className="space-y-4">
-                <div>
-                  <p className="mb-2 text-xs uppercase tracking-[0.18em] text-white/35">1. Upload and precompute</p>
-                  <CodeBlock code={longContextCommands.upload} />
-                </div>
-                <p className="rounded-md border border-aqua/20 bg-aqua/10 p-3 text-sm leading-6 text-aqua">
-                  Copy the <code>contextId</code> from the upload response, then paste it instead of <code>ctx_REPLACE_ME</code> in the next request.
-                </p>
-                <div>
-                  <p className="mb-2 text-xs uppercase tracking-[0.18em] text-white/35">2. Pay and fetch result</p>
-                  <CodeBlock code={longContextCommands.call} />
-                </div>
-              </div>
-            </div>
+            <div className="overflow-hidden rounded-xl border border-line bg-ink/55"><div className="flex items-center justify-between border-b border-line px-4 py-3"><div><p className="font-mono text-[10px] uppercase tracking-[0.16em] text-white/43">03 / Live response</p><p className="mt-1 text-sm text-white/58">3 real AI requests per account per day.</p></div><span className="h-2 w-2 animate-pulse rounded-full bg-mint" /></div><div className="p-4"><CodeBlock code={JSON.stringify(runResult ?? { status: "Paste context and run a live request." }, null, 2)} /></div></div>
+            <div className="overflow-hidden rounded-xl border border-line bg-ink/45"><div className="flex items-center gap-2 border-b border-line px-4 py-3 font-mono text-[10px] uppercase tracking-[0.16em] text-white/43"><Terminal className="h-4 w-4 text-aqua" /> 04 / Paid terminal request</div><div className="p-4"><p className="mb-3 text-sm leading-6 text-white/56">Run this after <code>bankr login</code>. Bankr asks for payment approval, then returns ContextKit JSON.</p>{needsJsonWrappedInput(active.slug) ? <p className="mb-3 rounded-lg border border-aqua/20 bg-aqua/[0.07] p-3 text-sm leading-6 text-aqua">This endpoint wraps your text as a JSON message so extraction receives valid conversation input.</p> : null}<CodeBlock code={command} /></div></div>
+            <div className="overflow-hidden rounded-xl border border-line bg-ink/45"><div className="flex items-center gap-2 border-b border-line px-4 py-3 font-mono text-[10px] uppercase tracking-[0.16em] text-white/43"><Terminal className="h-4 w-4 text-aqua" /> 05 / Long context workflow</div><div className="p-4"><p className="mb-4 text-sm leading-6 text-white/56">Upload and precompute large content first. Copy the returned <code>contextId</code> into the payment request.</p><div className="space-y-4"><div><p className="mb-2 font-mono text-[10px] uppercase tracking-[0.15em] text-white/38">1. Upload and precompute</p><CodeBlock code={longContextCommands.upload} /></div><div className="rounded-lg border border-aqua/20 bg-aqua/[0.07] p-3 text-sm leading-6 text-aqua">Copy the upload response&apos;s <code>contextId</code>, then replace <code>ctx_REPLACE_ME</code> below.</div><div><p className="mb-2 font-mono text-[10px] uppercase tracking-[0.15em] text-white/38">2. Pay and fetch result</p><CodeBlock code={longContextCommands.call} /></div></div></div></div>
           </section>
         </div>
       </div>
@@ -278,6 +185,10 @@ curl -X POST "https://contextkit.pro/api/context/upload-text?${params.toString()
 
 function Spinner() {
   return <span className="h-4 w-4 animate-spin rounded-full border-2 border-ink/30 border-t-ink" aria-hidden="true" />;
+}
+
+function PlaygroundStep({ icon, title, text }: { icon: ReactNode; title: string; text: string }) {
+  return <div className="flex gap-3 bg-carbon/90 p-4"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-mint/20 bg-mint/[0.06] text-mint">{icon}</span><div><p className="text-sm font-medium text-white">{title}</p><p className="mt-1 text-sm leading-6 text-white/52">{text}</p></div></div>;
 }
 
 function heredocMarker(value: string) {

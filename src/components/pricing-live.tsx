@@ -32,7 +32,7 @@ export function PricingEndpointStats({ endpoint }: { endpoint: string }) {
   const stats = endpointStats(endpoint, metric);
 
   return (
-    <div className="mt-5 rounded-md border border-line bg-ink/55 p-4">
+    <div className="mt-5 rounded-lg border border-line bg-ink/55 p-4">
       <p className="text-xs uppercase tracking-[0.18em] text-white/35">{stats.title}</p>
       <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
         {stats.items.map((item) => (

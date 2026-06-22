@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { Activity, ArrowUpRight, BarChart3, CreditCard, KeyRound, LogOut, RefreshCw, ShieldCheck, Wallet, Webhook, Zap } from "lucide-react";
 import { CodeBlock } from "@/components/code-block";
 
 type View = "overview" | "keys" | "usage" | "webhooks" | "payments" | "credits";
@@ -162,43 +163,49 @@ export function DashboardClient({ view = "overview" }: { view?: View }) {
   }
 
   return (
-    <main className="px-5 py-16">
-      <div className="mx-auto max-w-7xl">
-        <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
-          <div>
-            <p className="text-sm uppercase tracking-[0.22em] text-mint">Developer Dashboard</p>
-            <h1 className="mt-4 text-4xl font-semibold text-white md:text-6xl">Operate ContextKit in production.</h1>
-            <p className="mt-4 max-w-3xl leading-7 text-white/60">
-              Sign up to create API keys, inspect usage, manage webhooks, and track ContextKit-side payment events. API-key credits let SDK users call paid endpoints without Bankr; Bankr-hosted x402 remains the public pay-per-call path.
-            </p>
+    <main className="relative min-h-screen overflow-hidden px-5 py-8 md:py-10">
+      <div className="agent-grid pointer-events-none absolute inset-0 opacity-50" />
+      <div className="pointer-events-none absolute -left-48 top-24 h-[38rem] w-[38rem] rounded-full bg-mint/[0.08] blur-[110px]" />
+      <div className="pointer-events-none absolute -right-52 top-80 h-[30rem] w-[30rem] rounded-full bg-aqua/[0.07] blur-[110px]" />
+      <div className="relative mx-auto max-w-7xl">
+        <section className="overflow-hidden rounded-[1.5rem] border border-white/[0.13] bg-carbon/75 shadow-[0_24px_90px_rgba(0,0,0,0.3)] backdrop-blur-xl">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-3 font-mono text-[10px] uppercase tracking-[0.16em] text-white/42 sm:px-7">
+            <span className="flex items-center gap-2"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-mint" /> ContextKit operations / online</span>
+            <span className="hidden text-white/35 sm:inline">account-scoped control plane</span>
+            <span className="text-mint">{account?.email ? "Authenticated" : "No session"}</span>
           </div>
-          <div className="flex gap-3">
-            <Link href="/dashboard/login" className="inline-flex h-11 items-center rounded-md border border-line px-4 text-sm text-white/75 transition hover:border-mint/50 hover:text-white">
-              Login / sign up
-            </Link>
-            <button type="button" onClick={logout} className="inline-flex h-11 items-center rounded-md border border-line px-4 text-sm text-white/55 transition hover:border-coral/50 hover:text-white">
-              Logout
-            </button>
+          <div className="flex flex-col gap-6 px-5 py-7 sm:px-7 md:flex-row md:items-end md:justify-between md:py-9">
+            <div>
+              <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-mint">Developer dashboard</p>
+              <h1 className="mt-3 text-balance text-3xl font-semibold tracking-[-0.045em] text-white sm:text-4xl">Operate agent memory in production.</h1>
+              <p className="mt-3 max-w-2xl leading-7 text-white/58">Create scoped keys, monitor usage, settle credits, and keep every agent integration observable.</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Link href="/dashboard/login" className="inline-flex h-10 items-center gap-2 rounded-lg border border-line bg-ink/40 px-3.5 text-sm text-white/75 transition hover:border-mint/45 hover:text-white"><ShieldCheck className="h-4 w-4 text-mint" /> Login / sign up</Link>
+              <button type="button" onClick={logout} className="inline-flex h-10 items-center gap-2 rounded-lg border border-coral/20 px-3.5 text-sm text-white/55 transition hover:border-coral/50 hover:bg-coral/[0.06] hover:text-coral"><LogOut className="h-4 w-4" /> Logout</button>
+            </div>
           </div>
-        </div>
+          <nav className="grid gap-px border-t border-line bg-line sm:grid-cols-3 lg:grid-cols-6">
+            {routes.map(([key, label]) => (
+              <Link key={key} href={key === "overview" ? "/dashboard" : `/dashboard/${key}`} className={`group flex items-center gap-3 bg-carbon px-4 py-4 text-sm transition ${view === key ? "bg-mint/[0.09] text-mint" : "text-white/55 hover:bg-white/[0.045] hover:text-white"}`}>
+                <span className={`grid h-8 w-8 place-items-center rounded-lg border ${view === key ? "border-mint/30 bg-mint/10 text-mint" : "border-line bg-ink/40 text-white/42 group-hover:text-white"}`}><DashboardIcon view={key} /></span>
+                <span>{label}</span>
+                {view === key ? <ArrowUpRight className="ml-auto h-3.5 w-3.5" /> : null}
+              </Link>
+            ))}
+          </nav>
+        </section>
 
-        <div className="mt-8 grid gap-3 md:grid-cols-6">
-          {routes.map(([key, label]) => (
-            <Link key={key} href={key === "overview" ? "/dashboard" : `/dashboard/${key}`} className={`rounded-md border px-4 py-3 text-sm ${view === key ? "border-mint bg-mint/10 text-mint" : "border-line text-white/65"}`}>
-              {label}
-            </Link>
-          ))}
-        </div>
-
-        <section className="mt-8 rounded-md border border-line bg-white/[0.035] p-5">
-          <div className="grid gap-4 md:grid-cols-3">
-            <Metric label="Account" value={account?.email ? String(account.email) : "No session"} />
-            <Metric label="Current key" value={apiKey ? `${apiKey.slice(0, 12)}...${apiKey.slice(-4)}` : "Not set"} />
-            <Metric label="View" value={route[1]} />
+        <section className="mt-5 grid gap-5 lg:grid-cols-[1.08fr_0.92fr]">
+          <div className="rounded-[1.25rem] border border-line bg-white/[0.03] p-5 sm:p-6">
+            <div className="flex items-center justify-between"><div><p className="font-mono text-[10px] uppercase tracking-[0.16em] text-white/42">Session control</p><h2 className="mt-2 text-xl font-semibold text-white">Connect a scoped API key.</h2></div><span className="grid h-10 w-10 place-items-center rounded-xl border border-mint/25 bg-mint/[0.07]"><KeyRound className="h-4 w-4 text-mint" /></span></div>
+            <div className="mt-5 flex flex-col gap-3 sm:flex-row"><input value={apiKey} onChange={(event) => setApiKey(event.target.value)} placeholder="Optional ck_live_... for API-key endpoints" className="h-11 flex-1 rounded-xl border border-line bg-ink/80 px-3 font-mono text-sm text-white outline-none transition focus:border-mint" /><button type="button" onClick={() => load()} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-mint px-5 text-sm font-semibold text-ink transition hover:bg-white"><RefreshCw className="h-4 w-4" /> Refresh data</button></div>
+            <p className="mt-3 text-sm text-white/46">The dashboard session remains browser-local. Use a scoped live key only when an endpoint requires it.</p>
           </div>
-          <div className="mt-4 flex flex-col gap-3 sm:flex-row">
-            <input value={apiKey} onChange={(event) => setApiKey(event.target.value)} placeholder="Optional ck_live_... for API-key endpoints" className="h-11 flex-1 rounded-md border border-line bg-ink/80 px-3 font-mono text-sm text-white outline-none focus:border-mint" />
-            <button type="button" onClick={() => load()} className="h-11 rounded-md bg-mint px-5 text-sm font-medium text-ink">Load live data</button>
+          <div className="grid grid-cols-3 gap-px overflow-hidden rounded-[1.25rem] border border-line bg-line">
+            <DashboardStat label="Account" value={account?.email ? String(account.email) : "No session"} />
+            <DashboardStat label="Active key" value={apiKey ? `${apiKey.slice(0, 8)}...${apiKey.slice(-4)}` : "Not set"} />
+            <DashboardStat label="Current view" value={route[1]} />
           </div>
         </section>
 
@@ -215,7 +222,7 @@ export function DashboardClient({ view = "overview" }: { view?: View }) {
         />
 
         {view === "keys" ? (
-          <section className="mt-6 rounded-md border border-line bg-white/[0.035] p-5">
+          <section className="mt-6 rounded-[1.25rem] border border-line bg-white/[0.035] p-5 sm:p-6">
             <h2 className="text-xl font-semibold text-white">Create scoped API key</h2>
             {newKey ? (
               <div className="mt-4 rounded-md border border-mint/30 bg-mint/10 p-4">
@@ -246,7 +253,7 @@ export function DashboardClient({ view = "overview" }: { view?: View }) {
         ) : null}
 
         {view === "webhooks" ? (
-          <section className="mt-6 rounded-md border border-line bg-white/[0.035] p-5">
+          <section className="mt-6 rounded-[1.25rem] border border-line bg-white/[0.035] p-5 sm:p-6">
             <h2 className="text-xl font-semibold text-white">Webhook endpoints</h2>
             <div className="mt-4 grid gap-3">
               <input value={webhookUrl} onChange={(event) => setWebhookUrl(event.target.value)} placeholder="https://your-agent.com/contextkit/events" className="h-11 rounded-md border border-line bg-ink/80 px-3 text-sm text-white outline-none focus:border-mint" />
@@ -263,13 +270,27 @@ export function DashboardClient({ view = "overview" }: { view?: View }) {
           </section>
         ) : null}
 
-        <section className="mt-6 rounded-md border border-line bg-carbon/70 p-5">
-          <h2 className="mb-3 text-sm uppercase tracking-[0.18em] text-white/45">Live data</h2>
-          <CodeBlock code={JSON.stringify(actionResult ? { message, actionResult, data } : data ?? { status: "Loading live dashboard data..." }, null, 2)} />
+        <section className="mt-6 overflow-hidden rounded-[1.25rem] border border-line bg-carbon/70">
+          <div className="flex items-center justify-between border-b border-line px-5 py-4"><div><h2 className="font-mono text-[10px] uppercase tracking-[0.18em] text-white/45">Live data stream</h2><p className="mt-1 text-sm text-white/56">Raw account-scoped API response.</p></div><Zap className="h-4 w-4 text-mint" /></div>
+          <div className="p-4 sm:p-5"><CodeBlock code={JSON.stringify(actionResult ? { message, actionResult, data } : data ?? { status: "Loading live dashboard data..." }, null, 2)} /></div>
         </section>
       </div>
     </main>
   );
+}
+
+function DashboardIcon({ view }: { view: View }) {
+  const props = { className: "h-4 w-4" };
+  if (view === "keys") return <KeyRound {...props} />;
+  if (view === "usage") return <Activity {...props} />;
+  if (view === "webhooks") return <Webhook {...props} />;
+  if (view === "payments") return <CreditCard {...props} />;
+  if (view === "credits") return <Wallet {...props} />;
+  return <BarChart3 {...props} />;
+}
+
+function DashboardStat({ label, value }: { label: string; value: string }) {
+  return <div className="min-w-0 bg-carbon/90 p-4"><p className="font-mono text-[9px] uppercase tracking-[0.14em] text-white/38">{label}</p><p className="mt-2 truncate text-sm font-medium text-white" title={value}>{value}</p></div>;
 }
 
 function DashboardView({
@@ -483,9 +504,10 @@ function WebhookData({ data }: { data: ApiData }) {
 
 function Metric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded border border-line bg-ink/70 p-4">
-      <p className="text-xs uppercase tracking-[0.18em] text-white/40">{label}</p>
-      <p className="mt-2 break-all text-sm font-semibold text-white">{value}</p>
+    <div className="relative overflow-hidden rounded-xl border border-line bg-ink/65 p-4 transition hover:border-mint/25">
+      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-mint/45 to-transparent" />
+      <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-white/40">{label}</p>
+      <p className="mt-2 break-all text-lg font-semibold tracking-[-0.025em] text-white">{value}</p>
     </div>
   );
 }

@@ -12,6 +12,7 @@ export const site = {
     { href: "/demo", label: "Demo" },
     { href: "/playground", label: "Playground" },
     { href: "/pricing", label: "Pricing" },
+    { href: "/roadmap", label: "Roadmap" },
     { href: "/dashboard", label: "Dashboard" }
   ]
 };

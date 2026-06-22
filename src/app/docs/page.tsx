@@ -1,5 +1,7 @@
+import Link from "next/link";
+import type { ReactNode } from "react";
+import { ArrowRight, BookOpen, KeyRound, Network, Sparkles, Terminal } from "lucide-react";
 import { CodeBlock } from "@/components/code-block";
-import { Section } from "@/components/section";
 import { endpoints } from "@/content/docs";
 import { bankrX402Command } from "@/lib/bankr-x402";
 
@@ -176,15 +178,26 @@ const navItems = [
 
 export default function DocsPage() {
   return (
-    <main>
-      <Section eyebrow="Docs" title="ContextKit usage guide for Bankr, API keys, and SDK integrations.">
-        <div className="grid gap-8 lg:grid-cols-[260px_1fr]">
-          <aside className="h-fit rounded-md border border-line bg-white/[0.035] p-5 text-sm text-white/65">
-            {navItems.map((item) => (
-              <a key={item} href={`#${slugify(item)}`} className="block rounded px-2 py-2 hover:bg-white/[0.04] hover:text-white">
-                {item}
+    <main className="relative min-h-screen overflow-hidden px-5 py-8 md:py-10">
+      <div className="agent-grid pointer-events-none absolute inset-0 opacity-50" />
+      <div className="pointer-events-none absolute -left-44 top-32 h-[34rem] w-[34rem] rounded-full bg-mint/[0.07] blur-[110px]" />
+      <div className="pointer-events-none absolute -right-48 top-[50rem] h-[32rem] w-[32rem] rounded-full bg-aqua/[0.06] blur-[110px]" />
+      <div className="relative mx-auto max-w-7xl">
+        <section className="overflow-hidden rounded-[1.55rem] border border-white/[0.13] bg-carbon/80 shadow-[0_24px_90px_rgba(0,0,0,0.3)] backdrop-blur-xl">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-3 font-mono text-[10px] uppercase tracking-[0.16em] text-white/42 sm:px-7"><span className="flex items-center gap-2"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-mint" /> ContextKit docs / v1</span><span className="hidden sm:inline">bankr, SDK, direct API, MCP</span><span className="text-mint">developer reference</span></div>
+          <div className="grid gap-7 px-6 py-8 sm:px-9 lg:grid-cols-[1.08fr_0.92fr] lg:px-12 lg:py-10"><div><div className="inline-flex items-center gap-2 rounded-full border border-mint/25 bg-mint/[0.07] px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.16em] text-mint"><Sparkles className="h-3.5 w-3.5" /> Integration guide</div><h1 className="mt-5 max-w-3xl text-balance text-4xl font-semibold leading-[0.98] tracking-[-0.05em] text-white sm:text-5xl">Everything an agent needs to keep context moving.</h1><p className="mt-4 max-w-2xl leading-7 text-white/60">Start with a hosted x402 command, wire direct API credits into your backend, or connect MCP to a coding agent. This guide covers the full path.</p><div className="mt-7 flex flex-wrap gap-3"><Link href="/playground" className="inline-flex h-10 items-center gap-2 rounded-lg bg-mint px-4 text-sm font-semibold text-ink transition hover:bg-white">Try playground <ArrowRight className="h-4 w-4" /></Link><Link href="/api-reference" className="inline-flex h-10 items-center gap-2 rounded-lg border border-line bg-ink/45 px-4 text-sm text-white/75 transition hover:border-mint/45 hover:text-white">API reference <ArrowRight className="h-4 w-4" /></Link></div></div><div className="grid content-start gap-px overflow-hidden rounded-2xl border border-line bg-line"><DocsPulse icon={<Terminal className="h-4 w-4" />} title="Bankr x402" text="Public paid calls with USDC settlement." /><DocsPulse icon={<KeyRound className="h-4 w-4" />} title="SDK + credits" text="Scoped keys and direct production routes." /><DocsPulse icon={<Network className="h-4 w-4" />} title="Remote MCP" text="OAuth-connected agent tools over HTTP." /></div></div>
+        </section>
+
+        <section className="mt-14 grid gap-8 lg:grid-cols-[250px_minmax(0,1fr)]">
+          <aside className="h-fit rounded-[1.25rem] border border-line bg-carbon/70 p-3 text-sm text-white/65 lg:sticky lg:top-24">
+            <div className="border-b border-line px-3 pb-3 pt-2"><p className="font-mono text-[10px] uppercase tracking-[0.17em] text-mint">On this page</p><p className="mt-1 text-sm text-white/48">14 integration topics</p></div>
+            <nav className="mt-2 max-h-[calc(100vh-9rem)] overflow-y-auto pr-1">
+            {navItems.map((item, index) => (
+              <a key={item} href={`#${slugify(item)}`} className="group flex items-center gap-3 rounded-lg px-3 py-2.5 transition hover:bg-white/[0.05] hover:text-white">
+                <span className="font-mono text-[10px] text-white/30 group-hover:text-mint">{String(index + 1).padStart(2, "0")}</span><span>{item}</span>
               </a>
             ))}
+            </nav>
           </aside>
 
           <div className="space-y-12">
@@ -467,8 +480,8 @@ curl https://contextkit.pro/api/public/metrics`} />
               </div>
             </DocSection>
           </div>
-        </div>
-      </Section>
+        </section>
+      </div>
     </main>
   );
 }
@@ -528,7 +541,7 @@ function slugify(value: string) {
 
 function InfoCard({ title, body }: { title: string; body: string }) {
   return (
-    <div className="rounded-md border border-mint/20 bg-mint/10 p-4">
+    <div className="rounded-xl border border-mint/20 bg-mint/[0.055] p-4 transition hover:border-mint/40">
       <h3 className="font-semibold text-white">{title}</h3>
       <p className="mt-2 text-sm leading-6 text-white/60">{body}</p>
     </div>
@@ -537,18 +550,22 @@ function InfoCard({ title, body }: { title: string; body: string }) {
 
 function ErrorRow({ code, text }: { code: string; text: string }) {
   return (
-    <div className="rounded-md border border-line bg-white/[0.035] p-4">
+    <div className="rounded-xl border border-line bg-white/[0.03] p-4">
       <p className="font-mono text-sm text-mint">{code}</p>
       <p className="mt-2 text-sm leading-6 text-white/60">{text}</p>
     </div>
   );
 }
 
-function DocSection({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
+function DocSection({ id, title, children }: { id: string; title: string; children: ReactNode }) {
   return (
-    <section id={id} className="scroll-mt-28">
-      <h2 className="text-2xl font-semibold text-white">{title}</h2>
-      <div className="mt-4 leading-7 text-white/65">{children}</div>
+    <section id={id} className="scroll-mt-28 border-t border-line pt-8 first:border-t-0 first:pt-0">
+      <div className="flex items-start gap-4"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-mint/20 bg-mint/[0.06]"><BookOpen className="h-4 w-4 text-mint" /></span><div><h2 className="text-2xl font-semibold tracking-[-0.03em] text-white">{title}</h2><p className="mt-1 font-mono text-[10px] uppercase tracking-[0.16em] text-white/35">{id}</p></div></div>
+      <div className="mt-5 leading-7 text-white/65">{children}</div>
     </section>
   );
+}
+
+function DocsPulse({ icon, title, text }: { icon: ReactNode; title: string; text: string }) {
+  return <div className="flex gap-3 bg-carbon/90 p-4"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-mint/20 bg-mint/[0.06] text-mint">{icon}</span><div><p className="text-sm font-semibold text-white">{title}</p><p className="mt-1 text-sm leading-6 text-white/52">{text}</p></div></div>;
 }
