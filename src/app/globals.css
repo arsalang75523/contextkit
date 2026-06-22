@@ -55,6 +55,22 @@ body {
   word-break: break-word;
 }
 
+.auth-input {
+  display: block;
+  width: 100%;
+  height: 2.85rem;
+  border: 0;
+  background: transparent;
+  padding: 0 0.85rem;
+  color: #f3fff9;
+  font-size: 0.875rem;
+  outline: none;
+}
+
+.auth-input::placeholder {
+  color: rgba(243, 255, 249, 0.3);
+}
+
 .text-balance {
   text-wrap: balance;
 }

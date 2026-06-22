@@ -49,6 +49,17 @@ const memoryNodes = [
 ] as const;
 
 export default function HomePage() {
+  const [releaseVersion, setReleaseVersion] = useState("v1.2.4");
+
+  useEffect(() => {
+    fetch("/api/public/version")
+      .then((response) => response.ok ? response.json() as Promise<{ version?: string }> : null)
+      .then((payload) => {
+        if (payload?.version) setReleaseVersion(payload.version);
+      })
+      .catch(() => undefined);
+  }, []);
+
   return (
     <main className="overflow-hidden">
       <section className="agent-hero relative isolate min-h-[calc(100vh-62px)] px-5 pb-8 pt-6 md:pt-8">
@@ -59,7 +70,7 @@ export default function HomePage() {
           <div className="mb-6 flex items-center justify-between border-y border-line/80 py-3 font-mono text-[10px] uppercase tracking-[0.2em] text-white/44 md:text-xs">
             <span className="flex items-center gap-2"><Network className="h-3.5 w-3.5 text-mint" /><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-mint" /> ContextKit Network / Online</span>
             <span className="hidden sm:inline">Memory is infrastructure, not a transcript.</span>
-            <span className="text-mint">v1.1.0</span>
+            <span className="text-mint">{releaseVersion}</span>
           </div>
           <div className="mb-6 grid gap-2 border-b border-line pb-4 sm:grid-cols-3">
             <Signal label="01 / Capture" text="Keep the state, not every token." />
@@ -112,8 +123,8 @@ export default function HomePage() {
                         <ContextLine label="HANDOFF" value="ready for next agent" tone="text-amber" />
                       </div>
                       <div className="mt-auto grid grid-cols-2 gap-2 pt-4">
-                        <div className="rounded-lg border border-line bg-ink/50 p-2.5"><p className="font-mono text-[10px] text-white/42">INPUT</p><p className="mt-1 text-sm font-medium text-white">1,690 tok</p></div>
-                        <div className="rounded-lg border border-mint/20 bg-mint/[0.05] p-2.5"><p className="font-mono text-[10px] text-mint/70">OUTPUT</p><p className="mt-1 text-sm font-medium text-mint">330 tok</p></div>
+                        <div className="rounded-lg border border-line bg-ink/50 p-2.5"><p className="font-mono text-[10px] text-white/42">INPUT</p><p className="mt-1 text-sm font-medium text-white">1,690 tokens</p></div>
+                        <div className="rounded-lg border border-mint/20 bg-mint/[0.05] p-2.5"><p className="font-mono text-[10px] text-mint/70">OUTPUT</p><p className="mt-1 text-sm font-medium text-mint">330 tokens</p></div>
                       </div>
                     </div>
                   </div>
