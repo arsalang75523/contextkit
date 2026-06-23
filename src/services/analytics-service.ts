@@ -47,6 +47,17 @@ export class AnalyticsService {
     return this.globalOverview();
   }
 
+  async totalRecordedRevenue() {
+    const requests = await this.requests();
+    const total = requests.reduce<number>((sum, request) => {
+      if (!request || typeof request !== "object" || !("amountUsd" in request)) return sum;
+      const amount = Number(request.amountUsd);
+      return Number.isFinite(amount) && amount > 0 ? sum + amount : sum;
+    }, 0);
+
+    return Number(total.toFixed(6));
+  }
+
   async overviewForOwner(ownerId?: string) {
     if (!ownerId) return emptyOverview();
     const requests = await this.requestsForOwner(ownerId);

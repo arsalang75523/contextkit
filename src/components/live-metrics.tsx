@@ -8,6 +8,7 @@ type Metrics = {
   webhookDeliveries: number;
   compressionSavings: number;
   paymentTotal: number;
+  totalRevenue: number;
 };
 
 export function LiveMetrics() {
@@ -24,7 +25,7 @@ export function LiveMetrics() {
     ["Requests processed", metrics?.totalRequests ?? 0],
     ["Paid endpoints", 4],
     ["Starting price", "$0.03"],
-    ["x402 revenue", `$${(metrics?.paymentTotal ?? 0).toFixed(3)}`]
+    ["Total revenue", `$${(metrics?.totalRevenue ?? 0).toFixed(3)}`]
   ];
 
   return (

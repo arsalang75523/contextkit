@@ -275,99 +275,95 @@ body {
   box-shadow: 0 32px 100px rgba(0, 0, 0, 0.34);
 }
 
-.roadmap-specimen {
-  background: linear-gradient(145deg, rgba(115, 243, 195, 0.1), rgba(5, 7, 6, 0.18) 48%, rgba(104, 216, 255, 0.08));
+.roadmap-overview {
+  display: grid;
+  gap: 2rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
 }
 
-.roadmap-map-mark {
-  background:
-    linear-gradient(90deg, transparent 49.5%, rgba(115, 243, 195, 0.16) 50%, transparent 50.5%),
-    radial-gradient(ellipse at 50% 95%, transparent 0 16%, rgba(115, 243, 195, 0.18) 16.2% 16.6%, transparent 16.8% 33%, rgba(104, 216, 255, 0.14) 33.2% 33.5%, transparent 33.7%);
-  opacity: 0.85;
+.roadmap-current {
+  display: flex;
+  min-width: 14rem;
+  align-items: center;
+  gap: 0.85rem;
+  border-left: 1px solid rgba(246, 211, 101, 0.45);
+  padding: 0.35rem 0 0.35rem 1.1rem;
 }
 
-.roadmap-map {
+.roadmap-rail {
   position: relative;
   display: grid;
-  gap: 0;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 0.65rem;
   margin: 0;
-  padding: 0.5rem 0;
+  padding: 0;
   list-style: none;
 }
 
-.roadmap-map::before {
+.roadmap-rail::before {
   position: absolute;
-  top: 0;
-  bottom: 0;
-  left: calc(50% - 0.5px);
-  width: 1px;
-  background: linear-gradient(to bottom, #73f3c3 0%, rgba(115, 243, 195, 0.45) 35%, #f6d365 48%, rgba(104, 216, 255, 0.5) 75%, rgba(115, 243, 195, 0.18));
-  content: "";
-}
-
-.roadmap-stop {
-  position: relative;
-  display: grid;
-  min-height: 15rem;
-  grid-template-columns: minmax(0, 1fr) 7rem minmax(0, 1fr);
-  align-items: center;
-}
-
-.roadmap-branch {
-  position: relative;
-  width: min(100%, 30rem);
-  border: 1px solid rgba(219, 255, 239, 0.13);
-  background: rgba(10, 15, 13, 0.76);
-  padding: 1.5rem;
-  transition: transform 250ms ease, border-color 250ms ease, background-color 250ms ease;
-}
-
-.roadmap-branch::after {
-  position: absolute;
-  top: 50%;
-  width: 3.5rem;
+  z-index: 0;
+  top: 1.45rem;
+  right: 7.8%;
+  left: 7.8%;
   height: 1px;
-  background: linear-gradient(to right, rgba(115, 243, 195, 0.5), rgba(115, 243, 195, 0.1));
+  background: linear-gradient(to right, rgba(115, 243, 195, 0.65), rgba(104, 216, 255, 0.58) 35%, rgba(246, 211, 101, 0.85) 49%, rgba(255, 123, 107, 0.5) 68%, rgba(115, 243, 195, 0.42));
   content: "";
 }
 
-.roadmap-stop--left .roadmap-branch {
-  grid-column: 1;
-  justify-self: end;
-  margin-right: 3.5rem;
-}
-
-.roadmap-stop--left .roadmap-branch::after {
-  right: -3.5rem;
-}
-
-.roadmap-stop--right .roadmap-branch {
-  grid-column: 3;
-  margin-left: 3.5rem;
-}
-
-.roadmap-stop--right .roadmap-branch::after {
-  left: -3.5rem;
-  transform: rotate(180deg);
-}
-
-.roadmap-stop-marker {
+.roadmap-rail-stop {
   position: relative;
   z-index: 1;
-  display: grid;
-  width: 2.7rem;
-  height: 2.7rem;
-  grid-column: 2;
-  grid-row: 1;
-  place-items: center;
-  justify-self: center;
-  border-width: 1px;
-  border-radius: 9999px;
-  box-shadow: 0 0 0 8px rgba(5, 7, 6, 0.95);
+  padding-top: 0.25rem;
 }
 
-.roadmap-stop-marker--current {
-  box-shadow: 0 0 0 8px rgba(5, 7, 6, 0.95), 0 0 28px rgba(246, 211, 101, 0.52);
+.roadmap-rail-marker {
+  position: relative;
+  display: grid;
+  width: 2.45rem;
+  height: 2.45rem;
+  margin-left: 0.45rem;
+  place-items: center;
+  border-width: 1px;
+  border-radius: 9999px;
+  box-shadow: 0 0 0 7px rgba(10, 15, 13, 0.94);
+}
+
+.roadmap-rail-marker--current {
+  box-shadow: 0 0 0 7px rgba(10, 15, 13, 0.94), 0 0 28px rgba(246, 211, 101, 0.5);
+}
+
+.roadmap-rail-card {
+  min-height: 11.5rem;
+  margin-top: 1rem;
+  border: 1px solid rgba(219, 255, 239, 0.12);
+  background: rgba(10, 15, 13, 0.72);
+  padding: 1rem;
+  transition: transform 220ms ease, border-color 220ms ease, background-color 220ms ease;
+}
+
+.roadmap-rail-card--current {
+  border-color: rgba(246, 211, 101, 0.42);
+  background: linear-gradient(145deg, rgba(246, 211, 101, 0.1), rgba(10, 15, 13, 0.82) 55%);
+}
+
+.roadmap-rail-card:hover,
+.roadmap-detail-card:hover {
+  transform: translateY(-0.22rem);
+  border-color: rgba(115, 243, 195, 0.42);
+}
+
+.roadmap-detail-card {
+  border: 1px solid rgba(219, 255, 239, 0.12);
+  background: rgba(10, 15, 13, 0.72);
+  padding: 1.4rem;
+  transition: transform 220ms ease, border-color 220ms ease, background-color 220ms ease;
+}
+
+.roadmap-detail-card--current {
+  border-color: rgba(246, 211, 101, 0.38);
+  background: linear-gradient(145deg, rgba(246, 211, 101, 0.08), rgba(10, 15, 13, 0.83) 56%);
 }
 
 .roadmap-stop-pulse,
@@ -377,12 +373,6 @@ body {
   border: 1px solid rgba(246, 211, 101, 0.8);
   border-radius: 9999px;
   animation: roadmap-pulse 1.8s ease-out infinite;
-}
-
-.roadmap-branch:hover {
-  transform: translateY(-0.25rem);
-  border-color: rgba(115, 243, 195, 0.42);
-  background: rgba(14, 23, 19, 0.9);
 }
 
 @keyframes roadmap-pulse {
@@ -439,37 +429,40 @@ body {
 }
 
 @media (max-width: 640px) {
-  .roadmap-map::before {
-    left: 1.3rem;
+  .roadmap-overview {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
   }
 
-  .roadmap-stop {
-    min-height: auto;
-    grid-template-columns: 3.9rem minmax(0, 1fr);
-    padding-bottom: 2rem;
+  .roadmap-current {
+    min-width: 0;
   }
 
-  .roadmap-stop-marker {
-    width: 2.4rem;
-    height: 2.4rem;
-    grid-column: 1;
-    justify-self: center;
+  .roadmap-rail {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.55rem;
   }
 
-  .roadmap-branch,
-  .roadmap-stop--left .roadmap-branch,
-  .roadmap-stop--right .roadmap-branch {
-    width: auto;
-    grid-column: 2;
-    margin: 0;
-    text-align: left;
+  .roadmap-rail::before {
+    display: none;
   }
 
-  .roadmap-branch::after,
-  .roadmap-stop--left .roadmap-branch::after,
-  .roadmap-stop--right .roadmap-branch::after {
-    left: -1.8rem;
-    width: 1.8rem;
-    transform: none;
+  .roadmap-rail-marker {
+    margin-left: 0;
+  }
+
+  .roadmap-rail-card {
+    min-height: 10rem;
+    padding: 0.8rem;
+  }
+}
+
+@media (max-width: 900px) and (min-width: 641px) {
+  .roadmap-rail {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .roadmap-rail::before {
+    display: none;
   }
 }
