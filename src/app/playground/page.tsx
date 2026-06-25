@@ -3,7 +3,7 @@
 import { type ReactNode, useMemo, useState } from "react";
 import { CircleDollarSign, FileText, Network, Play, RotateCcw, Sparkles, Terminal, Zap } from "lucide-react";
 import { CodeBlock } from "@/components/code-block";
-import { endpoints } from "@/content/docs";
+import { bankrEndpoints, endpoints } from "@/content/docs";
 import { bankrHostedUrl, bankrX402Command } from "@/lib/bankr-x402";
 
 const playgroundEndpoints = endpoints.filter((item) => item.slug !== "memory-enrichment");
@@ -29,6 +29,7 @@ export default function PlaygroundPage() {
   const [isRunning, setIsRunning] = useState(false);
 
   const active = useMemo(() => playgroundEndpoints.find((item) => item.slug === endpoint) ?? playgroundEndpoints[0], [endpoint]);
+  const activeBankr = useMemo(() => bankrEndpointForOperation(active.slug), [active.slug]);
   const inputText = input.trim() || "Summarize this context.";
   const messages = useMemo(() => playgroundMessages(endpoint, inputText), [endpoint, inputText]);
   const selectedProfileMode = endpoint === "memory-enrichment" ? "memory-enrichment" : profileMode;
@@ -46,10 +47,10 @@ export default function PlaygroundPage() {
       params.set("mode", selectedProfileMode);
     }
     const callPayload = active.slug === "summarize"
-      ? `{"contextId":"ctx_REPLACE_ME","mode":"${summaryMode}"}`
+      ? { contextId: "ctx_REPLACE_ME", mode: summaryMode }
       : active.slug === "extract-profile" || active.slug === "memory-enrichment"
-        ? `{"contextId":"ctx_REPLACE_ME","mode":"${selectedProfileMode}"}`
-      : '{"contextId":"ctx_REPLACE_ME"}';
+        ? { contextId: "ctx_REPLACE_ME", mode: selectedProfileMode }
+      : { contextId: "ctx_REPLACE_ME" };
     const marker = heredocMarker(input);
     const jsonUpload = needsJsonWrappedInput(active.slug);
     const jsonPayload = JSON.stringify({
@@ -74,9 +75,7 @@ ${marker}
 curl -X POST "https://contextkit.pro/api/context/upload-text?${params.toString()}" \\
   -H "Content-Type: text/plain" \\
   --data-binary @long-context.txt`,
-      call: `bankr x402 call ${bankrHostedUrl(active.slug)} \\
-  -X POST \\
-  -d '${callPayload}'`
+      call: bankrX402Command(active.slug, callPayload)
     };
   }, [active.slug, input, messages, selectedProfileMode, summaryMode]);
 
@@ -145,7 +144,7 @@ curl -X POST "https://contextkit.pro/api/context/upload-text?${params.toString()
                   className={`min-w-0 rounded-xl border px-3 py-3 text-left text-xs transition xl:text-sm ${endpoint === item.slug ? "border-mint/50 bg-mint/[0.1] text-mint shadow-[inset_0_0_20px_rgba(115,243,195,0.05)]" : "border-line bg-ink/35 text-white/60 hover:border-white/25 hover:text-white"}`}
                 >
                   <span className="block break-words font-medium">{item.slug}</span>
-                  <span className="mt-1 block font-mono text-[10px] text-white/35">{item.price}</span>
+                  <span className="mt-1 block font-mono text-[10px] text-white/35">Bankr {bankrEndpointForOperation(item.slug).price}</span>
                 </button>
               ))}
             </div>
@@ -161,7 +160,7 @@ curl -X POST "https://contextkit.pro/api/context/upload-text?${params.toString()
             ) : null}
             {endpoint === "extract-profile" || endpoint === "memory-enrichment" ? (
               <div className="mt-5 rounded-xl border border-mint/20 bg-mint/[0.055] p-4">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"><div><h2 className="font-semibold text-white">Profile mode</h2><p className="mt-1 text-sm leading-6 text-white/57">Hosted Bankr calls use <code>contextkit-profile</code> for both profile and memory extraction.</p></div><span className="font-mono text-[10px] uppercase tracking-[0.15em] text-mint">{selectedProfileMode}</span></div>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"><div><h2 className="font-semibold text-white">Profile mode</h2><p className="mt-1 text-sm leading-6 text-white/57">Hosted Bankr calls use <code>contextkit-core</code> for both profile and memory extraction.</p></div><span className="font-mono text-[10px] uppercase tracking-[0.15em] text-mint">{selectedProfileMode}</span></div>
                 <div className="mt-4 grid grid-cols-2 gap-2">{(["extract-profile", "memory-enrichment"] as const).map((mode) => <button key={mode} type="button" onClick={() => setProfileMode(mode)} className={`rounded-lg border px-3 py-2 text-xs transition sm:text-sm ${selectedProfileMode === mode ? "border-mint bg-mint/15 text-mint" : "border-line text-white/58 hover:text-white"}`}>{mode}</button>)}</div>
               </div>
             ) : null}
@@ -170,8 +169,11 @@ curl -X POST "https://contextkit.pro/api/context/upload-text?${params.toString()
           </section>
           <section className="min-w-0 space-y-5 rounded-[1.45rem] border border-line bg-carbon/72 p-5 sm:p-6">
             <div className="overflow-hidden rounded-xl border border-mint/25 bg-mint/[0.06]">
-              <div className="flex items-center justify-between border-b border-mint/15 px-4 py-3"><span className="font-mono text-[10px] uppercase tracking-[0.16em] text-mint">02 / Active endpoint</span><span className="rounded-full border border-mint/20 bg-mint/[0.08] px-2 py-1 font-mono text-[10px] text-mint">{active.price}</span></div>
-              <div className="p-4"><p className="break-all font-mono text-sm leading-6 text-mint">{bankrHostedUrl(active.slug)}</p><p className="mt-3 text-sm leading-6 text-white/60">This is the real paid endpoint for <span className="text-mint">{active.slug}</span>. The playground runs from your dashboard session; production traffic uses Bankr-hosted x402.</p></div>
+              <div className="flex items-center justify-between border-b border-mint/15 px-4 py-3"><span className="font-mono text-[10px] uppercase tracking-[0.16em] text-mint">02 / Active endpoint</span><span className="rounded-full border border-mint/20 bg-mint/[0.08] px-2 py-1 font-mono text-[10px] text-mint">{activeBankr.price}</span></div>
+              <div className="p-4">
+                <p className="break-all font-mono text-sm leading-6 text-mint">{bankrHostedUrl(active.slug)}</p>
+                <p className="mt-3 text-sm leading-6 text-white/60">Bankr lane: <span className="text-mint">{activeBankr.slug}</span> at <span className="text-mint">{activeBankr.price}</span>. Operation selected by payload: <span className="text-aqua">{active.slug}</span>.</p>
+              </div>
             </div>
             <div className="overflow-hidden rounded-xl border border-line bg-ink/55"><div className="flex items-center justify-between border-b border-line px-4 py-3"><div><p className="font-mono text-[10px] uppercase tracking-[0.16em] text-white/43">03 / Live response</p><p className="mt-1 text-sm text-white/58">3 real AI requests per account per day.</p></div><span className="h-2 w-2 animate-pulse rounded-full bg-mint" /></div><div className="p-4"><CodeBlock code={JSON.stringify(runResult ?? { status: "Paste context and run a live request." }, null, 2)} /></div></div>
             <div className="overflow-hidden rounded-xl border border-line bg-ink/45"><div className="flex items-center gap-2 border-b border-line px-4 py-3 font-mono text-[10px] uppercase tracking-[0.16em] text-white/43"><Terminal className="h-4 w-4 text-aqua" /> 04 / Paid terminal request</div><div className="p-4"><p className="mb-3 text-sm leading-6 text-white/56">Run this after <code>bankr login</code>. Bankr asks for payment approval, then returns ContextKit JSON.</p>{needsJsonWrappedInput(active.slug) ? <p className="mb-3 rounded-lg border border-aqua/20 bg-aqua/[0.07] p-3 text-sm leading-6 text-aqua">This endpoint wraps your text as a JSON message so extraction receives valid conversation input.</p> : null}<CodeBlock code={command} /></div></div>
@@ -216,4 +218,11 @@ function playgroundMessages(endpoint: string, inputText: string) {
       ])
     }
   ];
+}
+
+function bankrEndpointForOperation(slug: string) {
+  if (slug === "summarize" || slug === "compress-context" || slug === "handoff" || slug === "extract-profile" || slug === "memory-enrichment") {
+    return bankrEndpoints[0];
+  }
+  return bankrEndpoints.find((endpoint) => endpoint.modes.includes(slug)) ?? bankrEndpoints[0];
 }

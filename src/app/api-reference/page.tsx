@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { ArrowRight, CircleDollarSign, KeyRound, Network, Sparkles, Terminal, Webhook } from "lucide-react";
 import { CodeBlock } from "@/components/code-block";
-import { endpoints } from "@/content/docs";
+import { bankrEndpoints, endpoints } from "@/content/docs";
 import { bankrHostedUrl, bankrX402Command } from "@/lib/bankr-x402";
 
 export default function ApiReferencePage() {
@@ -26,7 +26,7 @@ export default function ApiReferencePage() {
           <p className="max-w-sm text-sm leading-6 text-white/52">Every path reaches the same ContextKit API. Choose based on your agent host and payment model.</p>
         </div>
         <div className="mt-8 grid gap-5 lg:grid-cols-3">
-          <ApiQuickstart number="01" eyebrow="Fastest" title="Call through Bankr" text="Use a Bankr-authenticated terminal or agent. Approve USDC payment when prompted, then receive JSON." code={bankrX402Command("summarize", { messages: [{ role: "user", content: "Summarize this agent context." }], mode: "compact" })} href="/x402" linkLabel="Bankr x402 guide" tone="mint" />
+          <ApiQuickstart number="01" eyebrow="Fastest" title="Call through Bankr" text="Use the four Bankr lanes. Core operations share contextkit-core and select work with endpoint/mode." code={bankrX402Command("summarize", { messages: [{ role: "user", content: "Summarize this agent context." }], mode: "compact" })} href="/x402" linkLabel="Bankr x402 guide" tone="mint" />
           <ApiQuickstart number="02" eyebrow="SDK / backend" title="Use scoped API credits" text="Create a dashboard account, issue an API key, and call direct routes. Credits run before an x402 fallback." code={`npm install @basedchef/contextkit\n\nconst client = new ContextKit({ apiKey: process.env.CONTEXTKIT_API_KEY });`} href="/dashboard/login" linkLabel="Create API key" tone="aqua" />
           <ApiQuickstart number="03" eyebrow="Agent host" title="Connect remote MCP" text="Use Streamable HTTP with OAuth or a scoped key. Tools inherit the same credit and safety controls." code={`https://contextkit.pro/mcp\n\nAuthorization: Bearer <CONTEXTKIT_API_KEY>`} href="/mcp-guide" linkLabel="MCP connection guide" tone="mint" />
         </div>
@@ -38,6 +38,26 @@ export default function ApiReferencePage() {
           <div className="rounded-xl border border-mint/20 bg-mint/[0.06] p-5"><div className="flex items-center gap-2 text-mint"><CircleDollarSign className="h-4 w-4" /><p className="font-mono text-[10px] uppercase tracking-[0.16em]">Public paid path</p></div><h2 className="mt-3 text-xl font-semibold text-white">Bankr-hosted x402</h2><p className="mt-2 text-sm leading-6 text-white/60">Use the hosted URLs for public paid calls. Bankr settles payment, then forwards the request to ContextKit. No ContextKit API key is required.</p></div>
           <div className="rounded-xl border border-aqua/20 bg-aqua/[0.06] p-5"><div className="flex items-center gap-2 text-aqua"><KeyRound className="h-4 w-4" /><p className="font-mono text-[10px] uppercase tracking-[0.16em]">Developer path</p></div><h2 className="mt-3 text-xl font-semibold text-white">Direct SDK/API routes</h2><p className="mt-2 text-sm leading-6 text-white/60">Send a scoped `Authorization: Bearer` key. Account credits run paid endpoints first; insufficient balance returns an x402 challenge.</p></div>
         </div>
+        <div className="mb-10 grid gap-5">
+          {bankrEndpoints.map((endpoint) => (
+            <article key={endpoint.slug} className="overflow-hidden rounded-[1.35rem] border border-mint/20 bg-mint/[0.035] p-5 sm:p-7">
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div>
+                  <p className="break-all font-mono text-xs text-mint">POST {bankrHostedUrl(endpoint.slug)}</p>
+                  <h2 className="mt-3 text-2xl font-semibold tracking-[-0.03em] text-white">{endpoint.slug}</h2>
+                  <p className="mt-2 max-w-3xl text-sm leading-6 text-white/60">{endpoint.description}</p>
+                </div>
+                <span className="rounded-xl border border-aqua/25 bg-aqua/[0.08] px-3 py-2 font-mono text-sm text-aqua">{endpoint.price}<span className="ml-1 text-[10px] text-aqua/60">/ req</span></span>
+              </div>
+              <div className="mt-5 flex flex-wrap gap-2">
+                {endpoint.modes.map((mode) => (
+                  <span key={mode} className="rounded-full border border-line bg-ink/45 px-3 py-1 font-mono text-[10px] text-white/52">{mode}</span>
+                ))}
+              </div>
+            </article>
+          ))}
+        </div>
+        <div className="mb-8 border-b border-line pb-7"><p className="font-mono text-[10px] uppercase tracking-[0.18em] text-aqua">Direct API routes</p><h2 className="mt-3 max-w-3xl text-3xl font-semibold tracking-[-0.04em] text-white md:text-4xl">Same compute, API-key access, account credits.</h2></div>
         <div className="space-y-8">
           {endpoints.map((endpoint) => {
             const request = JSON.stringify({
@@ -66,7 +86,7 @@ export default function ApiReferencePage() {
                     ) : null}
                     {endpoint.slug === "memory-enrichment" ? (
                       <p className="mt-4 max-w-3xl rounded-xl border border-aqua/25 bg-aqua/[0.07] p-3 text-sm leading-6 text-aqua">
-                        Bankr memory enrichment is a mode of <code>contextkit-profile</code>: send <code>{'mode:"memory-enrichment"'}</code>. Direct API-key usage can still call <code>/api/memory-enrichment</code>.
+                        Bankr memory enrichment is a mode of <code>contextkit-core</code>: send <code>{'endpoint:"memory-enrichment"'}</code> and <code>{'mode:"memory-enrichment"'}</code>. Direct API-key usage can still call <code>/api/memory-enrichment</code>.
                       </p>
                     ) : null}
                   </div>

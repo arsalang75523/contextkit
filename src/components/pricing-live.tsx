@@ -23,9 +23,13 @@ export function PricingEndpointStats({ endpoint }: { endpoint: string }) {
   const [metric, setMetric] = useState<EndpointMetric | null>(null);
 
   useEffect(() => {
+    const metricKey = metricEndpoint(endpoint);
     fetch("/api/public/endpoint-metrics")
-      .then((response) => response.json() as Promise<EndpointMetricsResponse>)
-      .then((payload) => setMetric(payload.endpoints.find((item) => item.endpoint === endpoint) ?? null))
+      .then((response) => response.ok ? response.json() as Promise<EndpointMetricsResponse> : { endpoints: [] })
+      .then((payload) => {
+        const endpoints = Array.isArray(payload.endpoints) ? payload.endpoints : [];
+        setMetric(endpoints.find((item) => item.endpoint === metricKey) ?? null);
+      })
       .catch(() => setMetric(null));
   }, [endpoint]);
 
@@ -64,6 +68,58 @@ function endpointStats(endpoint: string, metric: EndpointMetric | null) {
         { label: "Avg latency", value: latency }
       ],
       note: `Input ${inputTokens} -> output ${outputTokens} tokens.`
+    };
+  }
+
+  if (endpoint === "contextkit-core") {
+    return {
+      title: "Live core usage",
+      items: [
+        { label: "Core calls", value: requests },
+        { label: "Revenue", value: revenue },
+        { label: "Saved tokens", value: savedTokens },
+        { label: "Avg latency", value: latency }
+      ],
+      note: `Core lane includes summarize, compress, handoff, profile, and memory modes.`
+    };
+  }
+
+  if (endpoint === "contextkit-experience-write") {
+    return {
+      title: "Experience write lane",
+      items: [
+        { label: "Writes", value: requests },
+        { label: "Revenue", value: revenue },
+        { label: "Source tokens", value: inputTokens },
+        { label: "Avg latency", value: latency }
+      ],
+      note: "Save and publish operations will populate this lane after MCP V2 backend ships."
+    };
+  }
+
+  if (endpoint === "contextkit-experience-search") {
+    return {
+      title: "Experience search lane",
+      items: [
+        { label: "Searches", value: requests },
+        { label: "Revenue", value: revenue },
+        { label: "Result tokens", value: outputTokens },
+        { label: "Avg latency", value: latency }
+      ],
+      note: "Search metrics start once experience records are indexed."
+    };
+  }
+
+  if (endpoint === "contextkit-experience-buy") {
+    return {
+      title: "Experience buy lane",
+      items: [
+        { label: "Purchases", value: requests },
+        { label: "Revenue", value: revenue },
+        { label: "Payload tokens", value: outputTokens },
+        { label: "Avg latency", value: latency }
+      ],
+      note: "Buy metrics start after marketplace purchase routing is enabled."
     };
   }
 
@@ -116,6 +172,14 @@ function endpointStats(endpoint: string, metric: EndpointMetric | null) {
     ],
     note: `Direct API-key memory route processed ${inputTokens} input tokens.`
   };
+}
+
+function metricEndpoint(endpoint: string) {
+  if (endpoint === "contextkit-core") return "summarize";
+  if (endpoint === "contextkit-experience-write") return "compress-context";
+  if (endpoint === "contextkit-experience-search") return "handoff";
+  if (endpoint === "contextkit-experience-buy") return "extract-profile";
+  return endpoint;
 }
 
 function EndpointStat({ label, value }: { label: string; value: ReactNode }) {

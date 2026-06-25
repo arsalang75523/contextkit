@@ -113,7 +113,7 @@ export const endpoints = [
     path: "/api/memory-enrichment",
     price: "$0.04",
     event: "request.completed",
-    description: "Evolve long-term memory. Bankr-hosted calls use contextkit-profile with mode: memory-enrichment; direct API-key usage can still call /api/memory-enrichment.",
+    description: "Evolve long-term memory. Bankr-hosted calls use contextkit-core with endpoint: memory-enrichment; direct API-key usage can still call /api/memory-enrichment.",
     response: {
       activeMemories: [{ fact: "Prefers concise weekly updates", category: "preference", stability: "stable", confidence: 0.96 }],
       evolvingMemories: [{ fact: "Preparing a night-bus pilot", category: "project", stability: "evolving", confidence: 0.92 }],
@@ -138,4 +138,35 @@ export const integrationGuides = [
   "AutoGen",
   "OpenAI Agents",
   "Claude-based agents"
+];
+
+export const bankrEndpoints = [
+  {
+    slug: "contextkit-core",
+    path: "contextkit-core",
+    price: "$0.03",
+    modes: ["summarize", "compress-context", "handoff", "extract-profile", "memory-enrichment"],
+    description: "One paid Bankr endpoint for all core ContextKit operations. Select the operation with endpoint or mode."
+  },
+  {
+    slug: "contextkit-experience-write",
+    path: "contextkit-experience-write",
+    price: "$0.01",
+    modes: ["experience-save", "experience-publish"],
+    description: "MCP V2 write lane for saving private experiences or publishing marketplace listings."
+  },
+  {
+    slug: "contextkit-experience-search",
+    path: "contextkit-experience-search",
+    price: "$0.01",
+    modes: ["experience-search"],
+    description: "MCP V2 search lane for reusable agent lessons, private records, and public marketplace results."
+  },
+  {
+    slug: "contextkit-experience-buy",
+    path: "contextkit-experience-buy",
+    price: "$0.05",
+    modes: ["experience-buy"],
+    description: "MCP V2 purchase lane for buying published agent experience records through Bankr x402."
+  }
 ];

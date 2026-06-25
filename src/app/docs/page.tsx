@@ -2,8 +2,8 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { ArrowRight, BookOpen, KeyRound, Network, Sparkles, Terminal } from "lucide-react";
 import { CodeBlock } from "@/components/code-block";
-import { endpoints } from "@/content/docs";
-import { bankrX402Command } from "@/lib/bankr-x402";
+import { bankrEndpoints, endpoints } from "@/content/docs";
+import { bankrHostedUrl, bankrX402Command } from "@/lib/bankr-x402";
 
 const samplePayload = {
   messages: [
@@ -114,9 +114,7 @@ curl -X POST "https://contextkit.pro/api/context/upload-text?endpoint=summarize&
   -H "Content-Type: text/plain" \\
   --data-binary @long-context.txt`;
 
-const bankrContextIdCall = `bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-summarize \\
-  -X POST \\
-  -d '{"contextId":"ctx_REPLACE_ME","mode":"compact"}'`;
+const bankrContextIdCall = bankrX402Command("summarize", { contextId: "ctx_REPLACE_ME", mode: "compact" });
 
 const longContextExamples = [
   {
@@ -143,7 +141,7 @@ const longContextExamples = [
     title: "Memory enrichment",
     upload: uploadTextCommand("extract-profile", "memory-enrichment"),
     call: bankrContextCommand("extract-profile", '{"contextId":"ctx_REPLACE_ME","mode":"memory-enrichment"}'),
-    note: "Bankr memory enrichment is a mode of contextkit-profile. Direct API-key usage can still call /api/memory-enrichment."
+    note: "Bankr memory enrichment is a mode of contextkit-core. Direct API-key usage can still call /api/memory-enrichment."
   }
 ];
 
@@ -203,10 +201,10 @@ export default function DocsPage() {
           <div className="space-y-12">
             <DocSection id="introduction" title="Introduction">
               <p>
-                ContextKit is a payable context infrastructure service for autonomous agents. It provides summarization, context compression, project handoff generation, profile extraction, memory enrichment, webhooks, usage analytics, and API-credit billing.
+                ContextKit is a payable context infrastructure service for autonomous agents. Bankr-hosted x402 now exposes four paid lanes: core context operations, experience write, experience search, and experience buy.
               </p>
               <p className="mt-3">
-                The simplest public product path is Bankr-hosted x402. API keys and the SDK are for dashboard operations, server integrations, credit-backed direct calls, and advanced developer workflows.
+                The simplest public product path is Bankr-hosted x402. API keys and the SDK are for dashboard operations, server integrations, credit-backed direct calls, MCP hosts, and advanced developer workflows.
               </p>
             </DocSection>
 
@@ -221,8 +219,13 @@ export default function DocsPage() {
 
             <DocSection id="bankr-hosted-x402" title="Bankr Hosted x402">
               <p>
-                Bankr-hosted endpoints are the main paid public URLs. Bankr handles the x402 payment and forwards the paid request to ContextKit internal endpoints.
+                Bankr-hosted endpoints are the main paid public URLs. Bankr handles the x402 payment and forwards the paid request to ContextKit internal endpoints. The current Bankr surface is intentionally compressed into four lanes.
               </p>
+              <div className="mt-4 grid gap-4 md:grid-cols-2">
+                {bankrEndpoints.map((endpoint) => (
+                  <InfoCard key={endpoint.slug} title={`${endpoint.slug} ${endpoint.price}`} body={`${endpoint.description} Modes: ${endpoint.modes.join(", ")}.`} />
+                ))}
+              </div>
               <div className="mt-4 grid gap-4">
                 {hostedExamples().map((item) => (
                   <div key={item.title}>
@@ -283,6 +286,10 @@ export default function DocsPage() {
                     <li>contextkit_compress_context</li>
                     <li>contextkit_handoff</li>
                     <li>contextkit_extract_profile</li>
+                    <li>contextkit_experience_save</li>
+                    <li>contextkit_experience_search</li>
+                    <li>contextkit_experience_publish</li>
+                    <li>contextkit_experience_buy</li>
                     <li>contextkit_estimate_tokens</li>
                     <li>contextkit_get_credits</li>
                   </ul>
@@ -393,7 +400,7 @@ export default function DocsPage() {
             <DocSection id="endpoint-reference" title="Endpoint Reference">
               <div className="grid gap-5">
                 {endpoints.map((endpoint) => {
-                  const payload = endpoint.slug === "summarize" ? summarizePayload : samplePayload;
+                  const payload = endpoint.slug === "summarize" ? summarizePayload : endpoint.slug === "memory-enrichment" ? { ...samplePayload, mode: "memory-enrichment" } : samplePayload;
                   return (
                     <div key={endpoint.path} className="rounded-md border border-line bg-white/[0.035] p-5">
                       <div className="flex flex-wrap items-center gap-3">
@@ -520,19 +527,24 @@ curl -X POST "https://contextkit.pro/api/context/upload-text?${params.toString()
 }
 
 function bankrContextCommand(slug: string, payload: string) {
-  return `bankr x402 call ${bankrHostedUrlForDocs(slug)} \\
+  try {
+    return bankrX402Command(slug, JSON.parse(payload));
+  } catch {
+    return `bankr x402 call ${bankrHostedUrlForDocs(slug)} \\
   -X POST \\
   -d '${payload}'`;
+  }
 }
 
 function bankrHostedUrlForDocs(slug: string) {
   const map: Record<string, string> = {
-    summarize: "contextkit-summarize",
-    "compress-context": "contextkit-compress",
-    handoff: "contextkit-handoff",
-    "extract-profile": "contextkit-profile"
+    summarize: "contextkit-core",
+    "compress-context": "contextkit-core",
+    handoff: "contextkit-core",
+    "extract-profile": "contextkit-core",
+    "memory-enrichment": "contextkit-core"
   };
-  return `https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/${map[slug] ?? slug}`;
+  return bankrHostedUrl(map[slug] ?? slug);
 }
 
 function slugify(value: string) {
