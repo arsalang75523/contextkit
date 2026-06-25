@@ -41,8 +41,8 @@ const responseStream = [
   "publish: reusable lesson",
   "buyer: bankr x402 paid",
   "creator: USDC earned",
-  "input: 1,690 tokens",
-  "output: 330 tokens"
+  "earned: 0.05 USDC",
+  "total earned: 3,690 USDC"
 ];
 
 const memoryNodes = [
@@ -127,8 +127,8 @@ export default function HomePage() {
                         <ContextLine label="PAYOUT" value="creator earns on reuse" tone="text-amber" />
                       </div>
                       <div className="mt-auto grid grid-cols-2 gap-2 pt-4">
-                        <div className="rounded-lg border border-line bg-ink/50 p-2.5"><p className="font-mono text-[10px] text-white/42">INPUT</p><p className="mt-1 text-sm font-medium text-white">1,690 tokens</p></div>
-                        <div className="rounded-lg border border-mint/20 bg-mint/[0.05] p-2.5"><p className="font-mono text-[10px] text-mint/70">OUTPUT</p><p className="mt-1 text-sm font-medium text-mint">330 tokens</p></div>
+                        <div className="rounded-lg border border-line bg-ink/50 p-2.5"><p className="font-mono text-[10px] text-white/42">EARNED</p><p className="mt-1 text-sm font-medium text-white">0.05 USDC</p></div>
+                        <div className="rounded-lg border border-mint/20 bg-mint/[0.05] p-2.5"><p className="font-mono text-[10px] text-mint/70">TOTAL EARNED</p><p className="mt-1 text-sm font-medium text-mint">3,690 USDC</p></div>
                       </div>
                     </div>
                   </div>
@@ -200,11 +200,11 @@ export default function HomePage() {
 
 function EarnCard() {
   return (
-    <div className="mt-5 max-w-xl rounded-xl border border-amber/20 bg-amber/[0.045] p-3.5">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <div className="mt-8 max-w-xl rounded-xl border border-amber/20 bg-amber/[0.045] px-3.5 py-2.5 lg:mt-10">
+      <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
           <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-amber">MCP V2 revenue loop</p>
-          <p className="mt-1.5 text-sm leading-5 text-white/62">Publish reusable agent experience. Earn USDC when another agent buys it.</p>
+          <p className="mt-1 text-sm leading-5 text-white/62">Publish experience. Earn USDC when another agent buys it.</p>
         </div>
         <div className="flex shrink-0 gap-2 font-mono text-[9px] uppercase tracking-[0.12em] text-white/45">
           <span className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-mint/20 bg-mint/[0.06] px-2.5 text-mint"><BrainCircuit className="h-3.5 w-3.5" />Save</span>
@@ -249,7 +249,7 @@ function McpEndpointCard() {
   }
 
   return (
-    <div className="mt-5 max-w-xl rounded-xl border border-aqua/20 bg-aqua/[0.045] p-3.5">
+    <div className="mt-5 w-full rounded-xl border border-aqua/20 bg-aqua/[0.045] p-3.5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0"><p className="font-mono text-[10px] uppercase tracking-[0.18em] text-aqua">Remote MCP / Streamable HTTP</p><code className="mt-1.5 block truncate font-mono text-sm text-white/90">{endpoint}</code></div>
         <div className="flex shrink-0 gap-2"><button type="button" onClick={copyEndpoint} className="inline-flex h-9 items-center gap-2 rounded-lg border border-aqua/30 bg-ink/45 px-3 text-xs text-aqua transition hover:border-aqua hover:text-white">{copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}{copied ? "Copied" : "Copy"}</button><Link href="/mcp-guide" className="inline-flex h-9 items-center gap-2 rounded-lg bg-aqua px-3 text-xs font-medium text-ink transition hover:bg-mint">Guide <ArrowRight className="h-3.5 w-3.5" /></Link></div>

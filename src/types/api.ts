@@ -28,6 +28,64 @@ export const contextUploadSchema = z.object({
   ttlSeconds: z.number().int().min(300).max(86_400).default(3600)
 });
 
+const experienceTextListSchema = z.array(z.string().min(1).max(280)).max(20);
+
+export const experienceRecordSchema = z.object({
+  title: z.string().min(1).max(160).optional(),
+  summary: z.string().min(1).max(1_200).optional(),
+  content: z.string().min(1).max(40_000).optional(),
+  task: z.string().min(1).max(800).optional(),
+  outcome: z.string().min(1).max(1_200).optional(),
+  lesson: z.string().min(1).max(2_500).optional(),
+  constraints: experienceTextListSchema.optional(),
+  decisions: experienceTextListSchema.optional(),
+  tags: z.array(z.string().min(1).max(48)).max(16).optional(),
+  confidence: z.number().min(0).max(1).optional(),
+  source: z.string().min(1).max(160).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional()
+});
+
+const experienceWriteBaseSchema = z.object({
+  mode: z.enum(["experience-save", "save"]).optional(),
+  operation: z.enum(["experience-save", "save"]).optional(),
+  action: z.enum(["experience-save", "save"]).optional(),
+  experience: experienceRecordSchema.optional(),
+  messages: z.array(messageSchema).min(1).max(200).optional(),
+  contextId: contextIdSchema.optional(),
+  title: z.string().min(1).max(160).optional(),
+  content: z.string().min(1).max(40_000).optional(),
+  tags: z.array(z.string().min(1).max(48)).max(16).optional(),
+  creatorId: z.string().min(1).max(120).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional()
+});
+
+export const experienceSaveSchema = experienceWriteBaseSchema.refine((value) => Boolean(value.experience || value.messages?.length || value.contextId || value.title || value.content), {
+  message: "Provide experience, messages, contextId, title, or content."
+});
+
+export const experiencePublishSchema = experienceWriteBaseSchema.extend({
+  mode: z.enum(["experience-publish", "publish"]).optional(),
+  operation: z.enum(["experience-publish", "publish"]).optional(),
+  action: z.enum(["experience-publish", "publish"]).optional(),
+  experienceId: z.string().regex(/^exp_[a-f0-9]{24}$/).optional(),
+  priceUsd: z.number().min(0.01).max(50).default(0.05),
+  visibility: z.enum(["public"]).default("public")
+}).refine((value) => Boolean(value.experienceId || value.experience || value.messages?.length || value.contextId || value.title || value.content), {
+  message: "Provide experienceId, experience, messages, contextId, title, or content."
+});
+
+export const experienceSearchSchema = z.object({
+  query: z.string().max(800).optional(),
+  tags: z.array(z.string().min(1).max(48)).max(16).optional(),
+  includePrivate: z.boolean().default(true),
+  limit: z.number().int().min(1).max(20).default(10)
+});
+
+export const experienceBuySchema = z.object({
+  experienceId: z.string().regex(/^exp_[a-f0-9]{24}$/),
+  buyerId: z.string().min(1).max(120).optional()
+});
+
 export const webhookRegistrationSchema = z.object({
   url: z.string().url(),
   events: z.array(z.string()).min(1),
@@ -106,6 +164,12 @@ export type VerifyEmailInput = z.infer<typeof verifyEmailSchema>;
 export type PlaygroundRunInput = z.infer<typeof playgroundRunSchema>;
 
 export type ContextEndpoint = "summarize" | "compress-context" | "handoff" | "extract-profile" | "memory-enrichment";
+export type ExperienceEndpoint = "experience-save" | "experience-publish" | "experience-search" | "experience-buy";
+export type BillableEndpoint = ContextEndpoint | ExperienceEndpoint;
+export type ExperienceSaveInput = z.infer<typeof experienceSaveSchema>;
+export type ExperiencePublishInput = z.infer<typeof experiencePublishSchema>;
+export type ExperienceSearchInput = z.infer<typeof experienceSearchSchema>;
+export type ExperienceBuyInput = z.infer<typeof experienceBuySchema>;
 
 export type ApiError = {
   error: {

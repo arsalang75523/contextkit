@@ -1,11 +1,11 @@
 import type { MiddlewareHandler } from "hono";
 import { log } from "@/lib/logger";
 import type { AppBindings } from "@/types/bindings";
-import type { ContextEndpoint } from "@/types/api";
+import type { BillableEndpoint } from "@/types/api";
 import { PaymentService } from "@/services/payment-service";
 import { endpointPricing } from "@/lib/pricing";
 
-export function x402PaymentRequired(endpoint: ContextEndpoint): MiddlewareHandler<AppBindings> {
+export function x402PaymentRequired(endpoint: BillableEndpoint): MiddlewareHandler<AppBindings> {
   return async (c, next) => {
     const amountUsd = endpointPricing[endpoint];
     const paymentHeader =

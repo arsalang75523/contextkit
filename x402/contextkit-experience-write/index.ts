@@ -4,7 +4,7 @@ export default async function handler(req: Request) {
 }
 
 function resolveExperienceWritePath(body: string) {
-  let payload: { mode?: string; operation?: string; action?: string; experience?: { title?: string; priceUsd?: number } } = {};
+  let payload: { mode?: string; operation?: string; action?: string; experience?: { priceUsd?: number }; priceUsd?: number } = {};
   try {
     payload = JSON.parse(body);
   } catch {
@@ -13,7 +13,7 @@ function resolveExperienceWritePath(body: string) {
 
   const operation = String(payload.mode ?? payload.operation ?? payload.action ?? "").toLowerCase();
   if (operation === "publish" || operation === "experience-publish") return "/api/internal/experience/publish";
-  if (payload.experience?.title || typeof payload.experience?.priceUsd === "number") return "/api/internal/experience/publish";
+  if (typeof payload.priceUsd === "number" || typeof payload.experience?.priceUsd === "number") return "/api/internal/experience/publish";
   return "/api/internal/experience/save";
 }
 

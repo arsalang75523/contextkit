@@ -2,10 +2,18 @@ import { Hono } from "hono";
 import type { Context } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { zValidator } from "@hono/zod-validator";
-import { contextUploadSchema, conversationRequestSchema } from "@/types/api";
+import {
+  contextUploadSchema,
+  conversationRequestSchema,
+  experienceBuySchema,
+  experiencePublishSchema,
+  experienceSaveSchema,
+  experienceSearchSchema
+} from "@/types/api";
 import { sanitizeMessages } from "@/utils/sanitize";
 import { estimateTokens } from "@/utils/tokens";
 import { ContextService } from "@/services/context-service";
+import { ExperienceService } from "@/services/experience-service";
 import { AnalyticsService } from "@/services/analytics-service";
 import { ApiKeyService } from "@/services/api-key-service";
 import { CreditService } from "@/services/credit-service";
@@ -20,6 +28,9 @@ import { endpointPricing } from "@/lib/pricing";
 import type { AppBindings } from "@/types/bindings";
 import type {
   CompressContextResponse,
+  ExperienceBuyInput,
+  ExperiencePublishInput,
+  ExperienceSaveInput,
   ContextEndpoint,
   ConversationMessage,
   ConversationRequest,
@@ -180,6 +191,64 @@ contextRoutes.post("/memory-enrichment", requireApiKey("context:write"), apiKeyR
   return c.json(result);
 });
 
+contextRoutes.post(
+  "/experience/save",
+  requireApiKey("context:write"),
+  apiKeyRateLimit(),
+  apiCreditOrX402PaymentRequired("experience-save"),
+  zValidator("json", experienceSaveSchema),
+  async (c) => {
+    const body = c.req.valid("json");
+    const context = await resolveExperienceContext(c, body);
+    const result = await new ExperienceService(c.env ?? {}).save(body, context);
+    await completeOperation(c, "/experience/save", body, JSON.stringify(result), c.get("payment")?.paymentId);
+    return c.json(result, 201);
+  }
+);
+
+contextRoutes.post(
+  "/experience/publish",
+  requireApiKey("context:write"),
+  apiKeyRateLimit(),
+  apiCreditOrX402PaymentRequired("experience-publish"),
+  zValidator("json", experiencePublishSchema),
+  async (c) => {
+    const body = c.req.valid("json");
+    const context = await resolveExperienceContext(c, body);
+    const result = await new ExperienceService(c.env ?? {}).publish(body, context);
+    await completeOperation(c, "/experience/publish", body, JSON.stringify(result), c.get("payment")?.paymentId);
+    return c.json(result, 201);
+  }
+);
+
+contextRoutes.post(
+  "/experience/search",
+  requireApiKey("context:write"),
+  apiKeyRateLimit(),
+  apiCreditOrX402PaymentRequired("experience-search"),
+  zValidator("json", experienceSearchSchema),
+  async (c) => {
+    const body = c.req.valid("json");
+    const result = await new ExperienceService(c.env ?? {}).search(body, accountOwnerId(c));
+    await completeOperation(c, "/experience/search", body, JSON.stringify(result), c.get("payment")?.paymentId);
+    return c.json(result);
+  }
+);
+
+contextRoutes.post(
+  "/experience/buy",
+  requireApiKey("context:write"),
+  apiKeyRateLimit(),
+  apiCreditOrX402PaymentRequired("experience-buy"),
+  zValidator("json", experienceBuySchema),
+  async (c) => {
+    const body = c.req.valid("json");
+    const result = await runExperienceBuy(c, body);
+    await completeOperation(c, "/experience/buy", body, JSON.stringify(result), c.get("payment")?.paymentId);
+    return c.json(result);
+  }
+);
+
 contextRoutes.post("/x402/memory-enrichment", x402PaymentRequired("memory-enrichment"), zValidator("json", conversationRequestSchema), async (c) => {
   const request = await resolveConversationRequest(c, c.req.valid("json"));
   const service = new ContextService({ env: c.env ?? {}, requestId: c.get("requestId") });
@@ -282,6 +351,82 @@ contextRoutes.post("/internal/memory-enrichment", requireInternalToken(), zValid
   await complete(c, "/internal/memory-enrichment", request, JSON.stringify(result));
   return c.json(result);
 });
+
+contextRoutes.post("/internal/experience/save", requireInternalToken(), zValidator("json", experienceSaveSchema), async (c) => {
+  const body = c.req.valid("json");
+  await markHostedPayment(c, "experience-save", "/internal/experience/save");
+  const context = await resolveExperienceContext(c, body);
+  const result = await new ExperienceService(c.env ?? {}).save(body, context);
+  await completeOperation(c, "/internal/experience/save", body, JSON.stringify(result));
+  return c.json(result, 201);
+});
+
+contextRoutes.post("/internal/experience/publish", requireInternalToken(), zValidator("json", experiencePublishSchema), async (c) => {
+  const body = c.req.valid("json");
+  await markHostedPayment(c, "experience-publish", "/internal/experience/publish");
+  const context = await resolveExperienceContext(c, body);
+  const result = await new ExperienceService(c.env ?? {}).publish(body, context);
+  await completeOperation(c, "/internal/experience/publish", body, JSON.stringify(result));
+  return c.json(result, 201);
+});
+
+contextRoutes.post("/internal/experience/search", requireInternalToken(), zValidator("json", experienceSearchSchema), async (c) => {
+  const body = c.req.valid("json");
+  await markHostedPayment(c, "experience-search", "/internal/experience/search");
+  const result = await new ExperienceService(c.env ?? {}).search(body, accountOwnerId(c));
+  await completeOperation(c, "/internal/experience/search", body, JSON.stringify(result));
+  return c.json(result);
+});
+
+contextRoutes.post("/internal/experience/buy", requireInternalToken(), zValidator("json", experienceBuySchema), async (c) => {
+  const body = c.req.valid("json");
+  await markHostedPayment(c, "experience-buy", "/internal/experience/buy");
+  const result = await runExperienceBuy(c, body);
+  await completeOperation(c, "/internal/experience/buy", body, JSON.stringify(result));
+  return c.json(result);
+});
+
+async function resolveExperienceContext(
+  c: Context<AppBindings>,
+  body: ExperienceSaveInput | ExperiencePublishInput
+) {
+  const ownerId = accountOwnerId(c) ?? body.creatorId ?? "bankr-hosted";
+  if (!body.contextId) {
+    return {
+      ownerId,
+      messages: body.messages ? sanitizeMessages(body.messages) : undefined
+    };
+  }
+
+  const stored = await new AppKV(c.env?.CONTEXTKIT_KV).get<StoredContext>(`context:${body.contextId}`);
+  if (!stored) {
+    throw new HTTPException(404, { message: "Context upload was not found or has expired." });
+  }
+
+  return {
+    ownerId,
+    messages: sanitizeMessages(body.messages ?? stored.messages),
+    contextMetadata: stored.metadata
+  };
+}
+
+async function runExperienceBuy(c: Context<AppBindings>, body: ExperienceBuyInput) {
+  try {
+    const buyerId = accountOwnerId(c) ?? body.buyerId ?? "bankr-buyer";
+    const amountUsd = c.get("payment")?.amountUsd ?? c.get("creditCharge")?.amountUsd ?? endpointPricing["experience-buy"];
+    return await new ExperienceService(c.env ?? {}).buy(body, buyerId, amountUsd);
+  } catch (error) {
+    if (error instanceof Error && error.message === "experience_not_found") {
+      throw new HTTPException(404, { message: "Experience record was not found or is not published." });
+    }
+    throw error;
+  }
+}
+
+function accountOwnerId(c: Context<AppBindings>) {
+  const apiKey = c.get("apiKey");
+  return apiKey?.ownerId ?? (apiKey ? `api-key:${apiKey.id}` : undefined);
+}
 
 async function resolveConversationRequest(
   c: Context<AppBindings>,
@@ -465,4 +610,42 @@ async function complete(
       data: { route, paymentId }
     }
   });
+}
+
+async function completeOperation(
+  c: Context<AppBindings>,
+  route: string,
+  input: unknown,
+  output: string,
+  paymentId?: string
+) {
+  const requestId = c.get("requestId");
+  const payment = c.get("payment");
+  const creditCharge = c.get("creditCharge");
+  const apiKey = c.get("apiKey");
+  const ownerId = accountOwnerId(c);
+
+  if (creditCharge) {
+    await new CreditService(c.env ?? {}).debit({
+      ...creditCharge,
+      requestId
+    });
+  }
+
+  await new AnalyticsService(c.env ?? {}).recordRequest({
+    requestId,
+    route,
+    latencyMs: Date.now() - c.get("startedAt"),
+    inputTokens: estimateTokens(JSON.stringify(input)),
+    outputTokens: estimateTokens(output),
+    paymentId,
+    apiKeyId: apiKey?.id,
+    ownerId,
+    amountUsd: payment?.amountUsd ?? creditCharge?.amountUsd,
+    status: "success"
+  });
+
+  if (apiKey) {
+    await new ApiKeyService(c.env ?? {}).recordUsage(apiKey.hash, route, payment?.amountUsd ?? creditCharge?.amountUsd ?? 0);
+  }
 }

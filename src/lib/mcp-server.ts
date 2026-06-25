@@ -33,6 +33,19 @@ type ContextKitApiError = {
 
 const MAX_MCP_CONVERSATION_CHARS = 400_000;
 
+const experienceInput = {
+  title: z.string().min(1).max(160).optional(),
+  content: z.string().min(1).max(40_000).optional(),
+  task: z.string().min(1).max(800).optional(),
+  outcome: z.string().min(1).max(1_200).optional(),
+  lesson: z.string().min(1).max(2_500).optional(),
+  constraints: z.array(z.string().min(1).max(280)).max(20).optional(),
+  decisions: z.array(z.string().min(1).max(280)).max(20).optional(),
+  tags: z.array(z.string().min(1).max(48)).max(16).optional(),
+  confidence: z.number().min(0).max(1).optional(),
+  source: z.string().min(1).max(160).optional()
+};
+
 /**
  * Builds a fresh stateless server for each MCP HTTP request. The API key stays
  * in request memory only and every paid tool reuses ContextKit's normal billing.
@@ -106,6 +119,74 @@ export function createContextKitMcpServer(options: ContextKitMcpOptions) {
   );
 
   server.registerTool(
+    "contextkit_experience_save",
+    {
+      title: "Save private agent experience",
+      description: "MCP V2: save a private reusable agent lesson from messages, an uploaded contextId, or a structured experience record.",
+      inputSchema: {
+        ...conversationInput,
+        ...experienceInput
+      }
+    },
+    async (input) => {
+      const invalid = validateExperienceWrite(input);
+      if (invalid) return toolError(invalid);
+      return callContextKit(options, "/experience/save", experienceBody(input, "experience-save"));
+    }
+  );
+
+  server.registerTool(
+    "contextkit_experience_publish",
+    {
+      title: "Publish paid agent experience",
+      description: "MCP V2: publish a reusable experience record so other agents can buy it through Bankr x402.",
+      inputSchema: {
+        experienceId: z.string().regex(/^exp_[a-f0-9]{24}$/).optional(),
+        priceUsd: z.number().min(0.01).max(50).default(0.05),
+        ...conversationInput,
+        ...experienceInput
+      }
+    },
+    async (input) => {
+      const hasExisting = Boolean(input.experienceId);
+      const invalid = hasExisting ? null : validateExperienceWrite(input);
+      if (invalid) return toolError(invalid);
+      return callContextKit(options, "/experience/publish", {
+        ...experienceBody(input, "experience-publish"),
+        experienceId: input.experienceId,
+        priceUsd: input.priceUsd
+      });
+    }
+  );
+
+  server.registerTool(
+    "contextkit_experience_search",
+    {
+      title: "Search agent experiences",
+      description: "MCP V2: search private and public reusable agent lessons by query or tags.",
+      inputSchema: {
+        query: z.string().max(800).optional(),
+        tags: z.array(z.string().min(1).max(48)).max(16).optional(),
+        includePrivate: z.boolean().default(true),
+        limit: z.number().int().min(1).max(20).default(10)
+      }
+    },
+    async (input) => callContextKit(options, "/experience/search", input)
+  );
+
+  server.registerTool(
+    "contextkit_experience_buy",
+    {
+      title: "Buy agent experience",
+      description: "MCP V2: buy a published experience record. Uses account credits in MCP; external agents can buy through Bankr x402.",
+      inputSchema: {
+        experienceId: z.string().regex(/^exp_[a-f0-9]{24}$/)
+      }
+    },
+    async (input) => callContextKit(options, "/experience/buy", input)
+  );
+
+  server.registerTool(
     "contextkit_estimate_tokens",
     {
       title: "Estimate tokens",
@@ -156,6 +237,49 @@ function validateConversation(input: ConversationInput) {
 
 function messageCharacters(messages: Array<{ content: string }>) {
   return messages.reduce((total, message) => total + message.content.length, 0);
+}
+
+function validateExperienceWrite(input: ConversationInput & Record<string, unknown>) {
+  if (input.messages || input.contextId) return validateConversation(input);
+  if (typeof input.content === "string" && input.content.trim()) return null;
+  if (typeof input.lesson === "string" && input.lesson.trim()) return null;
+  if (typeof input.title === "string" && input.title.trim()) return null;
+  return "Provide messages, contextId, content, lesson, or title.";
+}
+
+function experienceBody(input: Record<string, unknown>, mode: "experience-save" | "experience-publish") {
+  const {
+    messages,
+    contextId,
+    title,
+    content,
+    task,
+    outcome,
+    lesson,
+    constraints,
+    decisions,
+    tags,
+    confidence,
+    source
+  } = input;
+
+  return {
+    mode,
+    messages,
+    contextId,
+    experience: {
+      title,
+      content,
+      task,
+      outcome,
+      lesson,
+      constraints,
+      decisions,
+      tags,
+      confidence,
+      source
+    }
+  };
 }
 
 async function callContextKit(
