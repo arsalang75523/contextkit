@@ -2,19 +2,24 @@
   "network": "base",
   "currency": "USDC",
   "services": {
-    "contextkit-summarize": {
-      "description": "Summarize long AI conversations into concise reusable context for autonomous agents.",
+    "contextkit-core": {
+      "description": "Run core ContextKit operations with modes: summarize, compress-context, handoff, extract-profile, or memory-enrichment.",
       "price": "0.05",
       "methods": ["POST"],
       "category": "ai-infrastructure",
-      "tags": ["ai-agents", "context", "summarization", "bankr", "token-optimization"],
+      "tags": ["ai-agents", "context", "summarization", "compression", "handoff", "profile", "bankr"],
       "schema": {
         "input": {
           "type": "object",
           "properties": {
+            "endpoint": {
+              "type": "string",
+              "description": "Core operation to run. Defaults to summarize.",
+              "enum": ["summarize", "compress-context", "handoff", "extract-profile", "memory-enrichment"]
+            },
             "messages": {
               "type": "array",
-              "description": "Conversation messages to summarize.",
+              "description": "Conversation messages for the selected operation.",
               "items": {
                 "type": "object",
                 "properties": {
@@ -24,14 +29,14 @@
                 "required": ["role", "content"]
               }
             },
+            "contextId": {
+              "type": "string",
+              "description": "Optional uploaded ContextKit context ID for large payloads. Use /api/context/upload first."
+            },
             "mode": {
               "type": "string",
-              "description": "Summary mode: micro, compact, extended, or debug. Defaults to compact.",
-              "enum": ["micro", "compact", "extended", "debug"]
-            },
-            "contextId": {
-              "type": "string",
-              "description": "Optional uploaded ContextKit context ID for large payloads. Use /api/context/upload first."
+              "description": "Summarize mode or profile mode. Summarize defaults to compact.",
+              "enum": ["micro", "compact", "extended", "debug", "extract-profile", "memory-enrichment"]
             }
           },
           "required": []
@@ -39,190 +44,92 @@
         "output": {
           "type": "object",
           "properties": {
-            "mode": { "type": "string", "description": "Selected summary mode." },
-            "summary": { "type": "string", "description": "Optimized context summary." },
-            "tokenReductionEstimate": { "type": "number", "description": "Actual compact-summary token reduction percentage." },
-            "micro": { "type": "string", "description": "Maximum-compression summary." },
-            "compact": { "type": "string", "description": "Default continuation summary." },
-            "extended": { "type": "string", "description": "Human-readable compressed summary." },
-            "state": { "type": "object", "description": "Goal, status, blockers, and next steps. Omitted in micro mode." },
-            "metrics": {
-              "type": "object",
-              "description": "Micro metrics include inputTokens, microTokens, reductionPercent only. Compact/extended/debug include full token and latency metrics."
-            }
-          }
-        }
-      }
-    },
-    "contextkit-compress": {
-      "description": "Compress agent conversation context into compact structured memory.",
-      "price": "0.03",
-      "methods": ["POST"],
-      "category": "ai-infrastructure",
-      "tags": ["ai-agents", "context-compression", "memory", "bankr"],
-      "schema": {
-        "input": {
-          "type": "object",
-          "properties": {
-            "messages": {
-              "type": "array",
-              "description": "Conversation messages to compress.",
-              "items": {
-                "type": "object",
-                "properties": {
-                  "role": { "type": "string" },
-                  "content": { "type": "string" }
-                },
-                "required": ["role", "content"]
-              }
-            },
-            "contextId": {
-              "type": "string",
-              "description": "Optional uploaded ContextKit context ID for large payloads. Use /api/context/upload first."
-            }
-          },
-          "required": []
-        },
-        "output": {
-          "type": "object",
-          "properties": {
+            "mode": { "type": "string" },
+            "micro": { "type": "string" },
+            "compact": { "type": "string" },
+            "extended": { "type": "string" },
+            "state": { "type": "object", "description": "Structured state for summarize, compress, and handoff modes." },
             "compressedContext": { "type": "string" },
-            "estimatedSavings": { "type": "string" }
+            "project": { "type": "object" },
+            "profile": { "type": "object" },
+            "stableMemories": { "type": "array", "items": { "type": "string" } },
+            "metrics": { "type": "object" }
           }
         }
       }
     },
-    "contextkit-handoff": {
-      "description": "Generate structured agent-to-agent handoff payloads.",
+    "contextkit-experience-write": {
+      "description": "MCP V2 experience write endpoint: save private experience records or publish marketplace listings.",
       "price": "0.03",
       "methods": ["POST"],
       "category": "ai-infrastructure",
-      "tags": ["multi-agent", "handoff", "workflow", "bankr"],
+      "tags": ["ai-agents", "experience", "memory", "marketplace", "publish", "mcp", "bankr"],
       "schema": {
         "input": {
           "type": "object",
           "properties": {
-            "messages": {
-              "type": "array",
-              "description": "Conversation messages to convert into a handoff.",
-              "items": {
-                "type": "object",
-                "properties": {
-                  "role": { "type": "string" },
-                  "content": { "type": "string" }
-                },
-                "required": ["role", "content"]
-              }
-            },
-            "contextId": {
-              "type": "string",
-              "description": "Optional uploaded ContextKit context ID for large payloads. Use /api/context/upload first."
-            }
-          },
-          "required": []
-        },
-        "output": {
-          "type": "object",
-          "properties": {
-            "goal": { "type": "string" },
-            "importantFacts": { "type": "array", "items": { "type": "string" } },
-            "constraints": { "type": "array", "items": { "type": "string" } },
-            "recommendedNextActions": { "type": "array", "items": { "type": "string" } },
-            "tone": { "type": "string" },
-            "userIntent": { "type": "string" }
-          }
-        }
-      }
-    },
-    "contextkit-profile": {
-      "description": "Extract reusable user profile or memory enrichment for autonomous AI agents.",
-      "price": "0.04",
-      "methods": ["POST"],
-      "category": "ai-infrastructure",
-      "tags": ["profile", "memory", "personalization", "ai-agents"],
-      "schema": {
-        "input": {
-          "type": "object",
-          "properties": {
-            "messages": {
-              "type": "array",
-              "description": "Conversation messages to extract profile data from.",
-              "items": {
-                "type": "object",
-                "properties": {
-                  "role": { "type": "string" },
-                  "content": { "type": "string" }
-                },
-                "required": ["role", "content"]
-              }
-            },
-            "contextId": {
-              "type": "string",
-              "description": "Optional uploaded ContextKit context ID for large payloads. Use /api/context/upload first."
-            },
             "mode": {
               "type": "string",
-              "description": "Profile mode: extract-profile or memory-enrichment. Defaults to extract-profile.",
-              "enum": ["extract-profile", "memory-enrichment"]
+              "description": "Write operation. Defaults to experience-save.",
+              "enum": ["experience-save", "experience-publish", "save", "publish"]
+            },
+            "experience": {
+              "type": "object",
+              "description": "Experience record or marketplace listing payload.",
+              "properties": {
+                "experienceId": { "type": "string" },
+                "goal": { "type": "string", "description": "Original task or objective." },
+                "context": { "type": "string", "description": "Relevant execution context." },
+                "actionTaken": { "type": "string", "description": "What the agent tried or changed." },
+                "outcome": { "type": "string", "description": "Result of the attempt." },
+                "constraints": { "type": "array", "items": { "type": "string" } },
+                "lesson": { "type": "string", "description": "Reusable lesson for future agents." },
+                "title": { "type": "string", "description": "Marketplace title for publish mode." },
+                "description": { "type": "string", "description": "Marketplace description for publish mode." },
+                "priceUsd": { "type": "number", "description": "Suggested marketplace purchase price." },
+                "tags": { "type": "array", "items": { "type": "string" } },
+                "visibility": { "type": "string", "enum": ["private", "public"] }
+              }
+            },
+            "messages": {
+              "type": "array",
+              "description": "Optional source messages to convert into an experience record.",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "role": { "type": "string" },
+                  "content": { "type": "string" }
+                },
+                "required": ["role", "content"]
+              }
+            },
+            "contextId": {
+              "type": "string",
+              "description": "Optional uploaded ContextKit context ID for large payloads."
             }
           },
           "required": []
-        },
-        "output": {
-          "type": "object",
-          "properties": {
-            "interests": { "type": "array", "items": { "type": "string" } },
-            "riskTolerance": { "type": "string" },
-            "communicationStyle": { "type": "string" },
-            "preferences": { "type": "array", "items": { "type": "string" } },
-            "importantContext": { "type": "array", "items": { "type": "string" } },
-            "stableMemories": { "type": "array", "items": { "type": "string" } },
-            "evolvingMemories": { "type": "array", "items": { "type": "string" } },
-            "deprecatedMemories": { "type": "array", "items": { "type": "string" } },
-            "memoryImportance": { "type": "number" },
-            "confidence": { "type": "number" }
-          }
-        }
-      }
-    },
-    "contextkit-experience-save": {
-      "description": "Save a structured agent experience record for future autonomous-agent continuation.",
-      "price": "0.01",
-      "methods": ["POST"],
-      "category": "ai-infrastructure",
-      "tags": ["ai-agents", "experience", "memory", "mcp", "bankr"],
-      "schema": {
-        "input": {
-          "type": "object",
-          "properties": {
-            "goal": { "type": "string", "description": "Original task or objective." },
-            "context": { "type": "string", "description": "Relevant execution context." },
-            "actionTaken": { "type": "string", "description": "What the agent tried or changed." },
-            "outcome": { "type": "string", "description": "Result of the attempt." },
-            "constraints": { "type": "array", "items": { "type": "string" }, "description": "Operational constraints or rules." },
-            "lesson": { "type": "string", "description": "Reusable lesson for future agents." },
-            "tags": { "type": "array", "items": { "type": "string" }, "description": "Search and marketplace tags." },
-            "visibility": { "type": "string", "description": "private or public.", "enum": ["private", "public"] }
-          },
-          "required": ["goal", "context", "outcome"]
         },
         "output": {
           "type": "object",
           "properties": {
             "experienceId": { "type": "string" },
+            "listingId": { "type": "string" },
             "status": { "type": "string" },
             "visibility": { "type": "string" },
-            "qualityScore": { "type": "number" }
+            "qualityScore": { "type": "number" },
+            "reviewStatus": { "type": "string" },
+            "publishQuotaRemaining": { "type": "integer" }
           }
         }
       }
     },
     "contextkit-experience-search": {
-      "description": "Search reusable agent experience records by goal, constraints, tags, or execution context.",
+      "description": "MCP V2 experience search endpoint for finding reusable agent lessons and marketplace records.",
       "price": "0.01",
       "methods": ["POST"],
       "category": "ai-infrastructure",
-      "tags": ["ai-agents", "experience-search", "memory", "mcp", "bankr"],
+      "tags": ["ai-agents", "experience-search", "memory", "marketplace", "mcp", "bankr"],
       "schema": {
         "input": {
           "type": "object",
@@ -230,7 +137,8 @@
             "query": { "type": "string", "description": "Search query or current agent problem." },
             "tags": { "type": "array", "items": { "type": "string" }, "description": "Optional tags to filter by." },
             "limit": { "type": "integer", "description": "Maximum results to return." },
-            "visibility": { "type": "string", "description": "private, public, or all.", "enum": ["private", "public", "all"] }
+            "visibility": { "type": "string", "description": "private, public, or all.", "enum": ["private", "public", "all"] },
+            "contextId": { "type": "string", "description": "Optional uploaded ContextKit context ID to search from." }
           },
           "required": ["query"]
         },
@@ -243,6 +151,7 @@
                 "type": "object",
                 "properties": {
                   "experienceId": { "type": "string" },
+                  "listingId": { "type": "string" },
                   "title": { "type": "string" },
                   "lesson": { "type": "string" },
                   "score": { "type": "number" },
@@ -254,47 +163,19 @@
         }
       }
     },
-    "contextkit-experience-publish": {
-      "description": "Publish a saved agent experience record to the ContextKit marketplace.",
-      "price": "0.03",
-      "methods": ["POST"],
-      "category": "ai-infrastructure",
-      "tags": ["ai-agents", "experience-marketplace", "publish", "mcp", "bankr"],
-      "schema": {
-        "input": {
-          "type": "object",
-          "properties": {
-            "experienceId": { "type": "string", "description": "Saved experience record ID." },
-            "title": { "type": "string", "description": "Marketplace title." },
-            "description": { "type": "string", "description": "Marketplace description." },
-            "priceUsd": { "type": "number", "description": "Suggested marketplace purchase price." },
-            "tags": { "type": "array", "items": { "type": "string" } }
-          },
-          "required": ["experienceId", "title"]
-        },
-        "output": {
-          "type": "object",
-          "properties": {
-            "listingId": { "type": "string" },
-            "status": { "type": "string" },
-            "reviewStatus": { "type": "string" },
-            "publishQuotaRemaining": { "type": "integer" }
-          }
-        }
-      }
-    },
     "contextkit-experience-buy": {
-      "description": "Buy access to a published agent experience record through Bankr x402.",
+      "description": "MCP V2 experience buy endpoint for purchasing published agent experience records through Bankr x402.",
       "price": "0.03",
       "methods": ["POST"],
       "category": "ai-infrastructure",
-      "tags": ["ai-agents", "experience-marketplace", "buy", "mcp", "bankr"],
+      "tags": ["ai-agents", "experience-marketplace", "buy", "memory", "mcp", "bankr"],
       "schema": {
         "input": {
           "type": "object",
           "properties": {
             "listingId": { "type": "string", "description": "Marketplace listing ID." },
-            "buyerContext": { "type": "string", "description": "Optional current task context for matching." }
+            "buyerContext": { "type": "string", "description": "Optional current task context for matching." },
+            "contextId": { "type": "string", "description": "Optional uploaded ContextKit context ID for buyer context." }
           },
           "required": ["listingId"]
         },

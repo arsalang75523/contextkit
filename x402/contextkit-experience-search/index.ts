@@ -1,8 +1,8 @@
 export default async function handler(req: Request) {
-  return forwardToContextKit(req, "/api/internal/experience/search", "contextkit-experience-search");
+  return forwardToContextKit(await req.text(), "/api/internal/experience/search", "contextkit-experience-search");
 }
 
-async function forwardToContextKit(req: Request, path: string, service: string) {
+async function forwardToContextKit(body: string, path: string, service: string) {
   const baseUrl = process.env.CONTEXTKIT_BACKEND_URL;
   const token = process.env.CONTEXTKIT_INTERNAL_TOKEN;
   if (!baseUrl || !token) {
@@ -17,7 +17,7 @@ async function forwardToContextKit(req: Request, path: string, service: string) 
       "X-ContextKit-X402-Hosted": "bankr",
       "X-ContextKit-X402-Service": service
     },
-    body: await req.text()
+    body
   });
 
   return new Response(await response.text(), {

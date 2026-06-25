@@ -1,5 +1,20 @@
 export default async function handler(req: Request) {
-  return forwardToContextKit(await req.text(), "/api/internal/experience/buy", "contextkit-experience-buy");
+  const body = await req.text();
+  return forwardToContextKit(body, resolveExperienceWritePath(body), "contextkit-experience-write");
+}
+
+function resolveExperienceWritePath(body: string) {
+  let payload: { mode?: string; operation?: string; action?: string; experience?: { title?: string; priceUsd?: number } } = {};
+  try {
+    payload = JSON.parse(body);
+  } catch {
+    return "/api/internal/experience/save";
+  }
+
+  const operation = String(payload.mode ?? payload.operation ?? payload.action ?? "").toLowerCase();
+  if (operation === "publish" || operation === "experience-publish") return "/api/internal/experience/publish";
+  if (payload.experience?.title || typeof payload.experience?.priceUsd === "number") return "/api/internal/experience/publish";
+  return "/api/internal/experience/save";
 }
 
 async function forwardToContextKit(body: string, path: string, service: string) {
