@@ -50,6 +50,7 @@ export class ExperienceService {
   async save(input: ExperienceSaveInput, context: ExperienceInputContext) {
     const now = new Date().toISOString();
     const normalized = normalizeExperience(input, context.messages);
+    assertMeaningfulExperience(normalized);
     const record: ExperienceRecord = {
       id: createId("exp"),
       ownerId: context.ownerId,
@@ -80,6 +81,7 @@ export class ExperienceService {
     const normalized = existing && input.experienceId && !hasNewExperienceContent(input)
       ? experienceFields(existing)
       : normalizeExperience(input, context.messages);
+    assertMeaningfulExperience(normalized);
 
     const record: ExperienceRecord = {
       ...(existing ?? {
@@ -209,7 +211,7 @@ export class ExperienceService {
 function normalizeExperience(input: ExperienceSaveInput | ExperiencePublishInput, messages?: ConversationMessage[]) {
   const experience = input.experience ?? {};
   const messageContent = messages?.map((message) => `${message.role}: ${message.content}`).join("\n\n");
-  const content = cleanText(experience.content ?? input.content ?? messageContent ?? experience.lesson ?? experience.summary ?? input.title ?? "");
+  const content = cleanText(experience.content ?? input.content ?? experience.lesson ?? experience.outcome ?? experience.task ?? messageContent ?? experience.summary ?? "");
   const title = cleanText(experience.title ?? input.title ?? titleFromContent(content));
   const summary = cleanText(experience.summary ?? summarizeContent(content));
 
@@ -226,6 +228,20 @@ function normalizeExperience(input: ExperienceSaveInput | ExperiencePublishInput
     confidence: typeof experience.confidence === "number" ? Number(experience.confidence.toFixed(2)) : 0.72,
     source: cleanText(experience.source ?? "mcp-v2")
   };
+}
+
+function assertMeaningfulExperience(record: Pick<ExperienceRecord, "content" | "lesson" | "summary" | "task" | "outcome" | "constraints" | "decisions" | "tags">) {
+  const hasContent = Boolean(
+    record.content.trim() ||
+    record.lesson?.trim() ||
+    record.summary.trim() ||
+    record.task?.trim() ||
+    record.outcome?.trim() ||
+    record.constraints.length ||
+    record.decisions.length ||
+    record.tags.length
+  );
+  if (!hasContent) throw new Error("experience_content_required");
 }
 
 function experienceFields(record: ExperienceRecord) {
@@ -283,6 +299,7 @@ function experienceMetrics(input: unknown, record: ExperienceRecord) {
 function scoreRecord(record: ExperienceRecord, query: string, tags: string[]) {
   let score = 0;
   const haystack = [
+    record.id,
     record.title,
     record.summary,
     record.content,
@@ -359,5 +376,5 @@ function titleFromContent(content: string) {
 
 function summarizeContent(content: string) {
   const words = cleanText(content).split(/\s+/).slice(0, 36).join(" ");
-  return words || "Reusable agent experience record.";
+  return words;
 }

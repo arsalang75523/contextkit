@@ -200,7 +200,7 @@ contextRoutes.post(
   async (c) => {
     const body = c.req.valid("json");
     const context = await resolveExperienceContext(c, body);
-    const result = await new ExperienceService(c.env ?? {}).save(body, context);
+    const result = await runExperienceWrite(() => new ExperienceService(c.env ?? {}).save(body, context));
     await completeOperation(c, "/experience/save", body, JSON.stringify(result), c.get("payment")?.paymentId);
     return c.json(result, 201);
   }
@@ -215,7 +215,7 @@ contextRoutes.post(
   async (c) => {
     const body = c.req.valid("json");
     const context = await resolveExperienceContext(c, body);
-    const result = await new ExperienceService(c.env ?? {}).publish(body, context);
+    const result = await runExperienceWrite(() => new ExperienceService(c.env ?? {}).publish(body, context));
     await completeOperation(c, "/experience/publish", body, JSON.stringify(result), c.get("payment")?.paymentId);
     return c.json(result, 201);
   }
@@ -356,7 +356,7 @@ contextRoutes.post("/internal/experience/save", requireInternalToken(), zValidat
   const body = c.req.valid("json");
   await markHostedPayment(c, "experience-save", "/internal/experience/save");
   const context = await resolveExperienceContext(c, body);
-  const result = await new ExperienceService(c.env ?? {}).save(body, context);
+  const result = await runExperienceWrite(() => new ExperienceService(c.env ?? {}).save(body, context));
   await completeOperation(c, "/internal/experience/save", body, JSON.stringify(result));
   return c.json(result, 201);
 });
@@ -365,7 +365,7 @@ contextRoutes.post("/internal/experience/publish", requireInternalToken(), zVali
   const body = c.req.valid("json");
   await markHostedPayment(c, "experience-publish", "/internal/experience/publish");
   const context = await resolveExperienceContext(c, body);
-  const result = await new ExperienceService(c.env ?? {}).publish(body, context);
+  const result = await runExperienceWrite(() => new ExperienceService(c.env ?? {}).publish(body, context));
   await completeOperation(c, "/internal/experience/publish", body, JSON.stringify(result));
   return c.json(result, 201);
 });
@@ -418,6 +418,23 @@ async function runExperienceBuy(c: Context<AppBindings>, body: ExperienceBuyInpu
   } catch (error) {
     if (error instanceof Error && error.message === "experience_not_found") {
       throw new HTTPException(404, { message: "Experience record was not found or is not published." });
+    }
+    throw error;
+  }
+}
+
+async function runExperienceWrite<T>(operation: () => Promise<T>) {
+  try {
+    return await operation();
+  } catch (error) {
+    if (error instanceof Error && error.message === "experience_content_required") {
+      throw new HTTPException(422, { message: "Experience content is required. Provide content, lesson, summary, task, outcome, messages, or contextId." });
+    }
+    if (error instanceof Error && error.message === "experience_not_found") {
+      throw new HTTPException(404, { message: "Experience record was not found." });
+    }
+    if (error instanceof Error && error.message === "experience_forbidden") {
+      throw new HTTPException(403, { message: "You can only publish your own experience record." });
     }
     throw error;
   }

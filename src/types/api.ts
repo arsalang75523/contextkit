@@ -59,8 +59,8 @@ const experienceWriteBaseSchema = z.object({
   metadata: z.record(z.string(), z.unknown()).optional()
 });
 
-export const experienceSaveSchema = experienceWriteBaseSchema.refine((value) => Boolean(value.experience || value.messages?.length || value.contextId || value.title || value.content), {
-  message: "Provide experience, messages, contextId, title, or content."
+export const experienceSaveSchema = experienceWriteBaseSchema.refine((value) => hasExperienceContent(value) || Boolean(value.messages?.length || value.contextId || value.content), {
+  message: "Provide non-empty experience content, messages, contextId, or content."
 });
 
 export const experiencePublishSchema = experienceWriteBaseSchema.extend({
@@ -70,8 +70,8 @@ export const experiencePublishSchema = experienceWriteBaseSchema.extend({
   experienceId: z.string().regex(/^exp_[a-f0-9]{24}$/).optional(),
   priceUsd: z.number().min(0.01).max(50).default(0.05),
   visibility: z.enum(["public"]).default("public")
-}).refine((value) => Boolean(value.experienceId || value.experience || value.messages?.length || value.contextId || value.title || value.content), {
-  message: "Provide experienceId, experience, messages, contextId, title, or content."
+}).refine((value) => Boolean(value.experienceId) || hasExperienceContent(value) || Boolean(value.messages?.length || value.contextId || value.content), {
+  message: "Provide experienceId, non-empty experience content, messages, contextId, or content."
 });
 
 export const experienceSearchSchema = z.object({
@@ -85,6 +85,21 @@ export const experienceBuySchema = z.object({
   experienceId: z.string().regex(/^exp_[a-f0-9]{24}$/),
   buyerId: z.string().min(1).max(120).optional()
 });
+
+function hasExperienceContent(value: { experience?: z.infer<typeof experienceRecordSchema>; title?: string; content?: string; tags?: string[] }) {
+  const experience = value.experience;
+  return Boolean(
+    value.content?.trim() ||
+    experience?.content?.trim() ||
+    experience?.summary?.trim() ||
+    experience?.task?.trim() ||
+    experience?.outcome?.trim() ||
+    experience?.lesson?.trim() ||
+    experience?.constraints?.length ||
+    experience?.decisions?.length ||
+    experience?.tags?.length
+  );
+}
 
 export const webhookRegistrationSchema = z.object({
   url: z.string().url(),
