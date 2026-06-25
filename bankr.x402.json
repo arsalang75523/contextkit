@@ -184,6 +184,132 @@
           }
         }
       }
+    },
+    "contextkit-experience-save": {
+      "description": "Save a structured agent experience record for future autonomous-agent continuation.",
+      "price": "0.01",
+      "methods": ["POST"],
+      "category": "ai-infrastructure",
+      "tags": ["ai-agents", "experience", "memory", "mcp", "bankr"],
+      "schema": {
+        "input": {
+          "type": "object",
+          "properties": {
+            "goal": { "type": "string", "description": "Original task or objective." },
+            "context": { "type": "string", "description": "Relevant execution context." },
+            "actionTaken": { "type": "string", "description": "What the agent tried or changed." },
+            "outcome": { "type": "string", "description": "Result of the attempt." },
+            "constraints": { "type": "array", "items": { "type": "string" }, "description": "Operational constraints or rules." },
+            "lesson": { "type": "string", "description": "Reusable lesson for future agents." },
+            "tags": { "type": "array", "items": { "type": "string" }, "description": "Search and marketplace tags." },
+            "visibility": { "type": "string", "description": "private or public.", "enum": ["private", "public"] }
+          },
+          "required": ["goal", "context", "outcome"]
+        },
+        "output": {
+          "type": "object",
+          "properties": {
+            "experienceId": { "type": "string" },
+            "status": { "type": "string" },
+            "visibility": { "type": "string" },
+            "qualityScore": { "type": "number" }
+          }
+        }
+      }
+    },
+    "contextkit-experience-search": {
+      "description": "Search reusable agent experience records by goal, constraints, tags, or execution context.",
+      "price": "0.01",
+      "methods": ["POST"],
+      "category": "ai-infrastructure",
+      "tags": ["ai-agents", "experience-search", "memory", "mcp", "bankr"],
+      "schema": {
+        "input": {
+          "type": "object",
+          "properties": {
+            "query": { "type": "string", "description": "Search query or current agent problem." },
+            "tags": { "type": "array", "items": { "type": "string" }, "description": "Optional tags to filter by." },
+            "limit": { "type": "integer", "description": "Maximum results to return." },
+            "visibility": { "type": "string", "description": "private, public, or all.", "enum": ["private", "public", "all"] }
+          },
+          "required": ["query"]
+        },
+        "output": {
+          "type": "object",
+          "properties": {
+            "results": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "experienceId": { "type": "string" },
+                  "title": { "type": "string" },
+                  "lesson": { "type": "string" },
+                  "score": { "type": "number" },
+                  "priceUsd": { "type": "number" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "contextkit-experience-publish": {
+      "description": "Publish a saved agent experience record to the ContextKit marketplace.",
+      "price": "0.03",
+      "methods": ["POST"],
+      "category": "ai-infrastructure",
+      "tags": ["ai-agents", "experience-marketplace", "publish", "mcp", "bankr"],
+      "schema": {
+        "input": {
+          "type": "object",
+          "properties": {
+            "experienceId": { "type": "string", "description": "Saved experience record ID." },
+            "title": { "type": "string", "description": "Marketplace title." },
+            "description": { "type": "string", "description": "Marketplace description." },
+            "priceUsd": { "type": "number", "description": "Suggested marketplace purchase price." },
+            "tags": { "type": "array", "items": { "type": "string" } }
+          },
+          "required": ["experienceId", "title"]
+        },
+        "output": {
+          "type": "object",
+          "properties": {
+            "listingId": { "type": "string" },
+            "status": { "type": "string" },
+            "reviewStatus": { "type": "string" },
+            "publishQuotaRemaining": { "type": "integer" }
+          }
+        }
+      }
+    },
+    "contextkit-experience-buy": {
+      "description": "Buy access to a published agent experience record through Bankr x402.",
+      "price": "0.03",
+      "methods": ["POST"],
+      "category": "ai-infrastructure",
+      "tags": ["ai-agents", "experience-marketplace", "buy", "mcp", "bankr"],
+      "schema": {
+        "input": {
+          "type": "object",
+          "properties": {
+            "listingId": { "type": "string", "description": "Marketplace listing ID." },
+            "buyerContext": { "type": "string", "description": "Optional current task context for matching." }
+          },
+          "required": ["listingId"]
+        },
+        "output": {
+          "type": "object",
+          "properties": {
+            "experienceId": { "type": "string" },
+            "goal": { "type": "string" },
+            "lesson": { "type": "string" },
+            "constraints": { "type": "array", "items": { "type": "string" } },
+            "recommendedUse": { "type": "string" },
+            "license": { "type": "string" }
+          }
+        }
+      }
     }
   }
 }
