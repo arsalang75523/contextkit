@@ -4,7 +4,7 @@
   "services": {
     "contextkit-core": {
       "description": "Run core ContextKit operations with modes: summarize, compress-context, handoff, extract-profile, or memory-enrichment.",
-      "price": "0.05",
+      "price": "0.03",
       "methods": ["POST"],
       "category": "ai-infrastructure",
       "tags": ["ai-agents", "context", "summarization", "compression", "handoff", "profile", "bankr"],
@@ -60,7 +60,7 @@
     },
     "contextkit-experience-write": {
       "description": "MCP V2 experience write endpoint: save private experience records or publish marketplace listings.",
-      "price": "0.03",
+      "price": "0.01",
       "methods": ["POST"],
       "category": "ai-infrastructure",
       "tags": ["ai-agents", "experience", "memory", "marketplace", "publish", "mcp", "bankr"],
@@ -165,7 +165,7 @@
     },
     "contextkit-experience-buy": {
       "description": "MCP V2 experience buy endpoint for purchasing published agent experience records through Bankr x402.",
-      "price": "0.03",
+      "price": "0.05",
       "methods": ["POST"],
       "category": "ai-infrastructure",
       "tags": ["ai-agents", "experience-marketplace", "buy", "memory", "mcp", "bankr"],
