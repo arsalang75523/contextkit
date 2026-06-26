@@ -274,6 +274,12 @@ export default function DocsPage() {
                 <InfoCard title="2. Add credits" body="Paid MCP tools spend the same account credits as direct API and SDK requests. Top up from Dashboard before long-running agent use." />
                 <InfoCard title="3. CLI or backend" body="Use a dedicated API key with context:write in the Authorization header when your MCP host does not offer OAuth Connect." />
               </div>
+              <div className="mt-4 rounded-md border border-amber/25 bg-amber/[0.08] p-4 text-sm leading-6 text-white/68">
+                <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-amber">MCP V2 auto-capture</p>
+                <p className="mt-2">
+                  Tell connected agents to call <code>contextkit_experience_consider</code> after completed non-trivial work, passing the user request, actions, final result, and reusable lesson. ContextKit saves only real reusable experience drafts privately. Agents must ask the user before calling <code>contextkit_experience_publish</code>.
+                </p>
+              </div>
               <div className="mt-4 grid gap-4 lg:grid-cols-2">
                 <div>
                   <h3 className="mb-2 font-semibold text-white">Connection configuration</h3>

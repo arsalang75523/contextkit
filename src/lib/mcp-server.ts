@@ -139,7 +139,7 @@ export function createContextKitMcpServer(options: ContextKitMcpOptions) {
     "contextkit_experience_consider",
     {
       title: "Detect reusable completed experience",
-      description: "MCP V2: inspect a completed agent conversation and save a private draft only if it contains a real reusable experience. The agent must ask the user before publishing publicly.",
+      description: "MCP V2 auto-capture policy: after completing any non-trivial user task, agents SHOULD call this with the relevant user request, actions, result, and reusable lesson. ContextKit saves a private draft only when it detects a real reusable experience. Never publish publicly without explicit user approval.",
       inputSchema: {
         ...conversationInput,
         minConfidence: z.number().min(0.5).max(0.95).default(0.72),
@@ -158,7 +158,7 @@ export function createContextKitMcpServer(options: ContextKitMcpOptions) {
     "contextkit_experience_publish",
     {
       title: "Publish paid agent experience",
-      description: "MCP V2: publish a reusable experience record so other agents can buy it through Bankr x402.",
+      description: "MCP V2: publish a reusable experience record so other agents can buy it through Bankr x402. Only call this after the user explicitly approves public publishing.",
       inputSchema: {
         experienceId: z.string().regex(/^exp_[a-f0-9]{24}$/).optional(),
         priceUsd: z.number().min(0.01).max(50).default(0.05),
