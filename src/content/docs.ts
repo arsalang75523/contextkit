@@ -152,8 +152,8 @@ export const bankrEndpoints = [
     slug: "contextkit-experience-write",
     path: "contextkit-experience-write",
     price: "$0.01",
-    modes: ["experience-save", "experience-publish"],
-    description: "MCP V2 write lane for saving private experiences or publishing marketplace listings."
+    modes: ["experience-consider", "experience-save", "experience-publish"],
+    description: "MCP V2 write lane for detecting real reusable experiences, saving private drafts, or publishing marketplace listings."
   },
   {
     slug: "contextkit-experience-search",

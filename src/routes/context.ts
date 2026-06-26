@@ -6,6 +6,7 @@ import {
   contextUploadSchema,
   conversationRequestSchema,
   experienceBuySchema,
+  experienceConsiderSchema,
   experiencePublishSchema,
   experienceSaveSchema,
   experienceSearchSchema
@@ -29,6 +30,7 @@ import type { AppBindings } from "@/types/bindings";
 import type {
   CompressContextResponse,
   ExperienceBuyInput,
+  ExperienceConsiderInput,
   ExperiencePublishInput,
   ExperienceSaveInput,
   ContextEndpoint,
@@ -207,6 +209,21 @@ contextRoutes.post(
 );
 
 contextRoutes.post(
+  "/experience/consider",
+  requireApiKey("context:write"),
+  apiKeyRateLimit(),
+  apiCreditOrX402PaymentRequired("experience-save"),
+  zValidator("json", experienceConsiderSchema),
+  async (c) => {
+    const body = c.req.valid("json");
+    const context = await resolveExperienceConsiderContext(c, body);
+    const result = await runExperienceWrite(() => new ExperienceService(c.env ?? {}).consider(body, context));
+    await completeOperation(c, "/experience/consider", body, JSON.stringify(result), c.get("payment")?.paymentId);
+    return c.json(result);
+  }
+);
+
+contextRoutes.post(
   "/experience/publish",
   requireApiKey("context:write"),
   apiKeyRateLimit(),
@@ -361,6 +378,15 @@ contextRoutes.post("/internal/experience/save", requireInternalToken(), zValidat
   return c.json(result, 201);
 });
 
+contextRoutes.post("/internal/experience/consider", requireInternalToken(), zValidator("json", experienceConsiderSchema), async (c) => {
+  const body = c.req.valid("json");
+  await markHostedPayment(c, "experience-save", "/internal/experience/consider");
+  const context = await resolveExperienceConsiderContext(c, body);
+  const result = await runExperienceWrite(() => new ExperienceService(c.env ?? {}).consider(body, context));
+  await completeOperation(c, "/internal/experience/consider", body, JSON.stringify(result));
+  return c.json(result);
+});
+
 contextRoutes.post("/internal/experience/publish", requireInternalToken(), zValidator("json", experiencePublishSchema), async (c) => {
   const body = c.req.valid("json");
   await markHostedPayment(c, "experience-publish", "/internal/experience/publish");
@@ -407,6 +433,31 @@ async function resolveExperienceContext(
     ownerId,
     messages: sanitizeMessages(body.messages ?? stored.messages),
     contextMetadata: stored.metadata
+  };
+}
+
+async function resolveExperienceConsiderContext(c: Context<AppBindings>, body: ExperienceConsiderInput) {
+  const ownerId = accountOwnerId(c) ?? body.creatorId ?? "bankr-hosted";
+  if (!body.contextId) {
+    return {
+      ownerId,
+      messages: sanitizeMessages(body.messages ?? []),
+      contextMetadata: body.metadata
+    };
+  }
+
+  const stored = await new AppKV(c.env?.CONTEXTKIT_KV).get<StoredContext>(`context:${body.contextId}`);
+  if (!stored) {
+    throw new HTTPException(404, { message: "Context upload was not found or has expired." });
+  }
+
+  return {
+    ownerId,
+    messages: sanitizeMessages(body.messages ?? stored.messages),
+    contextMetadata: {
+      ...(stored.metadata ?? {}),
+      ...(body.metadata ?? {})
+    }
   };
 }
 

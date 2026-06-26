@@ -286,6 +286,7 @@ export default function DocsPage() {
                     <li>contextkit_compress_context</li>
                     <li>contextkit_handoff</li>
                     <li>contextkit_extract_profile</li>
+                    <li>contextkit_experience_consider</li>
                     <li>contextkit_experience_save</li>
                     <li>contextkit_experience_search</li>
                     <li>contextkit_experience_publish</li>

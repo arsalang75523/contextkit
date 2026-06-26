@@ -59,7 +59,7 @@
       }
     },
     "contextkit-experience-write": {
-      "description": "MCP V2 experience write endpoint: save private experience records or publish marketplace listings.",
+      "description": "MCP V2 experience write endpoint: detect, save, or publish reusable agent experience records.",
       "price": "0.01",
       "methods": ["POST"],
       "category": "ai-infrastructure",
@@ -71,7 +71,7 @@
             "mode": {
               "type": "string",
               "description": "Write operation. Defaults to experience-save.",
-              "enum": ["experience-save", "experience-publish", "save", "publish"]
+              "enum": ["experience-consider", "experience-save", "experience-publish", "consider", "save", "publish"]
             },
             "experience": {
               "type": "object",
@@ -106,6 +106,14 @@
             "contextId": {
               "type": "string",
               "description": "Optional uploaded ContextKit context ID for large payloads."
+            },
+            "minConfidence": {
+              "type": "number",
+              "description": "Minimum confidence required for experience-consider to save a private draft."
+            },
+            "autoSave": {
+              "type": "boolean",
+              "description": "Whether experience-consider should save a private draft when a real reusable experience is detected."
             }
           },
           "required": []
@@ -114,6 +122,7 @@
           "type": "object",
           "properties": {
             "experienceId": { "type": "string" },
+            "shouldSave": { "type": "boolean" },
             "listingId": { "type": "string" },
             "status": { "type": "string" },
             "visibility": { "type": "string" },

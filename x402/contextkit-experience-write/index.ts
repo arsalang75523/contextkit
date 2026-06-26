@@ -12,6 +12,7 @@ function resolveExperienceWritePath(body: string) {
   }
 
   const operation = String(payload.mode ?? payload.operation ?? payload.action ?? "").toLowerCase();
+  if (operation === "consider" || operation === "experience-consider") return "/api/internal/experience/consider";
   if (operation === "publish" || operation === "experience-publish") return "/api/internal/experience/publish";
   if (typeof payload.priceUsd === "number" || typeof payload.experience?.priceUsd === "number") return "/api/internal/experience/publish";
   return "/api/internal/experience/save";

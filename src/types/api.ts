@@ -81,6 +81,18 @@ export const experienceSearchSchema = z.object({
   limit: z.number().int().min(1).max(20).default(10)
 });
 
+export const experienceConsiderSchema = z.object({
+  messages: z.array(messageSchema).min(2).max(200).optional(),
+  contextId: contextIdSchema.optional(),
+  minConfidence: z.number().min(0.5).max(0.95).default(0.72),
+  autoSave: z.boolean().default(true),
+  priceUsd: z.number().min(0.01).max(50).default(0.05),
+  creatorId: z.string().min(1).max(120).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional()
+}).refine((value) => Boolean(value.contextId) || Boolean(value.messages?.length), {
+  message: "Provide messages or contextId."
+});
+
 export const experienceBuySchema = z.object({
   experienceId: z.string().regex(/^exp_[a-f0-9]{24}$/),
   buyerId: z.string().min(1).max(120).optional()
@@ -184,6 +196,7 @@ export type BillableEndpoint = ContextEndpoint | ExperienceEndpoint;
 export type ExperienceSaveInput = z.infer<typeof experienceSaveSchema>;
 export type ExperiencePublishInput = z.infer<typeof experiencePublishSchema>;
 export type ExperienceSearchInput = z.infer<typeof experienceSearchSchema>;
+export type ExperienceConsiderInput = z.infer<typeof experienceConsiderSchema>;
 export type ExperienceBuyInput = z.infer<typeof experienceBuySchema>;
 
 export type ApiError = {

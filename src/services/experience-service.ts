@@ -1,8 +1,10 @@
 import { AppKV } from "@/storage/app-kv";
+import { BankrLlmClient } from "@/lib/bankr-llm";
 import type { AppBindings } from "@/types/bindings";
 import type {
   ConversationMessage,
   ExperienceBuyInput,
+  ExperienceConsiderInput,
   ExperiencePublishInput,
   ExperienceSaveInput,
   ExperienceSearchInput
@@ -43,7 +45,7 @@ export type ExperienceInputContext = {
 export class ExperienceService {
   private readonly kv: AppKV;
 
-  constructor(env: AppBindings["Bindings"] = {}) {
+  constructor(private readonly env: AppBindings["Bindings"] = {}) {
     this.kv = new AppKV(env.CONTEXTKIT_KV);
   }
 
@@ -144,6 +146,61 @@ export class ExperienceService {
     };
   }
 
+  async consider(input: ExperienceConsiderInput, context: ExperienceInputContext) {
+    const messages = context.messages ?? [];
+    const candidate = await this.generateCandidate(messages, input.minConfidence);
+    const shouldSave = Boolean(candidate.shouldSave) && candidate.confidence >= input.minConfidence;
+
+    if (!shouldSave) {
+      return {
+        shouldSave: false,
+        reason: candidate.reason || "No completed reusable agent experience detected.",
+        confidence: candidate.confidence,
+        requiredEvidence: candidate.requiredEvidence,
+        nextAgentAction: "Do not save. Continue working until there is a completed outcome and reusable method."
+      };
+    }
+
+    const saveInput: ExperienceSaveInput = {
+      experience: {
+        title: candidate.experience.title,
+        summary: candidate.experience.summary,
+        content: candidate.experience.content,
+        task: candidate.experience.task,
+        outcome: candidate.experience.outcome,
+        lesson: candidate.experience.lesson,
+        constraints: candidate.experience.constraints,
+        decisions: candidate.experience.decisions,
+        tags: candidate.experience.tags,
+        confidence: candidate.confidence,
+        source: "mcp-v2-auto-detect",
+        metadata: {
+          suggestedPriceUsd: input.priceUsd,
+          detectionReason: candidate.reason,
+          publishRequiresUserApproval: true
+        }
+      },
+      metadata: input.metadata
+    };
+    const saved = input.autoSave ? await this.save(saveInput, context) : null;
+
+    return {
+      shouldSave: true,
+      confidence: candidate.confidence,
+      reason: candidate.reason,
+      requiredEvidence: candidate.requiredEvidence,
+      experience: saved?.experience ?? saveInput.experience,
+      publishRecommendation: {
+        shouldAskUser: true,
+        priceUsd: input.priceUsd,
+        message: "I found a reusable experience from this completed work. Do you want me to publish it publicly so other agents can buy/reuse it?"
+      },
+      nextAgentAction: saved
+        ? `Ask the user for approval to publish experience ${saved.experience.id}. If approved, call contextkit_experience_publish with that experienceId.`
+        : "Ask the user whether to save and publish this draft experience."
+    };
+  }
+
   async buy(input: ExperienceBuyInput, buyerId: string, amountUsd = 0.05) {
     const record = await this.kv.get<ExperienceRecord>(recordKey(input.experienceId));
     if (!record || record.visibility !== "public") {
@@ -187,6 +244,55 @@ export class ExperienceService {
     };
   }
 
+  private async generateCandidate(messages: ConversationMessage[], minConfidence: number) {
+    const llm = new BankrLlmClient({ env: this.env });
+    const output = await llm.generateJsonFromPrompt("summarize", [
+      {
+        role: "system",
+        content: [
+          "You are ContextKit MCP V2 experience detector.",
+          "Return only JSON.",
+          "Detect only REAL reusable agent experiences created during this conversation.",
+          "A real experience requires all evidence: initial user request, agent actions/method, completed or meaningfully advanced outcome, reusable lesson, and no unresolved core blocker.",
+          "Reject generic notes, plans, brainstorms, empty records, incomplete attempts, pure summaries, secrets, credentials, OTPs, passwords, private keys, or user-private personal data.",
+          "Do not invent. Redact secrets completely.",
+          "If evidence is weak, set shouldSave=false.",
+          `Only set shouldSave=true when confidence >= ${minConfidence}.`
+        ].join(" ")
+      },
+      {
+        role: "user",
+        content: JSON.stringify({
+          responseSchema: {
+            shouldSave: true,
+            confidence: 0.0,
+            reason: "string",
+            requiredEvidence: {
+              userRequest: "string",
+              agentMethod: "string",
+              outcome: "string",
+              reusableLesson: "string"
+            },
+            experience: {
+              title: "string",
+              summary: "string",
+              content: "string",
+              task: "string",
+              outcome: "string",
+              lesson: "string",
+              constraints: ["string"],
+              decisions: ["string"],
+              tags: ["string"]
+            }
+          },
+          conversation: messages
+        })
+      }
+    ]);
+
+    return normalizeCandidate(output);
+  }
+
   private async recordsFromIndex(prefix: string) {
     const index = await this.kv.getMany<{ id: string }>(prefix);
     const records = await Promise.all(index.map((item) => this.kv.get<ExperienceRecord>(recordKey(item.id))));
@@ -211,22 +317,63 @@ export class ExperienceService {
 function normalizeExperience(input: ExperienceSaveInput | ExperiencePublishInput, messages?: ConversationMessage[]) {
   const experience = input.experience ?? {};
   const messageContent = messages?.map((message) => `${message.role}: ${message.content}`).join("\n\n");
-  const content = cleanText(experience.content ?? input.content ?? experience.lesson ?? experience.outcome ?? experience.task ?? messageContent ?? experience.summary ?? "");
-  const title = cleanText(experience.title ?? input.title ?? titleFromContent(content));
-  const summary = cleanText(experience.summary ?? summarizeContent(content));
+  const content = redactSensitive(cleanText(experience.content ?? input.content ?? experience.lesson ?? experience.outcome ?? experience.task ?? messageContent ?? experience.summary ?? ""));
+  const title = redactSensitive(cleanText(experience.title ?? input.title ?? titleFromContent(content)));
+  const summary = redactSensitive(cleanText(experience.summary ?? summarizeContent(content)));
 
   return {
     title,
     summary,
     content,
-    task: optionalText(experience.task),
-    outcome: optionalText(experience.outcome),
-    lesson: optionalText(experience.lesson),
-    constraints: cleanList(experience.constraints),
-    decisions: cleanList(experience.decisions),
+    task: optionalText(redactSensitive(experience.task ?? "")),
+    outcome: optionalText(redactSensitive(experience.outcome ?? "")),
+    lesson: optionalText(redactSensitive(experience.lesson ?? "")),
+    constraints: cleanList(experience.constraints?.map(redactSensitive)),
+    decisions: cleanList(experience.decisions?.map(redactSensitive)),
     tags: cleanTags(experience.tags ?? input.tags),
     confidence: typeof experience.confidence === "number" ? Number(experience.confidence.toFixed(2)) : 0.72,
     source: cleanText(experience.source ?? "mcp-v2")
+  };
+}
+
+function normalizeCandidate(output: Record<string, unknown>) {
+  const evidence = objectValue(output.requiredEvidence);
+  const experience = objectValue(output.experience);
+  const content = redactSensitive(cleanText(String(experience.content ?? experience.lesson ?? experience.outcome ?? "")));
+  const lesson = redactSensitive(cleanText(String(experience.lesson ?? "")));
+  const candidate = {
+    shouldSave: Boolean(output.shouldSave),
+    confidence: clampConfidence(output.confidence),
+    reason: redactSensitive(cleanText(String(output.reason ?? ""))),
+    requiredEvidence: {
+      userRequest: redactSensitive(cleanText(String(evidence.userRequest ?? ""))),
+      agentMethod: redactSensitive(cleanText(String(evidence.agentMethod ?? ""))),
+      outcome: redactSensitive(cleanText(String(evidence.outcome ?? ""))),
+      reusableLesson: redactSensitive(cleanText(String(evidence.reusableLesson ?? "")))
+    },
+    experience: {
+      title: redactSensitive(cleanText(String(experience.title ?? titleFromContent(content || lesson)))),
+      summary: redactSensitive(cleanText(String(experience.summary ?? summarizeContent(content || lesson)))),
+      content,
+      task: redactSensitive(cleanText(String(experience.task ?? ""))),
+      outcome: redactSensitive(cleanText(String(experience.outcome ?? ""))),
+      lesson,
+      constraints: cleanList(arrayOfStrings(experience.constraints).map(redactSensitive)),
+      decisions: cleanList(arrayOfStrings(experience.decisions).map(redactSensitive)),
+      tags: cleanTags(arrayOfStrings(experience.tags))
+    }
+  };
+
+  const hasEvidence = Boolean(
+    candidate.requiredEvidence.userRequest &&
+    candidate.requiredEvidence.agentMethod &&
+    candidate.requiredEvidence.outcome &&
+    candidate.requiredEvidence.reusableLesson
+  );
+  const hasExperience = Boolean(candidate.experience.content || candidate.experience.lesson || candidate.experience.outcome);
+  return {
+    ...candidate,
+    shouldSave: candidate.shouldSave && hasEvidence && hasExperience
   };
 }
 
@@ -377,4 +524,27 @@ function titleFromContent(content: string) {
 function summarizeContent(content: string) {
   const words = cleanText(content).split(/\s+/).slice(0, 36).join(" ");
   return words;
+}
+
+function objectValue(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
+}
+
+function arrayOfStrings(value: unknown) {
+  if (!Array.isArray(value)) return [];
+  return value.map((item) => cleanText(String(item))).filter(Boolean);
+}
+
+function clampConfidence(value: unknown) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return 0;
+  return Math.max(0, Math.min(1, Number(number.toFixed(2))));
+}
+
+function redactSensitive(value: string) {
+  return value
+    .replace(/\b(?:sk|bk|ck|re)_[A-Za-z0-9_-]{12,}\b/g, "[redacted-secret]")
+    .replace(/\bBearer\s+[A-Za-z0-9._~+/=-]{12,}\b/gi, "Bearer [redacted-secret]")
+    .replace(/\b(?:password|token|secret|api[_-]?key|private[_-]?key|otp|code)\s*[:=]\s*['\"]?[^,'\"\s}]{4,}/gi, "$1=[redacted-secret]")
+    .replace(/\b\d{6}\b/g, "[redacted-code]");
 }

@@ -136,6 +136,25 @@ export function createContextKitMcpServer(options: ContextKitMcpOptions) {
   );
 
   server.registerTool(
+    "contextkit_experience_consider",
+    {
+      title: "Detect reusable completed experience",
+      description: "MCP V2: inspect a completed agent conversation and save a private draft only if it contains a real reusable experience. The agent must ask the user before publishing publicly.",
+      inputSchema: {
+        ...conversationInput,
+        minConfidence: z.number().min(0.5).max(0.95).default(0.72),
+        autoSave: z.boolean().default(true),
+        priceUsd: z.number().min(0.01).max(50).default(0.05)
+      }
+    },
+    async ({ messages, contextId, minConfidence, autoSave, priceUsd }) => {
+      const invalid = validateConversation({ messages, contextId });
+      if (invalid) return toolError(invalid);
+      return callContextKit(options, "/experience/consider", { messages, contextId, minConfidence, autoSave, priceUsd });
+    }
+  );
+
+  server.registerTool(
     "contextkit_experience_publish",
     {
       title: "Publish paid agent experience",
