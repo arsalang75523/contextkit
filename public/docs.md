@@ -1,6 +1,6 @@
 # ContextKit Docs
 
-ContextKit is a memory layer for autonomous AI agents. It compresses long conversations, project history, and operational notes into compact continuation state for agent memory, handoffs, profile extraction, and workflow persistence.
+ContextKit is a memory layer and Verified Skill Registry for autonomous AI agents. It compresses continuation state and turns completed Bankr-adjacent agent work into portable validated `SKILL.md` packages.
 
 Website: https://contextkit.pro
 GitHub: https://github.com/arsalang75523/contextkit
@@ -56,7 +56,7 @@ Use a dedicated dashboard-created API key with `context:write` and account credi
 }
 ```
 
-MCP tools: `contextkit_summarize`, `contextkit_compress_context`, `contextkit_handoff`, `contextkit_extract_profile`, `contextkit_estimate_tokens`, and `contextkit_get_credits`.
+MCP tools: `contextkit_summarize`, `contextkit_compress_context`, `contextkit_handoff`, `contextkit_extract_profile`, `contextkit_skill_compile`, `contextkit_skill_publish`, `contextkit_skill_search`, `contextkit_skill_buy`, `contextkit_estimate_tokens`, and `contextkit_get_credits`.
 
 MCP has no admin, key-management, internal-token, Bankr-wallet, or webhook-write tool. Never provide any admin or Bankr secret to an MCP client.
 
@@ -66,6 +66,15 @@ MCP has no admin, key-management, internal-token, Bankr-wallet, or webhook-write
 - POST /api/compress-context: compress project context into structured machine memory.
 - POST /api/handoff: generate agent-to-agent project transfer payloads.
 - POST /api/extract-profile: extract durable profile memory or run memory enrichment with mode: memory-enrichment.
+
+## Verified Skill Registry
+
+- POST /api/skills/compile: compile completed work into a private portable skill draft.
+- POST /api/skills/publish: publish only validation-eligible skills after explicit approval.
+- POST /api/skills/search: search verified metadata previews without exposing paid skill content.
+- POST /api/skills/buy: buy the full SKILL.md, manifest, validation report, and installation license.
+
+Public skills require an approved Bankr-adjacent ecosystem, real completion evidence, executable workflow, verification, safety boundaries, rollback, at least three contract scenarios, score 75+, and no secrets/private identifiers.
 
 ## Long Context
 
@@ -84,9 +93,9 @@ curl -X POST "https://contextkit.pro/api/context/upload-text?endpoint=summarize&
 Then call Bankr with the returned contextId:
 
 ```bash
-bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-summarize \
+bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-core \
   -X POST \
-  -d '{"contextId":"ctx_REPLACE_ME","mode":"compact"}'
+  -d '{"endpoint":"summarize","contextId":"ctx_REPLACE_ME","mode":"compact"}'
 ```
 
 ## Dashboard

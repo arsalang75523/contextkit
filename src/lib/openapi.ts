@@ -4,6 +4,10 @@ import {
   contextUploadSchema,
   conversationRequestSchema,
   createApiKeySchema,
+  experienceBuySchema,
+  experienceConsiderSchema,
+  experiencePublishSchema,
+  experienceSearchSchema,
   loginSchema,
   revokeApiKeySchema,
   signupSchema,
@@ -293,6 +297,39 @@ routes.forEach(([path, summary, responseSchema, price]) => {
   });
 });
 
+const skillRoutes = [
+  ["/api/skills/compile", "Compile completed work into a private verified-skill draft", experienceConsiderSchema, endpointPricing["experience-save"]],
+  ["/api/skills/publish", "Publish an approved validation-eligible skill", experiencePublishSchema, endpointPricing["experience-publish"]],
+  ["/api/skills/search", "Search verified skill previews", experienceSearchSchema, endpointPricing["experience-search"]],
+  ["/api/skills/buy", "Buy a verified SKILL.md install bundle", experienceBuySchema, endpointPricing["experience-buy"]]
+] as const;
+
+skillRoutes.forEach(([path, summary, requestSchema, price]) => {
+  registry.registerPath({
+    method: "post",
+    path,
+    summary,
+    description: `Requires a Bearer API key with context:write scope and ${formatUsd(price)} in account credits or verified x402 payment. Public publishing also requires userApproved=true; the API rejects unverified drafts.`,
+    tags: ["Verified Skills"],
+    security: [{ ApiKeyAuth: [], X402Payment: [] }],
+    request: {
+      body: {
+        content: {
+          "application/json": { schema: requestSchema }
+        }
+      }
+    },
+    responses: {
+      200: response("Successful verified-skill operation.", z.record(z.unknown())),
+      201: response("Skill draft or public listing created.", z.record(z.unknown())),
+      401: response("Invalid API key.", errorSchema),
+      402: response("Credits or x402 payment required.", errorSchema),
+      403: response("Ownership or publish capability check failed.", errorSchema),
+      422: response("Validation or skill eligibility failed.", errorSchema)
+    }
+  });
+});
+
 function formatUsd(price: number) {
   return `$${price.toFixed(3).replace(/0+$/, "").replace(/\.$/, "")}`;
 }
@@ -393,11 +430,12 @@ export function createOpenApiDocument() {
     info: {
       title: "ContextKit API",
       version: "0.1.0",
-      description: "Context Infrastructure for AI Agents. Bankr-native context compression, handoff, and profile APIs with x402 payments."
+      description: "Context Infrastructure and Verified Skill Registry for AI Agents. Bankr-native context operations plus portable SKILL.md compilation, validation, search, and purchase with x402 payments."
     },
     servers: [{ url: "https://contextkit.pro" }, { url: "http://localhost:3000" }],
     tags: [
       { name: "Context" },
+      { name: "Verified Skills" },
       { name: "Authentication" },
       { name: "Analytics" },
       { name: "Tokens" },

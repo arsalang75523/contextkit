@@ -6,7 +6,7 @@ const activeRuns = new Set();
 export default definePluginEntry({
   id: "contextkit-autocapture",
   name: "ContextKit Auto-Capture",
-  description: "Save qualified OpenClaw agent outcomes as private ContextKit experience drafts.",
+  description: "Compile qualified OpenClaw outcomes into private tested ContextKit skill drafts.",
   register(api) {
     api.on("agent_end", async (event, context) => {
       const runId = event?.runId || context?.sessionKey || context?.sessionId || "openclaw-agent-end";
@@ -23,7 +23,7 @@ export default definePluginEntry({
         });
         const experience = savedExperience(result);
         if (experience?.id) {
-          api.logger?.info?.(`ContextKit saved private draft ${experience.id}: ${redactSensitive(experience.title)}`);
+          api.logger?.info?.(`ContextKit saved private skill draft ${experience.id}: ${redactSensitive(experience.title)}; verified=${Boolean(experience.validation?.eligible)}`);
         }
       } catch (error) {
         api.logger?.warn?.(`ContextKit auto-capture skipped: ${redactSensitive(error instanceof Error ? error.message : String(error))}`);

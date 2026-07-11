@@ -1,7 +1,7 @@
 "use client";
 
 import { type ReactNode, useMemo, useState } from "react";
-import { CircleDollarSign, FileText, Network, Play, RotateCcw, Sparkles, Terminal, Zap } from "lucide-react";
+import { BadgeCheck, CircleDollarSign, FileText, Network, PackageCheck, Play, RotateCcw, Search, Sparkles, Terminal, Zap } from "lucide-react";
 import { CodeBlock } from "@/components/code-block";
 import { bankrEndpoints, endpoints } from "@/content/docs";
 import { bankrHostedUrl, bankrX402Command } from "@/lib/bankr-x402";
@@ -19,6 +19,24 @@ Important constraints: union rules require two consecutive rest days for drivers
 Completed work includes ridership interviews, stop safety audits, proposed route maps, a driver staffing model, and a draft airport agreement. Open issues are charger scheduling, weekend driver coverage, and whether the east neighborhood loop should run every 20 or 30 minutes.
 
 Turn this into a concise state update for the next planning agent, preserving goals, decisions, blockers, constraints, and immediate next steps.`;
+
+const skillCompileCommand = bankrX402Command("skill-compile", {
+  mode: "skill-compile",
+  messages: [
+    { role: "user", content: "Fix a completed Bankr-adjacent task and preserve the reusable method." },
+    { role: "assistant", content: "Describe the actions taken, verified outcome, constraints, and reusable lesson." }
+  ]
+});
+
+const skillSearchCommand = bankrX402Command("skill-search", {
+  query: "x402 timeout recovery",
+  ecosystems: ["x402"],
+  compatibility: ["codex"],
+  verifiedOnly: true,
+  limit: 5
+});
+
+const skillBuyCommand = bankrX402Command("skill-buy", { skillId: "exp_REPLACE_ME" });
 
 export default function PlaygroundPage() {
   const [endpoint, setEndpoint] = useState("summarize");
@@ -180,6 +198,45 @@ curl -X POST "https://contextkit.pro/api/context/upload-text?${params.toString()
             <div className="overflow-hidden rounded-xl border border-line bg-ink/45"><div className="flex items-center gap-2 border-b border-line px-4 py-3 font-mono text-[10px] uppercase tracking-[0.16em] text-white/43"><Terminal className="h-4 w-4 text-aqua" /> 05 / Long context workflow</div><div className="p-4"><p className="mb-4 text-sm leading-6 text-white/56">Upload and precompute large content first. Copy the returned <code>contextId</code> into the payment request.</p><div className="space-y-4"><div><p className="mb-2 font-mono text-[10px] uppercase tracking-[0.15em] text-white/38">1. Upload and precompute</p><CodeBlock code={longContextCommands.upload} /></div><div className="rounded-lg border border-aqua/20 bg-aqua/[0.07] p-3 text-sm leading-6 text-aqua">Copy the upload response&apos;s <code>contextId</code>, then replace <code>ctx_REPLACE_ME</code> below.</div><div><p className="mb-2 font-mono text-[10px] uppercase tracking-[0.15em] text-white/38">2. Pay and fetch result</p><CodeBlock code={longContextCommands.call} /></div></div></div></div>
           </section>
         </div>
+
+        <section className="mt-6 overflow-hidden rounded-[1.45rem] border border-mint/20 bg-carbon/80">
+          <div className="flex flex-col gap-4 border-b border-line px-5 py-6 sm:px-7 md:flex-row md:items-end md:justify-between">
+            <div>
+              <p className="font-mono text-[10px] uppercase tracking-[0.17em] text-mint">Verified Skill Registry / Bankr x402</p>
+              <h2 className="mt-2 max-w-3xl text-2xl font-semibold tracking-[-0.03em] text-white md:text-3xl">Compile real work. Publish only tested skills. Install what already works.</h2>
+            </div>
+            <p className="max-w-md text-sm leading-6 text-white/52">Raw chats and project diaries are never listings. ContextKit requires portability, evidence, safety boundaries, and three passing contract tests.</p>
+          </div>
+          <div className="grid gap-px bg-line lg:grid-cols-3">
+            <RegistryLane
+              icon={<BadgeCheck className="h-4 w-4" />}
+              step="01 / Compile"
+              title="Private SKILL.md draft"
+              text="The LLM extracts a reusable Bankr-adjacent method; deterministic validation scores portability, evidence, safety, and tests."
+              code={skillCompileCommand}
+              price="$0.01"
+            />
+            <RegistryLane
+              icon={<Search className="h-4 w-4" />}
+              step="02 / Search"
+              title="Verified previews only"
+              text="Filter by problem, ecosystem, and agent compatibility. Paid SKILL.md content stays private until purchase."
+              code={skillSearchCommand}
+              price="$0.01"
+            />
+            <RegistryLane
+              icon={<PackageCheck className="h-4 w-4" />}
+              step="03 / Buy + install"
+              title="Versioned skill bundle"
+              text="Receive SKILL.md, manifest, validation report, compatibility metadata, and a non-resale installation license."
+              code={skillBuyCommand}
+              price="$0.05"
+            />
+          </div>
+          <div className="border-t border-line bg-mint/[0.035] px-5 py-4 text-sm leading-6 text-white/58 sm:px-7">
+            Publishing is a separate approval-gated call: use <code>mode: &quot;skill-publish&quot;</code> with the returned <code>skillId</code>, <code>publishToken</code>, and <code>userApproved: true</code>. The API rejects unverified or unapproved drafts even if an agent tries to publish them.
+          </div>
+        </section>
       </div>
     </main>
   );
@@ -191,6 +248,20 @@ function Spinner() {
 
 function PlaygroundStep({ icon, title, text }: { icon: ReactNode; title: string; text: string }) {
   return <div className="flex gap-3 bg-carbon/90 p-4"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-mint/20 bg-mint/[0.06] text-mint">{icon}</span><div><p className="text-sm font-medium text-white">{title}</p><p className="mt-1 text-sm leading-6 text-white/52">{text}</p></div></div>;
+}
+
+function RegistryLane({ icon, step, title, text, code, price }: { icon: ReactNode; step: string; title: string; text: string; code: string; price: string }) {
+  return (
+    <article className="min-w-0 bg-carbon/95 p-5 sm:p-6">
+      <div className="flex items-center justify-between gap-3">
+        <span className="inline-flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.16em] text-mint">{icon}{step}</span>
+        <span className="rounded-full border border-aqua/20 bg-aqua/[0.07] px-2.5 py-1 font-mono text-[10px] text-aqua">{price}</span>
+      </div>
+      <h3 className="mt-4 text-lg font-semibold text-white">{title}</h3>
+      <p className="mt-2 min-h-[4.5rem] text-sm leading-6 text-white/54">{text}</p>
+      <div className="mt-5"><CodeBlock code={code} /></div>
+    </article>
+  );
 }
 
 function heredocMarker(value: string) {

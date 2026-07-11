@@ -34,6 +34,90 @@ export type ContextUploadResponse = {
   } | null;
 };
 
+export type SkillValidationReport = {
+  eligible: boolean;
+  status: "verified" | "needs-work" | "rejected";
+  score: number;
+  threshold: number;
+  validationLevel: "deterministic-contract";
+  breakdown: Record<string, number>;
+  tests: Array<{ name: string; passed: boolean; findings: string[] }>;
+  findings: string[];
+};
+
+export type VerifiedSkill = {
+  name: string;
+  description: string;
+  version: string;
+  ecosystem: "bankr" | "x402" | "base" | "mcp" | "wallet" | "defi" | "automation" | "llm-gateway" | "agent-infrastructure";
+  compatibility: string[];
+  trigger: string;
+  prerequisites: string[];
+  inputs: string[];
+  outputs: string[];
+  steps?: string[];
+  verification?: string[];
+  failureHandling?: string[];
+  doNotUseWhen?: string[];
+  rollback?: string[];
+  tags: string[];
+  testCount: number;
+  skillMarkdown?: string;
+};
+
+export type SkillCompileRequest = Pick<ContextRequest, "messages" | "contextId"> & {
+  minConfidence?: number;
+  autoSave?: boolean;
+  priceUsd?: 0.05;
+  metadata?: Record<string, unknown>;
+};
+
+export type SkillRecord = {
+  id: string;
+  title: string;
+  summary: string;
+  visibility: "private" | "public";
+  priceUsd: number;
+  sales: number;
+  earnedUsd: number;
+  kind: "verified-skill" | "legacy-experience";
+  skill?: VerifiedSkill;
+  validation?: SkillValidationReport;
+};
+
+export type SkillCompileResponse = {
+  shouldSave: boolean;
+  confidence: number;
+  reason: string;
+  experience?: SkillRecord;
+  publishToken?: string;
+  validation?: SkillValidationReport;
+  publishRecommendation?: { shouldAskUser: boolean; priceUsd: number; message: string };
+  nextAgentAction: string;
+};
+
+export type SkillSearchRequest = {
+  query?: string;
+  tags?: string[];
+  ecosystems?: VerifiedSkill["ecosystem"][];
+  compatibility?: string[];
+  includePrivate?: boolean;
+  limit?: number;
+};
+
+export type SkillPurchaseResponse = {
+  purchase: { id: string; experienceId: string; amountUsd: number; createdAt: string };
+  skill: VerifiedSkill;
+  validation?: SkillValidationReport;
+  installBundle: {
+    format: "contextkit-verified-skill/v1";
+    fileName: "SKILL.md";
+    skillMarkdown: string;
+    manifest: Record<string, unknown>;
+  };
+  license: { use: "agent-skill-installation"; resale: false; attribution: string };
+};
+
 type SummarizeState = {
   goal: string;
   status: string;

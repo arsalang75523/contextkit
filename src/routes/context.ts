@@ -266,6 +266,66 @@ contextRoutes.post(
   }
 );
 
+// Verified Skill Registry aliases. Legacy /experience/* paths remain stable for
+// deployed MCP and Bankr x402 clients while new integrations use skill terms.
+contextRoutes.post(
+  "/skills/compile",
+  requireApiKey("context:write"),
+  apiKeyRateLimit(),
+  apiCreditOrX402PaymentRequired("experience-save"),
+  zValidator("json", experienceConsiderSchema),
+  async (c) => {
+    const body = c.req.valid("json");
+    const context = await resolveExperienceConsiderContext(c, body);
+    const result = await runExperienceWrite(() => new ExperienceService(c.env ?? {}).consider(body, context));
+    await completeOperation(c, "/skills/compile", body, JSON.stringify(result), c.get("payment")?.paymentId);
+    return c.json(result);
+  }
+);
+
+contextRoutes.post(
+  "/skills/publish",
+  requireApiKey("context:write"),
+  apiKeyRateLimit(),
+  apiCreditOrX402PaymentRequired("experience-publish"),
+  zValidator("json", experiencePublishSchema),
+  async (c) => {
+    const body = c.req.valid("json");
+    const context = await resolveExperienceContext(c, body);
+    const result = await runExperienceWrite(() => new ExperienceService(c.env ?? {}).publish(body, context));
+    await completeOperation(c, "/skills/publish", body, JSON.stringify(result), c.get("payment")?.paymentId);
+    return c.json(result, 201);
+  }
+);
+
+contextRoutes.post(
+  "/skills/search",
+  requireApiKey("context:write"),
+  apiKeyRateLimit(),
+  apiCreditOrX402PaymentRequired("experience-search"),
+  zValidator("json", experienceSearchSchema),
+  async (c) => {
+    const body = c.req.valid("json");
+    const result = await new ExperienceService(c.env ?? {}).search({ ...body, verifiedOnly: true }, accountOwnerId(c));
+    await completeOperation(c, "/skills/search", body, JSON.stringify(result), c.get("payment")?.paymentId);
+    return c.json(result);
+  }
+);
+
+contextRoutes.post(
+  "/skills/buy",
+  requireApiKey("context:write"),
+  apiKeyRateLimit(),
+  apiCreditOrX402PaymentRequired("experience-buy"),
+  zValidator("json", experienceBuySchema),
+  async (c) => {
+    const body = c.req.valid("json");
+    const result = await runExperienceBuy(c, body);
+    await completeOperation(c, "/skills/buy", body, JSON.stringify(result), c.get("payment")?.paymentId);
+    return c.json(result);
+  }
+);
+
 contextRoutes.post("/x402/memory-enrichment", x402PaymentRequired("memory-enrichment"), zValidator("json", conversationRequestSchema), async (c) => {
   const request = await resolveConversationRequest(c, c.req.valid("json"));
   const service = new ContextService({ env: c.env ?? {}, requestId: c.get("requestId") });
@@ -485,7 +545,13 @@ async function runExperienceWrite<T>(operation: () => Promise<T>) {
       throw new HTTPException(404, { message: "Experience record was not found." });
     }
     if (error instanceof Error && error.message === "experience_forbidden") {
-      throw new HTTPException(403, { message: "You can only publish your own experience record." });
+      throw new HTTPException(403, { message: "You can only publish your own skill draft. Bankr-hosted drafts also require the publishToken returned during compilation." });
+    }
+    if (error instanceof Error && error.message === "skill_required_for_publish") {
+      throw new HTTPException(422, { message: "Public listings must contain a compiled ContextKit Verified Skill. Run experience-consider or contextkit_skill_compile first." });
+    }
+    if (error instanceof Error && error.message.startsWith("skill_not_publishable:")) {
+      throw new HTTPException(422, { message: error.message.slice("skill_not_publishable:".length) });
     }
     throw error;
   }

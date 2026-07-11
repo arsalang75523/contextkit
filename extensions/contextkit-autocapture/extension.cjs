@@ -94,7 +94,7 @@ async function runCapturedAgent(context, output, status) {
       apiKey,
       baseUrl: config.get("baseUrl"),
       minConfidence: config.get("minConfidence"),
-      priceUsd: config.get("defaultPriceUsd"),
+      priceUsd: 0.05,
       source: "vscode-extension-runner",
       agent: agent.id,
       workspace,
@@ -129,7 +129,7 @@ async function captureTranscript(context, output, status) {
       apiKey,
       baseUrl: config.get("baseUrl"),
       minConfidence: config.get("minConfidence"),
-      priceUsd: config.get("defaultPriceUsd"),
+      priceUsd: 0.05,
       source: "vscode-extension-transcript",
       workspace: vscode.workspace.workspaceFolders?.[0]?.uri.fsPath,
       cachePath: context.globalStorageUri.fsPath + "/capture-cache.json"
@@ -151,15 +151,21 @@ async function presentResult(result, apiKey, config, output) {
     return;
   }
   output.appendLine(`\n[ContextKit] Private draft saved: ${experience.id} (${experience.title})`);
+  if (!experience.validation?.eligible) {
+    const findings = experience.validation?.findings?.join(" ") || "The draft did not pass verified-skill validation.";
+    output.appendLine(`[ContextKit] Kept private: ${findings}`);
+    void vscode.window.showWarningMessage(`ContextKit kept this skill private: ${findings}`);
+    return;
+  }
   const action = await vscode.window.showInformationMessage(
-    `ContextKit saved a private draft: ${experience.title}. Publish it for Bankr x402 reuse?`,
-    "Publish for $" + Number(config.get("defaultPriceUsd")).toFixed(2),
+    `ContextKit compiled a verified private skill: ${experience.title} (score ${experience.validation.score}). Publish it for Bankr x402 installation?`,
+    "Publish for $0.05",
     "Keep private"
   );
   if (!action?.startsWith("Publish")) return;
-  await publishExperience(experience.id, apiKey, config.get("baseUrl"), config.get("defaultPriceUsd"));
+  await publishExperience(experience.id, apiKey, config.get("baseUrl"));
   output.appendLine(`[ContextKit] Published ${experience.id} after explicit IDE approval.`);
-  void vscode.window.showInformationMessage("ContextKit experience published successfully.");
+  void vscode.window.showInformationMessage("ContextKit verified skill published successfully.");
 }
 
 function savedExperience(result) {
@@ -170,11 +176,11 @@ function savedExperience(result) {
   return undefined;
 }
 
-async function publishExperience(experienceId, apiKey, baseUrl, priceUsd) {
-  const response = await fetch(String(baseUrl).replace(/\/$/, "") + "/api/experience/publish", {
+async function publishExperience(skillId, apiKey, baseUrl) {
+  const response = await fetch(String(baseUrl).replace(/\/$/, "") + "/api/skills/publish", {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ experienceId, priceUsd })
+    body: JSON.stringify({ skillId, priceUsd: 0.05, userApproved: true })
   });
   if (!response.ok) {
     const body = await response.text();

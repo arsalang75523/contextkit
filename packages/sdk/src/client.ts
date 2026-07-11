@@ -7,6 +7,11 @@ import type {
   HandoffResponse,
   MemoryEnrichmentResponse,
   ProfileResponse,
+  SkillCompileRequest,
+  SkillCompileResponse,
+  SkillPurchaseResponse,
+  SkillRecord,
+  SkillSearchRequest,
   SummarizeResponse,
   X402PaymentHandler
 } from "./types";
@@ -54,6 +59,22 @@ export class ContextKit {
 
   memoryEnrichment(request: ContextRequest) {
     return this.post<MemoryEnrichmentResponse>("/api/memory-enrichment", request);
+  }
+
+  compileSkill(request: SkillCompileRequest) {
+    return this.post<SkillCompileResponse>("/api/skills/compile", request);
+  }
+
+  publishSkill(request: { skillId: string; priceUsd?: 0.05; publishToken?: string }) {
+    return this.post<{ experience: SkillRecord; marketplace: { listed: true; priceUsd: number; access: string } }>("/api/skills/publish", { ...request, userApproved: true });
+  }
+
+  searchSkills(request: SkillSearchRequest = {}) {
+    return this.post<{ results: Array<SkillRecord & { score: number }>; count: number; query: string | null }>("/api/skills/search", request);
+  }
+
+  buySkill(skillId: string) {
+    return this.post<SkillPurchaseResponse>("/api/skills/buy", { skillId });
   }
 
   async estimateTokens(input: unknown) {

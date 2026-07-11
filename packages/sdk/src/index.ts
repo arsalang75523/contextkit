@@ -10,6 +10,13 @@ export type {
   HandoffResponse,
   MemoryEnrichmentResponse,
   ProfileResponse,
+  SkillCompileRequest,
+  SkillCompileResponse,
+  SkillPurchaseResponse,
+  SkillRecord,
+  SkillSearchRequest,
+  SkillValidationReport,
   SummarizeResponse,
+  VerifiedSkill,
   X402PaymentHandler
 } from "./types";

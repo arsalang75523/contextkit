@@ -152,21 +152,21 @@ export const bankrEndpoints = [
     slug: "contextkit-experience-write",
     path: "contextkit-experience-write",
     price: "$0.01",
-    modes: ["experience-consider", "experience-save", "experience-publish"],
-    description: "MCP V2 write lane for detecting real reusable experiences, saving private drafts, or publishing marketplace listings."
+    modes: ["skill-compile", "skill-publish", "experience-consider", "experience-save", "experience-publish"],
+    description: "Compile completed Bankr-adjacent work into portable tested SKILL.md drafts, then publish only validation-approved skills."
   },
   {
     slug: "contextkit-experience-search",
     path: "contextkit-experience-search",
     price: "$0.01",
     modes: ["experience-search"],
-    description: "MCP V2 search lane for reusable agent lessons, private records, and public marketplace results."
+    description: "Search verified skills by problem, ecosystem, tags, compatibility, and quality score."
   },
   {
     slug: "contextkit-experience-buy",
     path: "contextkit-experience-buy",
     price: "$0.05",
     modes: ["experience-buy"],
-    description: "MCP V2 purchase lane for buying published agent experience records through Bankr x402."
+    description: "Buy a verified skill through Bankr x402 and receive SKILL.md, manifest, validation report, and installation license."
   }
 ];

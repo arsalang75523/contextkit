@@ -59,23 +59,23 @@
       }
     },
     "contextkit-experience-write": {
-      "description": "MCP V2 experience write endpoint: detect, save, or publish reusable agent experience records.",
+      "description": "Compile completed Bankr-adjacent work into tested SKILL.md drafts or publish verified installable skills.",
       "price": "0.01",
       "methods": ["POST"],
       "category": "ai-infrastructure",
-      "tags": ["ai-agents", "experience", "memory", "marketplace", "publish", "mcp", "bankr"],
+      "tags": ["ai-agents", "verified-skills", "skill-md", "marketplace", "publish", "mcp", "bankr"],
       "schema": {
         "input": {
           "type": "object",
           "properties": {
             "mode": {
               "type": "string",
-              "description": "Write operation. Defaults to experience-save.",
-              "enum": ["experience-consider", "experience-save", "experience-publish", "consider", "save", "publish"]
+              "description": "Use skill-compile for completed work or skill-publish for an approved verified draft. Legacy experience modes remain accepted.",
+              "enum": ["skill-compile", "skill-publish", "experience-consider", "experience-save", "experience-publish", "consider", "save", "publish"]
             },
             "experience": {
               "type": "object",
-              "description": "Experience record or marketplace listing payload.",
+              "description": "Legacy input record. New skill drafts are compiled from messages and validated before publishing.",
               "properties": {
                 "experienceId": { "type": "string" },
                 "goal": { "type": "string", "description": "Original task or objective." },
@@ -113,7 +113,25 @@
             },
             "autoSave": {
               "type": "boolean",
-              "description": "Whether experience-consider should save a private draft when a real reusable experience is detected."
+              "description": "Whether skill-compile should save a private SKILL.md draft when completed reusable work passes evidence checks."
+            },
+            "skillId": {
+              "type": "string",
+              "description": "Private verified skill ID for skill-publish mode. Explicit user approval is required before calling publish."
+            },
+            "publishToken": {
+              "type": "string",
+              "description": "Capability returned with a Bankr-hosted private draft. Required with skillId when publishing through the shared hosted endpoint."
+            },
+            "userApproved": {
+              "type": "boolean",
+              "enum": [true],
+              "description": "Required in skill-publish mode. Confirms the user explicitly approved public listing."
+            },
+            "priceUsd": {
+              "type": "number",
+              "enum": [0.05],
+              "description": "Fixed v1 marketplace price for a verified skill."
             }
           },
           "required": []
@@ -121,30 +139,30 @@
         "output": {
           "type": "object",
           "properties": {
-            "experienceId": { "type": "string" },
+            "experience": { "type": "object", "description": "Private compiled draft or published verified skill record." },
+            "publishToken": { "type": "string", "description": "Returned only for a new Bankr-hosted private draft; required to publish that draft." },
+            "skill": { "type": "object", "description": "Compiled portable skill preview." },
+            "validation": { "type": "object", "description": "Quality score, contract-test results, findings, and publish eligibility." },
             "shouldSave": { "type": "boolean" },
-            "listingId": { "type": "string" },
-            "status": { "type": "string" },
-            "visibility": { "type": "string" },
-            "qualityScore": { "type": "number" },
-            "reviewStatus": { "type": "string" },
-            "publishQuotaRemaining": { "type": "integer" }
+            "marketplace": { "type": "object", "description": "Present after successful public listing." }
           }
         }
       }
     },
     "contextkit-experience-search": {
-      "description": "MCP V2 experience search endpoint for finding reusable agent lessons and marketplace records.",
+      "description": "Search ContextKit Verified Skills by problem, ecosystem, tags, or compatible agent host.",
       "price": "0.01",
       "methods": ["POST"],
       "category": "ai-infrastructure",
-      "tags": ["ai-agents", "experience-search", "memory", "marketplace", "mcp", "bankr"],
+      "tags": ["ai-agents", "verified-skill-search", "skill-md", "marketplace", "mcp", "bankr"],
       "schema": {
         "input": {
           "type": "object",
           "properties": {
             "query": { "type": "string", "description": "Search query or current agent problem." },
             "tags": { "type": "array", "items": { "type": "string" }, "description": "Optional tags to filter by." },
+            "ecosystems": { "type": "array", "items": { "type": "string" }, "description": "Filter by Bankr, x402, Base, MCP, wallet, DeFi, automation, LLM gateway, or agent infrastructure." },
+            "compatibility": { "type": "array", "items": { "type": "string" }, "description": "Filter by Bankr, Claude Code, Codex, OpenClaw, Cursor, or another compatible host." },
             "limit": { "type": "integer", "description": "Maximum results to return." },
             "visibility": { "type": "string", "description": "private, public, or all.", "enum": ["private", "public", "all"] },
             "contextId": { "type": "string", "description": "Optional uploaded ContextKit context ID to search from." }
@@ -160,6 +178,8 @@
                 "type": "object",
                 "properties": {
                   "experienceId": { "type": "string" },
+                  "skill": { "type": "object" },
+                  "validation": { "type": "object" },
                   "listingId": { "type": "string" },
                   "title": { "type": "string" },
                   "lesson": { "type": "string" },
@@ -173,30 +193,29 @@
       }
     },
     "contextkit-experience-buy": {
-      "description": "MCP V2 experience buy endpoint for purchasing published agent experience records through Bankr x402.",
+      "description": "Buy a verified installable SKILL.md bundle through Bankr x402.",
       "price": "0.05",
       "methods": ["POST"],
       "category": "ai-infrastructure",
-      "tags": ["ai-agents", "experience-marketplace", "buy", "memory", "mcp", "bankr"],
+      "tags": ["ai-agents", "verified-skill-marketplace", "buy", "skill-md", "mcp", "bankr"],
       "schema": {
         "input": {
           "type": "object",
           "properties": {
             "listingId": { "type": "string", "description": "Marketplace listing ID." },
+            "skillId": { "type": "string", "description": "Verified skill ID. Either skillId or listingId is accepted." },
             "buyerContext": { "type": "string", "description": "Optional current task context for matching." },
             "contextId": { "type": "string", "description": "Optional uploaded ContextKit context ID for buyer context." }
           },
-          "required": ["listingId"]
+          "required": []
         },
         "output": {
           "type": "object",
           "properties": {
             "experienceId": { "type": "string" },
-            "goal": { "type": "string" },
-            "lesson": { "type": "string" },
-            "constraints": { "type": "array", "items": { "type": "string" } },
-            "recommendedUse": { "type": "string" },
-            "license": { "type": "string" }
+            "skill": { "type": "object", "description": "Full verified skill record." },
+            "installBundle": { "type": "object", "description": "SKILL.md plus versioned manifest and validation report." },
+            "license": { "type": "object" }
           }
         }
       }

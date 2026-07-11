@@ -33,9 +33,27 @@ ContextKit MCP uses Streamable HTTP. OAuth-capable Connector UIs can use the Con
 }
 ```
 
-Tools: `contextkit_summarize`, `contextkit_compress_context`, `contextkit_handoff`, `contextkit_extract_profile`, `contextkit_estimate_tokens`, `contextkit_get_credits`.
+Tools: `contextkit_summarize`, `contextkit_compress_context`, `contextkit_handoff`, `contextkit_extract_profile`, `contextkit_skill_compile`, `contextkit_skill_publish`, `contextkit_skill_search`, `contextkit_skill_buy`, `contextkit_estimate_tokens`, `contextkit_get_credits`.
 
 The MCP server intentionally has no tool for admin actions, credits grants, API-key creation or revocation, webhook writes, or internal service access.
+
+## Verified Skill Registry
+
+Direct API routes:
+
+- `POST /api/skills/compile`: compile completed Bankr-adjacent work into a private SKILL.md draft.
+- `POST /api/skills/publish`: publish an eligible skill after explicit user approval; requires `userApproved: true`. V1 listing price is fixed at `$0.05`.
+- `POST /api/skills/search`: search verified metadata previews by query, tags, ecosystem, and compatibility.
+- `POST /api/skills/buy`: buy the full SKILL.md install bundle and non-resale license.
+
+Publishing rejects raw experience notes, missing skills, validation score below 75, fewer than three valid contract scenarios, secrets, private paths/identifiers, unsafe commands, weak evidence, and unsupported ecosystems.
+
+```bash
+curl -X POST https://contextkit.pro/api/skills/search \
+  -H "Authorization: Bearer <CONTEXTKIT_API_KEY>" \
+  -H "Content-Type: application/json" \
+  -d '{"query":"x402 timeout","ecosystems":["x402"],"compatibility":["codex"],"verifiedOnly":true}'
+```
 
 ## POST /api/summarize
 

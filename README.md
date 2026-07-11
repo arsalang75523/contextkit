@@ -31,7 +31,7 @@ contextkit-autocapture run claude -- "Implement webhook retries"
 contextkit-autocapture run codex -- "Verify the payment callback"
 ```
 
-The bridge locally redacts common secrets, submits only the latest completed task, skips duplicate and failed runs, and auto-saves only qualified private drafts. Public publishing always requires explicit user approval.
+The bridge locally redacts common secrets, submits only the latest completed task, skips duplicate and failed runs, and compiles only qualified Bankr-adjacent work into private `SKILL.md` drafts. Public publishing requires a validation score of at least 75, three passing contract tests, and explicit user approval.
 
 The VS Code-compatible extension for VS Code, Cursor, Windsurf, and VSCodium is in `extensions/contextkit-autocapture`:
 
@@ -40,11 +40,25 @@ npm run extension:package
 code --install-extension extensions/contextkit-autocapture/contextkit-autocapture-0.1.0.vsix
 ```
 
-ContextKit is a memory layer for autonomous AI agents.
+ContextKit is a memory layer and Verified Skill Registry for autonomous AI agents.
 
 Website: https://contextkit.pro
 
 It turns long conversations, project notes, and operational history into compact continuation state that another agent can safely pick up later. The focus is not pretty summaries. The focus is preserving goals, blockers, constraints, decisions, next actions, durable preferences, and handoff state with fewer tokens.
+
+## Verified Skill Registry
+
+ContextKit does not sell raw chat history or project-specific notes. MCP V2 compiles completed agent work into portable skills with declared inputs, executable steps, verification, failure handling, rollback, evidence, compatibility metadata, and contract tests.
+
+The lifecycle is strict:
+
+1. `contextkit_skill_compile` creates a private draft from completed work.
+2. Deterministic validation rejects secrets, private paths/identifiers, unsafe commands, weak evidence, unsupported ecosystems, and incomplete tests.
+3. `contextkit_skill_publish` lists only eligible skills after explicit user approval.
+4. `contextkit_skill_search` returns verified previews without exposing paid `SKILL.md` content.
+5. `contextkit_skill_buy` returns a versioned install bundle and non-resale license.
+
+Public skill ecosystems are `bankr`, `x402`, `base`, `mcp`, `wallet`, `defi`, `automation`, `llm-gateway`, and `agent-infrastructure`.
 
 ## Why It Exists
 
@@ -83,12 +97,12 @@ Agent hosts can connect to the stateless Streamable HTTP MCP endpoint at `https:
 
 ## Paid Endpoints
 
-| Endpoint | Bankr service | Purpose | Price |
+| Direct API operations | Bankr service | Purpose | Price |
 | --- | --- | --- | ---: |
-| `POST /api/summarize` | `contextkit-summarize` | Micro, compact, extended, or debug continuation summaries | `$0.05` |
-| `POST /api/compress-context` | `contextkit-compress` | Machine-optimized context packet | `$0.03` |
-| `POST /api/handoff` | `contextkit-handoff` | Agent-to-agent project transfer | `$0.03` |
-| `POST /api/extract-profile` | `contextkit-profile` | Durable profile extraction or memory enrichment via `mode` | `$0.04` |
+| summarize, compress, handoff, profile | `contextkit-core` | All context operations selected by `endpoint`/`mode` | `$0.03` |
+| `POST /api/skills/compile`, `/publish` | `contextkit-experience-write` | Compile a private skill or publish an approved verified skill | `$0.01` |
+| `POST /api/skills/search` | `contextkit-experience-search` | Search verified skills by problem and compatibility | `$0.01` |
+| `POST /api/skills/buy` | `contextkit-experience-buy` | Buy a versioned `SKILL.md` install bundle | `$0.05` |
 
 Utility endpoints such as token estimates, credits, analytics, keys, and webhooks use dashboard API keys instead of Bankr-hosted pay-per-call.
 
@@ -97,48 +111,76 @@ Utility endpoints such as token estimates, credits, analytics, keys, and webhook
 Summarize:
 
 ```bash
-bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-summarize \
+bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-core \
   -X POST \
-  -d '{"messages":[{"role":"user","content":"Summarize this project state for the next AI agent."}],"mode":"compact"}'
+  -d '{"endpoint":"summarize","messages":[{"role":"user","content":"Summarize this project state for the next AI agent."}],"mode":"compact"}'
 ```
 
 Compress context:
 
 ```bash
-bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-compress \
+bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-core \
   -X POST \
-  -d '{"messages":[{"role":"user","content":"Project Atlas uses Next.js, Postgres, and Redis. Auth is complete. Slow report generation and onboarding remain. Beta is due in six weeks."}]}'
+  -d '{"endpoint":"compress-context","messages":[{"role":"user","content":"Project Atlas uses Next.js, Postgres, and Redis. Auth is complete. Slow report generation and onboarding remain. Beta is due in six weeks."}]}'
 ```
 
 Handoff:
 
 ```bash
-bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-handoff \
+bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-core \
   -X POST \
-  -d '{"messages":[{"role":"user","content":"Create a handoff for the next AI agent. Preserve goal, completed work, blockers, decisions, constraints, and immediate next actions."}]}'
+  -d '{"endpoint":"handoff","messages":[{"role":"user","content":"Create a handoff for the next AI agent. Preserve goal, completed work, blockers, decisions, constraints, and immediate next actions."}]}'
 ```
 
 Extract profile:
 
 ```bash
-bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-profile \
+bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-core \
   -X POST \
-  -d '{"messages":[{"role":"user","content":"I prefer short technical explanations, direct debugging help, clear risks, and step-by-step commands."}],"mode":"extract-profile"}'
+  -d '{"endpoint":"extract-profile","messages":[{"role":"user","content":"I prefer short technical explanations, direct debugging help, clear risks, and step-by-step commands."}],"mode":"extract-profile"}'
 ```
 
 Memory enrichment uses the same hosted profile endpoint:
 
 ```bash
-bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-profile \
+bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-core \
   -X POST \
-  -d '{"messages":[{"role":"user","content":"I used to want long weekly reports, but now I prefer short risk-focused updates with clear next actions."}],"mode":"memory-enrichment"}'
+  -d '{"endpoint":"memory-enrichment","messages":[{"role":"user","content":"I used to want long weekly reports, but now I prefer short risk-focused updates with clear next actions."}],"mode":"memory-enrichment"}'
 ```
 
 Useful Bankr helpers:
 
 ```bash
-bankr x402 schema https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-summarize
-bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-summarize -i
+bankr x402 schema https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-core
+bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-core -i
+```
+
+Compile completed work into a private skill draft:
+
+```bash
+bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-experience-write \
+  -X POST \
+  -d '{"mode":"skill-compile","messages":[{"role":"user","content":"Fix the Bankr x402 timeout without changing the response contract."},{"role":"assistant","content":"Compared origin and gateway latency, precomputed the long request, and verified HTTP 200."}]}'
+```
+
+After validation passes and the user approves, publish with the returned `skillId` and `publishToken`:
+
+```bash
+bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-experience-write \
+  -X POST \
+  -d '{"mode":"skill-publish","skillId":"exp_REPLACE_ME","publishToken":"pub_REPLACE_ME","userApproved":true,"priceUsd":0.05}'
+```
+
+Search and buy verified skills:
+
+```bash
+bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-experience-search \
+  -X POST \
+  -d '{"query":"x402 timeout","ecosystems":["x402"],"compatibility":["codex"],"verifiedOnly":true}'
+
+bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-experience-buy \
+  -X POST \
+  -d '{"skillId":"exp_REPLACE_ME"}'
 ```
 
 ## Long Context
@@ -160,9 +202,9 @@ curl -X POST "https://contextkit.pro/api/context/upload-text?endpoint=summarize&
 Copy the returned `contextId`, then call the paid Bankr endpoint:
 
 ```bash
-bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-summarize \
+bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-core \
   -X POST \
-  -d '{"contextId":"ctx_REPLACE_ME","mode":"compact"}'
+  -d '{"endpoint":"summarize","contextId":"ctx_REPLACE_ME","mode":"compact"}'
 ```
 
 For `compress-context` and `extract-profile`, upload JSON so the text is wrapped as a message payload:
@@ -191,9 +233,9 @@ curl -X POST "https://contextkit.pro/api/context/upload" \
 Then fetch through Bankr:
 
 ```bash
-bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-profile \
+bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-core \
   -X POST \
-  -d '{"contextId":"ctx_REPLACE_ME","mode":"extract-profile"}'
+  -d '{"endpoint":"extract-profile","contextId":"ctx_REPLACE_ME","mode":"extract-profile"}'
 ```
 
 ## Dashboard

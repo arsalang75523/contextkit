@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "ContextKit automatic private experience capture for OpenClaw.",
+  "description": "ContextKit automatic verified-skill compilation for OpenClaw.",
   "openclaw": {
     "extensions": [
       "./index.mjs"

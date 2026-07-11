@@ -1,6 +1,6 @@
 # ContextKit Auto-Capture
 
-Secure task-completion bridge for ContextKit MCP V2. It reads a real agent transcript, removes common secret formats, sends only the latest completed task to `experience/consider`, and saves a private draft only when ContextKit detects a reusable experience.
+Secure task-completion bridge for ContextKit MCP V2. It reads a real agent transcript, removes common secret formats, and sends only the latest completed task to ContextKit. Qualifying Bankr-adjacent work is compiled into a private, portable `SKILL.md` draft; generic notes and project diaries are rejected.
 
 ## Claude Code: automatic Stop hook
 
@@ -10,7 +10,7 @@ export CONTEXTKIT_API_KEY="ck_live_your_scoped_key"
 contextkit-autocapture install claude
 ```
 
-The hook runs after every completed Claude Code turn. A duplicate transcript is ignored. If a private draft is created, Claude is asked to tell the user and request explicit approval before publishing.
+The hook runs after every completed Claude Code turn. A duplicate transcript is ignored. Public publishing is offered only when the draft passes ContextKit validation and the user explicitly approves it.
 
 ## Codex: automatic Stop hook
 
@@ -70,6 +70,7 @@ The runner captures structured CLI output and submits it only after a successful
 - API keys remain in environment variables and are never included in the payload.
 - Common API keys, bearer tokens, passwords, OTPs, private keys, and seed phrases are redacted locally.
 - File-write tool payloads include the target path, not source-file contents.
-- Public publishing is never automatic.
+- Public publishing is never automatic and unverified drafts cannot be listed.
+- Public skills must be portable, Bankr-adjacent, free of private paths/identifiers, and include at least three contract tests.
 - A local hash cache prevents duplicate consideration calls.
 - A sanitized local outbox (`0600`) retries temporary network/API failures on the next run, so completed tasks are not silently lost.

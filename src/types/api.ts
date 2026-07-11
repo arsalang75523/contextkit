@@ -30,6 +30,39 @@ export const contextUploadSchema = z.object({
 
 const experienceTextListSchema = z.array(z.string().min(1).max(280)).max(20);
 
+const skillTestCaseSchema = z.object({
+  name: z.string().min(1).max(120),
+  input: z.string().min(1).max(1_200),
+  expectedOutcome: z.string().min(1).max(1_200),
+  successCriteria: z.array(z.string().min(1).max(280)).min(1).max(10)
+});
+
+export const verifiedSkillSchema = z.object({
+  name: z.string().min(2).max(80).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
+  description: z.string().min(20).max(280),
+  version: z.string().regex(/^\d+\.\d+\.\d+$/).default("1.0.0"),
+  ecosystem: z.enum(["bankr", "x402", "base", "mcp", "wallet", "defi", "automation", "llm-gateway", "agent-infrastructure"]),
+  compatibility: z.array(z.string().min(1).max(48)).min(1).max(16),
+  trigger: z.string().min(20).max(800),
+  prerequisites: experienceTextListSchema,
+  inputs: experienceTextListSchema,
+  outputs: experienceTextListSchema,
+  steps: z.array(z.string().min(1).max(800)).min(3).max(30),
+  verification: experienceTextListSchema,
+  failureHandling: experienceTextListSchema,
+  doNotUseWhen: experienceTextListSchema,
+  rollback: experienceTextListSchema,
+  tags: z.array(z.string().min(1).max(48)).min(1).max(16),
+  testCases: z.array(skillTestCaseSchema).min(3).max(12),
+  evidence: z.object({
+    userRequest: z.string().min(1).max(1_200),
+    agentMethod: z.string().min(1).max(2_500),
+    outcome: z.string().min(1).max(1_200),
+    reusableLesson: z.string().min(1).max(1_200)
+  }),
+  skillMarkdown: z.string().min(100).max(100_000).optional()
+});
+
 export const experienceRecordSchema = z.object({
   title: z.string().min(1).max(160).optional(),
   summary: z.string().min(1).max(1_200).optional(),
@@ -42,6 +75,7 @@ export const experienceRecordSchema = z.object({
   tags: z.array(z.string().min(1).max(48)).max(16).optional(),
   confidence: z.number().min(0).max(1).optional(),
   source: z.string().min(1).max(160).optional(),
+  skill: verifiedSkillSchema.optional(),
   metadata: z.record(z.string(), z.unknown()).optional()
 });
 
@@ -64,19 +98,25 @@ export const experienceSaveSchema = experienceWriteBaseSchema.refine((value) => 
 });
 
 export const experiencePublishSchema = experienceWriteBaseSchema.extend({
-  mode: z.enum(["experience-publish", "publish"]).optional(),
-  operation: z.enum(["experience-publish", "publish"]).optional(),
-  action: z.enum(["experience-publish", "publish"]).optional(),
+  mode: z.enum(["skill-publish", "experience-publish", "publish"]).optional(),
+  operation: z.enum(["skill-publish", "experience-publish", "publish"]).optional(),
+  action: z.enum(["skill-publish", "experience-publish", "publish"]).optional(),
   experienceId: z.string().regex(/^exp_[a-f0-9]{24}$/).optional(),
-  priceUsd: z.number().min(0.01).max(50).default(0.05),
+  skillId: z.string().regex(/^exp_[a-f0-9]{24}$/).optional(),
+  publishToken: z.string().regex(/^pub_[a-f0-9]{24}$/).optional(),
+  userApproved: z.literal(true),
+  priceUsd: z.literal(0.05).default(0.05),
   visibility: z.enum(["public"]).default("public")
-}).refine((value) => Boolean(value.experienceId) || hasExperienceContent(value) || Boolean(value.messages?.length || value.contextId || value.content), {
+}).refine((value) => Boolean(value.experienceId || value.skillId) || hasExperienceContent(value) || Boolean(value.messages?.length || value.contextId || value.content), {
   message: "Provide experienceId, non-empty experience content, messages, contextId, or content."
 });
 
 export const experienceSearchSchema = z.object({
   query: z.string().max(800).optional(),
   tags: z.array(z.string().min(1).max(48)).max(16).optional(),
+  ecosystems: z.array(z.enum(["bankr", "x402", "base", "mcp", "wallet", "defi", "automation", "llm-gateway", "agent-infrastructure"])).max(9).optional(),
+  compatibility: z.array(z.string().min(1).max(48)).max(16).optional(),
+  verifiedOnly: z.boolean().default(true),
   includePrivate: z.boolean().default(true),
   limit: z.number().int().min(1).max(20).default(10)
 });
@@ -86,7 +126,7 @@ export const experienceConsiderSchema = z.object({
   contextId: contextIdSchema.optional(),
   minConfidence: z.number().min(0.5).max(0.95).default(0.72),
   autoSave: z.boolean().default(true),
-  priceUsd: z.number().min(0.01).max(50).default(0.05),
+  priceUsd: z.literal(0.05).default(0.05),
   creatorId: z.string().min(1).max(120).optional(),
   metadata: z.record(z.string(), z.unknown()).optional()
 }).refine((value) => Boolean(value.contextId) || Boolean(value.messages?.length), {
@@ -94,8 +134,12 @@ export const experienceConsiderSchema = z.object({
 });
 
 export const experienceBuySchema = z.object({
-  experienceId: z.string().regex(/^exp_[a-f0-9]{24}$/),
+  experienceId: z.string().regex(/^exp_[a-f0-9]{24}$/).optional(),
+  skillId: z.string().regex(/^exp_[a-f0-9]{24}$/).optional(),
+  listingId: z.string().regex(/^exp_[a-f0-9]{24}$/).optional(),
   buyerId: z.string().min(1).max(120).optional()
+}).refine((value) => Boolean(value.experienceId || value.skillId || value.listingId), {
+  message: "Provide experienceId, skillId, or listingId."
 });
 
 function hasExperienceContent(value: { experience?: z.infer<typeof experienceRecordSchema>; title?: string; content?: string; tags?: string[] }) {
@@ -109,7 +153,8 @@ function hasExperienceContent(value: { experience?: z.infer<typeof experienceRec
     experience?.lesson?.trim() ||
     experience?.constraints?.length ||
     experience?.decisions?.length ||
-    experience?.tags?.length
+    experience?.tags?.length ||
+    experience?.skill
   );
 }
 
@@ -198,6 +243,7 @@ export type ExperiencePublishInput = z.infer<typeof experiencePublishSchema>;
 export type ExperienceSearchInput = z.infer<typeof experienceSearchSchema>;
 export type ExperienceConsiderInput = z.infer<typeof experienceConsiderSchema>;
 export type ExperienceBuyInput = z.infer<typeof experienceBuySchema>;
+export type VerifiedSkillInput = z.infer<typeof verifiedSkillSchema>;
 
 export type ApiError = {
   error: {

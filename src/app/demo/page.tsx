@@ -141,7 +141,7 @@ export default function DemoPage() {
               <div>
                 <h2 className="mb-3 text-sm uppercase tracking-[0.18em] text-white/45">Run every endpoint</h2>
                 <p className="mb-3 text-sm leading-6 text-white/55">
-                  Bankr-hosted x402 commands use <code>contextkit-core</code> for all core modes. Experience marketplace work uses the three MCP V2 lanes.
+                  Bankr-hosted x402 commands use <code>contextkit-core</code> for all core modes. Verified skill compilation, search, and purchase use the three MCP V2 registry lanes.
                 </p>
                 <Panel title="Full pipeline command" value={allEndpointsCommand} />
                 <p className="mt-3 text-xs leading-5 text-white/40">

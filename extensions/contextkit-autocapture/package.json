@@ -87,9 +87,8 @@
         "contextkit.autoCapture.defaultPriceUsd": {
           "type": "number",
           "default": 0.05,
-          "minimum": 0.01,
-          "maximum": 50,
-          "description": "Suggested public marketplace price. Publishing still requires explicit approval."
+          "enum": [0.05],
+          "description": "Fixed v1 verified-skill price. Publishing still requires explicit approval."
         },
         "contextkit.autoCapture.cursorExecutable": {
           "type": "string",

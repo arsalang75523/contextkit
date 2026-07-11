@@ -1,7 +1,7 @@
 {
   "name": "@basedchef/contextkit-autocapture",
   "version": "0.1.0",
-  "description": "Secure task-completion bridge for ContextKit MCP V2 experience auto-capture.",
+  "description": "Secure task-completion bridge for ContextKit MCP V2 verified-skill compilation.",
   "type": "module",
   "bin": {
     "contextkit-autocapture": "bin/contextkit-autocapture.mjs"

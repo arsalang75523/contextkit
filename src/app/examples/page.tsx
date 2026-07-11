@@ -1,30 +1,51 @@
 import { CodeBlock } from "@/components/code-block";
 import { Section } from "@/components/section";
+import { bankrX402Command } from "@/lib/bankr-x402";
 
 const bankrExamples = [
   {
     title: "Summarize compact",
-    code: `bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-summarize \\
-  -X POST \\
-  -d '{"messages":[{"role":"user","content":"Summarize this project state for the next AI agent."}],"mode":"compact"}'`
+    code: bankrX402Command("summarize", {
+      messages: [{ role: "user", content: "Summarize this project state for the next AI agent." }],
+      mode: "compact"
+    })
   },
   {
     title: "Compress context",
-    code: `bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-compress \\
-  -X POST \\
-  -d '{"messages":[{"role":"user","content":"Project Atlas uses Next.js, Postgres, and Redis. Auth is complete. Slow reports and onboarding remain."}]}'`
+    code: bankrX402Command("compress-context", {
+      messages: [{ role: "user", content: "Project Atlas uses Next.js, Postgres, and Redis. Auth is complete. Slow reports and onboarding remain." }]
+    })
   },
   {
     title: "Handoff",
-    code: `bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-handoff \\
-  -X POST \\
-  -d '{"messages":[{"role":"user","content":"Create a successor-agent handoff. Preserve completed work, blockers, decisions, constraints, and next actions."}]}'`
+    code: bankrX402Command("handoff", {
+      messages: [{ role: "user", content: "Create a successor-agent handoff. Preserve completed work, blockers, decisions, constraints, and next actions." }]
+    })
   },
   {
     title: "Profile memory",
-    code: `bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-profile \\
-  -X POST \\
-  -d '{"messages":[{"role":"user","content":"I prefer concise technical updates and clear next actions."}],"mode":"extract-profile"}'`
+    code: bankrX402Command("extract-profile", {
+      messages: [{ role: "user", content: "I prefer concise technical updates and clear next actions." }],
+      mode: "extract-profile"
+    })
+  },
+  {
+    title: "Compile verified skill",
+    code: bankrX402Command("skill-compile", {
+      mode: "skill-compile",
+      messages: [
+        { role: "user", content: "Repair the Bankr x402 timeout without changing the response contract." },
+        { role: "assistant", content: "Compared origin and gateway latency, precomputed the long request, and verified HTTP 200." }
+      ]
+    })
+  },
+  {
+    title: "Search verified skills",
+    code: bankrX402Command("skill-search", {
+      query: "x402 timeout",
+      ecosystems: ["x402"],
+      verifiedOnly: true
+    })
   }
 ] as const;
 
@@ -64,9 +85,7 @@ curl -X POST "https://contextkit.pro/api/context/upload-text?endpoint=summarize&
   },
   {
     title: "Fetch uploaded context result",
-    code: `bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-summarize \\
-  -X POST \\
-  -d '{"contextId":"ctx_REPLACE_ME","mode":"compact"}'`
+    code: bankrX402Command("summarize", { contextId: "ctx_REPLACE_ME", mode: "compact" })
   }
 ] as const;
 

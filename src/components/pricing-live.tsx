@@ -86,40 +86,40 @@ function endpointStats(endpoint: string, metric: EndpointMetric | null) {
 
   if (endpoint === "contextkit-experience-write") {
     return {
-      title: "Experience write lane",
+      title: "Verified skill compiler",
       items: [
-        { label: "Writes", value: requests },
+        { label: "Compiles", value: requests },
         { label: "Revenue", value: revenue },
         { label: "Source tokens", value: inputTokens },
         { label: "Avg latency", value: latency }
       ],
-      note: "Save and publish operations will populate this lane after MCP V2 backend ships."
+      note: "Compiles private SKILL.md drafts and publishes only validation-approved skills."
     };
   }
 
   if (endpoint === "contextkit-experience-search") {
     return {
-      title: "Experience search lane",
+      title: "Verified skill search",
       items: [
         { label: "Searches", value: requests },
         { label: "Revenue", value: revenue },
         { label: "Result tokens", value: outputTokens },
         { label: "Avg latency", value: latency }
       ],
-      note: "Search metrics start once experience records are indexed."
+      note: "Searches verified skills by problem, ecosystem, tags, and compatible host."
     };
   }
 
   if (endpoint === "contextkit-experience-buy") {
     return {
-      title: "Experience buy lane",
+      title: "Verified skill purchase",
       items: [
         { label: "Purchases", value: requests },
         { label: "Revenue", value: revenue },
         { label: "Payload tokens", value: outputTokens },
         { label: "Avg latency", value: latency }
       ],
-      note: "Buy metrics start after marketplace purchase routing is enabled."
+      note: "Returns an installable SKILL.md bundle, manifest, validation report, and license."
     };
   }
 

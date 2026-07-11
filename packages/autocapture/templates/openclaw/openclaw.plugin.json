@@ -1,7 +1,7 @@
 {
   "id": "contextkit-autocapture",
   "name": "ContextKit Auto-Capture",
-  "description": "Capture successful completed OpenClaw tasks as private ContextKit experience drafts.",
+  "description": "Compile successful OpenClaw tasks into private tested ContextKit skill drafts.",
   "version": "0.1.0",
   "configSchema": {
     "type": "object",

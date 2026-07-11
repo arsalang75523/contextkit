@@ -58,7 +58,7 @@
     <circle cx="31" cy="20" r="2.4" fill="#72F2C3"/>
   </g>
   <text x="112" y="51" class="sans" fill="#F1FFF9" font-size="21" font-weight="700" letter-spacing="0.6">ContextKit</text>
-  <text x="1084" y="49" class="mono caps" fill="#69EAB9" font-size="12" font-weight="600" text-anchor="end">MCP V2 / EXPERIENCE ECONOMY</text>
+  <text x="1084" y="49" class="mono caps" fill="#69EAB9" font-size="12" font-weight="600" text-anchor="end">MCP V2 / VERIFIED SKILL REGISTRY</text>
   <circle cx="1110" cy="45" r="4" fill="#69EAB9"/>
 
   <g transform="translate(58 108)">
@@ -72,8 +72,8 @@
   <text x="58" y="363" class="sans" fill="#72F2C3" font-size="64" font-weight="760" letter-spacing="-2.5">your agent learns.</text>
 
   <text x="58" y="419" class="sans" fill="#A0BDB1" font-size="22" font-weight="450">
-    <tspan x="58" dy="0">Capture useful outcomes. Publish reusable experience.</tspan>
-    <tspan x="58" dy="33">Earn USDC when another agent buys it with x402.</tspan>
+    <tspan x="58" dy="0">Compile real work into tested SKILL.md packages.</tspan>
+    <tspan x="58" dy="33">Earn USDC when another agent installs one with x402.</tspan>
   </text>
 
   <g transform="translate(58 505)">
@@ -99,9 +99,9 @@
   <circle cx="1077" cy="130" r="4" fill="#66F0BE"/>
   <text x="1088" y="134" class="mono" fill="#70E9BA" font-size="9" font-weight="700">LIVE</text>
 
-  <text x="710" y="203" class="mono caps" fill="#5FDFAF" font-size="11" font-weight="700">EXPERIENCE CAPTURE</text>
+  <text x="710" y="203" class="mono caps" fill="#5FDFAF" font-size="11" font-weight="700">VERIFIED SKILL PIPELINE</text>
   <text x="710" y="241" class="mono" fill="#D9EEE5" font-size="15"><tspan fill="#62E7B6">&gt;</tspan> task completed in IDE</text>
-  <text x="710" y="278" class="mono" fill="#D9EEE5" font-size="15"><tspan fill="#62E7B6">&gt;</tspan> reusable lesson detected</text>
+  <text x="710" y="278" class="mono" fill="#D9EEE5" font-size="15"><tspan fill="#62E7B6">&gt;</tspan> SKILL.md tests validated</text>
   <text x="710" y="315" class="mono" fill="#D9EEE5" font-size="15"><tspan fill="#62E7B6">&gt;</tspan> user approved publish</text>
   <text x="710" y="352" class="mono" fill="#D9EEE5" font-size="15"><tspan fill="#55C9F4">&gt;</tspan> buyer paid via Bankr x402</text>
 
@@ -115,5 +115,5 @@
   </g>
 
   <text x="58" y="594" class="mono caps" fill="#66877A" font-size="12" font-weight="600">CONTEXTKIT.PRO/MCP</text>
-  <text x="1142" y="594" class="mono caps" fill="#66877A" font-size="12" font-weight="600" text-anchor="end">PRIVATE BY DEFAULT / PAID ON REUSE</text>
+  <text x="1142" y="594" class="mono caps" fill="#66877A" font-size="12" font-weight="600" text-anchor="end">PRIVATE BY DEFAULT / PAID ON INSTALL</text>
 </svg>

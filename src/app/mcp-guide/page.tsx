@@ -333,9 +333,9 @@ export default function McpGuidePage() {
           <SectionHeading number="04" eyebrow="Tools" title="What your connected agent can call." text="All tools use the authenticated account&apos;s ContextKit credits and the same request safeguards as direct API calls." />
           <div className="mt-8 rounded-[1.2rem] border border-amber/25 bg-amber/[0.07] p-5 text-sm leading-7 text-white/68">
             <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-amber">Auto-capture rule</p>
-            <p className="mt-2">Agents can read <code>contextkit://instructions</code> or call <code>contextkit_get_agent_instructions</code>. Policy: after every completed non-trivial task, call <code>contextkit_experience_consider</code> with the user request, actions, final result, and reusable lesson. If it returns <code>shouldSave:true</code>, ask the user before calling <code>contextkit_experience_publish</code>. Never publish publicly without explicit approval.</p>
+            <p className="mt-2">Agents can read <code>contextkit://instructions</code> or call <code>contextkit_get_agent_instructions</code>. Policy: after completed Bankr-adjacent work, call <code>contextkit_skill_compile</code>. ContextKit removes project-specific data, generates SKILL.md plus contract tests, and returns a validation report. Ask the user before <code>contextkit_skill_publish</code>; the API rejects unverified drafts.</p>
           </div>
-          <div className="mt-8 grid gap-px overflow-hidden rounded-[1.3rem] border border-line bg-line sm:grid-cols-2 lg:grid-cols-3">{["contextkit_get_agent_instructions", "contextkit_summarize", "contextkit_compress_context", "contextkit_handoff", "contextkit_extract_profile", "contextkit_experience_consider", "contextkit_experience_save", "contextkit_experience_publish", "contextkit_experience_search", "contextkit_experience_buy", "contextkit_estimate_tokens", "contextkit_get_credits"].map((tool, index) => <div key={tool} className="flex items-center gap-3 bg-carbon/90 p-4"><span className="font-mono text-[10px] text-white/35">{String(index + 1).padStart(2, "0")}</span><code className="text-sm text-mint">{tool}</code></div>)}</div>
+          <div className="mt-8 grid gap-px overflow-hidden rounded-[1.3rem] border border-line bg-line sm:grid-cols-2 lg:grid-cols-3">{["contextkit_get_agent_instructions", "contextkit_summarize", "contextkit_compress_context", "contextkit_handoff", "contextkit_extract_profile", "contextkit_skill_compile", "contextkit_skill_publish", "contextkit_skill_search", "contextkit_skill_buy", "contextkit_estimate_tokens", "contextkit_get_credits"].map((tool, index) => <div key={tool} className="flex items-center gap-3 bg-carbon/90 p-4"><span className="font-mono text-[10px] text-white/35">{String(index + 1).padStart(2, "0")}</span><code className="text-sm text-mint">{tool}</code></div>)}</div>
         </section>
 
         <section className="mt-16">
@@ -350,7 +350,7 @@ export default function McpGuidePage() {
           <div className="mt-5 grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
             <article className="rounded-[1.3rem] border border-mint/20 bg-mint/[0.045] p-6 sm:p-7">
               <div className="flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-xl border border-mint/25 bg-mint/[0.08]"><Workflow className="h-4 w-4 text-mint" /></span><div><p className="font-mono text-[10px] uppercase tracking-[0.16em] text-mint">Verified lifecycle</p><h3 className="mt-1 text-xl font-semibold text-white">Task → sanitize → consider → private draft.</h3></div></div>
-              <p className="mt-5 text-sm leading-7 text-white/62">The bridge reads the latest completed user-to-agent task, strips common credentials locally, ignores failed and duplicate runs, and calls the LLM-backed detector. If a real reusable experience is found, the draft is saved privately. The agent or IDE then asks before any public marketplace publish.</p>
+              <p className="mt-5 text-sm leading-7 text-white/62">The bridge reads the latest completed task, strips credentials locally, ignores failed and duplicate runs, then compiles qualifying Bankr-adjacent work into a portable SKILL.md. Public listing requires score 75+, three passing contract tests, approved ecosystem, evidence, verification, rollback, and no private paths or identifiers.</p>
             </article>
             <article className="rounded-[1.3rem] border border-aqua/20 bg-aqua/[0.04] p-6 sm:p-7">
               <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-aqua">VS Code / Cursor / Windsurf / VSCodium</p>
@@ -382,9 +382,9 @@ export default function McpGuidePage() {
           </div>
 
           <div className="mt-6 grid gap-px overflow-hidden rounded-[1.3rem] border border-line bg-line md:grid-cols-3">
-            <SafetyCard icon={<ShieldCheck className="h-4 w-4" />} title="Private by default" text="A qualified experience is saved privately first. No adapter can publish it to the marketplace without explicit approval." />
+            <SafetyCard icon={<ShieldCheck className="h-4 w-4" />} title="Private by default" text="A qualified skill is saved privately first. No adapter can publish it without passing validation and receiving explicit approval." />
             <SafetyCard icon={<LockKeyhole className="h-4 w-4" />} title="Failure isolated" text="Network, API, or detector failures are queued or skipped without turning a successful agent task into a failed task." />
-            <SafetyCard icon={<Workflow className="h-4 w-4" />} title="One core pipeline" text="Every host uses the same sanitizer, latest-task extraction, dedupe cache, retry outbox, and LLM-backed experience detector." />
+            <SafetyCard icon={<Workflow className="h-4 w-4" />} title="One core pipeline" text="Every host uses the same sanitizer, latest-task extraction, skill compiler, deterministic validator, dedupe cache, and retry outbox." />
           </div>
         </section>
 

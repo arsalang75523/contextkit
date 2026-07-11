@@ -18,7 +18,9 @@ try {
     });
     const experience = savedExperience(result);
     process.stdout.write(JSON.stringify(experience?.id ? {
-      systemMessage: `ContextKit saved private experience draft ${experience.id}: ${experience.title}. Ask the user whether to publish it; never publish without explicit approval.`
+      systemMessage: experience.validation?.eligible
+        ? `ContextKit compiled verified private skill ${experience.id}: ${experience.title} (score ${experience.validation.score}). Ask whether to publish it; never publish without explicit approval.`
+        : `ContextKit saved private skill draft ${experience.id}: ${experience.title}. Keep it private and report validation findings.`
     } : {}));
   }
 } catch (error) {

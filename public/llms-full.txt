@@ -1,6 +1,6 @@
 # ContextKit Full AI Index
 
-ContextKit is a memory layer for autonomous AI agents. It is built for continuation memory, context compression, agent handoff, user profile extraction, memory enrichment, and x402-paid API usage.
+ContextKit is a memory layer and Verified Skill Registry for autonomous AI agents. It is built for continuation memory, context compression, agent handoff, profile memory, and portable Bankr-adjacent SKILL.md commerce through x402.
 
 Website: https://contextkit.pro
 GitHub: https://github.com/arsalang75523/contextkit
@@ -85,6 +85,10 @@ The key must have `context:write`. Paid MCP generation tools spend the same acco
 - `contextkit_compress_context`
 - `contextkit_handoff`
 - `contextkit_extract_profile`
+- `contextkit_skill_compile`
+- `contextkit_skill_publish`
+- `contextkit_skill_search`
+- `contextkit_skill_buy`
 - `contextkit_estimate_tokens`
 - `contextkit_get_credits`
 
@@ -92,11 +96,17 @@ MCP intentionally excludes API-key management, webhook writes, admin actions, cr
 
 ## Paid Endpoints
 
+All core context operations share this Bankr route:
+
+Bankr route: https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-core
+Price: $0.03
+Select the operation with `endpoint`: summarize, compress-context, handoff, extract-profile, or memory-enrichment.
+
 ### Summarize
 
 Direct route: POST https://contextkit.pro/api/summarize
-Bankr route: https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-summarize
-Price: $0.05
+Bankr route: contextkit-core with endpoint=summarize
+Price: $0.03
 
 Modes:
 
@@ -108,7 +118,7 @@ Modes:
 ### Compress Context
 
 Direct route: POST https://contextkit.pro/api/compress-context
-Bankr route: https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-compress
+Bankr route: contextkit-core with endpoint=compress-context
 Price: $0.03
 
 Returns compressedContext, state, entities, and metrics.
@@ -116,7 +126,7 @@ Returns compressedContext, state, entities, and metrics.
 ### Handoff
 
 Direct route: POST https://contextkit.pro/api/handoff
-Bankr route: https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-handoff
+Bankr route: contextkit-core with endpoint=handoff
 Price: $0.03
 
 Returns project state, completed work, pending work, blockers, decisions, priorities, criticalContext, startHere, and agentNotes.
@@ -124,11 +134,35 @@ Returns project state, completed work, pending work, blockers, decisions, priori
 ### Extract Profile And Memory Enrichment
 
 Direct route: POST https://contextkit.pro/api/extract-profile
-Bankr route: https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-profile
-Price: $0.04
+Bankr route: contextkit-core with endpoint=extract-profile or memory-enrichment
+Price: $0.03
 
 Use mode: extract-profile for durable user profile memory.
 Use mode: memory-enrichment for stable and evolving memory records.
+
+### Verified Skill Registry
+
+Direct routes:
+
+- POST https://contextkit.pro/api/skills/compile
+- POST https://contextkit.pro/api/skills/publish
+- POST https://contextkit.pro/api/skills/search
+- POST https://contextkit.pro/api/skills/buy
+
+Bankr routes:
+
+- Compile/publish, $0.01: https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-experience-write
+- Search, $0.01: https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-experience-search
+- Buy/install, $0.05: https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-experience-buy
+
+Skill policy:
+
+- Compile only completed, reusable Bankr-adjacent work.
+- Drafts are private by default.
+- Reject secrets, private paths/identifiers, project diaries, dangerous commands, weak evidence, and incomplete workflows.
+- Public listing requires validation score >=75, at least three contract scenarios, explicit user approval, and `userApproved: true` in the publish request.
+- Search exposes previews, not paid SKILL.md steps or lessons.
+- Purchase returns SKILL.md, manifest, validation report, compatibility metadata, and non-resale license.
 
 ## Recommended Agent Integration Pattern
 
@@ -137,7 +171,9 @@ Use mode: memory-enrichment for stable and evolving memory records.
 3. Use handoff when another agent or worker continues the task.
 4. Use extract-profile when user preferences should become durable memory.
 5. Use memory-enrichment when preferences change over time.
-6. Use webhooks to route completed events into downstream systems.
+6. Search verified skills before repeating solved Bankr-adjacent work.
+7. Compile useful completed work into a private skill, then ask before publishing.
+8. Use webhooks to route completed events into downstream systems.
 
 ## Benchmark Highlights
 

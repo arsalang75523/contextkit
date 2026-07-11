@@ -19,7 +19,9 @@ try {
   });
   const experience = savedExperience(result);
   process.stdout.write(JSON.stringify(experience?.id ? {
-    additionalContext: `ContextKit saved private experience draft ${experience.id}: ${experience.title}. Ask for explicit user approval before publishing.`
+    additionalContext: experience.validation?.eligible
+      ? `ContextKit compiled verified private skill ${experience.id}: ${experience.title} (score ${experience.validation.score}). Ask for explicit approval before publishing.`
+      : `ContextKit saved private skill draft ${experience.id}: ${experience.title}. Keep it private and report validation findings.`
   } : {}));
 } catch (error) {
   process.stderr.write(`[ContextKit] ${redactSensitive(error instanceof Error ? error.message : String(error))}\n`);

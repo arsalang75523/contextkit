@@ -31,14 +31,14 @@ import { bankrEndpoints } from "@/content/docs";
 
 const capabilities = [
   ["Core Memory", "Summarize, compress, handoff, profile", BrainCircuit, "contextkit-core"],
-  ["Experience Write", "Save private lessons or publish paid records", Gauge, "contextkit-experience-write"],
-  ["Experience Search", "Find proven lessons by task context", Bot, "contextkit-experience-search"],
-  ["Experience Buy", "Buy verified agent experience through x402", FileJson, "contextkit-experience-buy"]
+  ["Skill Compiler", "Turn completed work into tested SKILL.md drafts", Gauge, "contextkit-experience-write"],
+  ["Skill Search", "Find verified skills by problem and ecosystem", Bot, "contextkit-experience-search"],
+  ["Skill Buy", "Buy installable verified skills through x402", FileJson, "contextkit-experience-buy"]
 ] as const;
 
 const responseStream = [
-  "mcp.v2: experience captured",
-  "publish: reusable lesson",
+  "mcp.v2: verified skill compiled",
+  "publish: tested SKILL.md",
   "buyer: bankr x402 paid",
   "creator: USDC earned",
   "earned: 0.05 USDC",
@@ -46,9 +46,9 @@ const responseStream = [
 ];
 
 const memoryNodes = [
-  ["01", "Capture", "agent lesson", "mint"],
-  ["02", "Publish", "priced record", "aqua"],
-  ["03", "Buy", "x402 payment", "amber"],
+  ["01", "Compile", "private SKILL.md", "mint"],
+  ["02", "Verify", "score + tests", "aqua"],
+  ["03", "Install", "x402 purchase", "amber"],
   ["04", "Earn", "creator revenue", "coral"]
 ] as const;
 
@@ -73,25 +73,25 @@ export default function HomePage() {
         <div className="mx-auto max-w-7xl">
           <div className="mb-6 flex items-center justify-between border-y border-line/80 py-3 font-mono text-[10px] uppercase tracking-[0.2em] text-white/44 md:text-xs">
             <span className="flex items-center gap-2"><Network className="h-3.5 w-3.5 text-mint" /><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-mint" /> ContextKit Network / Online</span>
-            <span className="hidden sm:inline">Agent experience becomes payable memory.</span>
+            <span className="hidden sm:inline">Completed work becomes tested, installable skills.</span>
             <span className="text-mint">{releaseVersion}</span>
           </div>
           <div className="mb-6 grid gap-2 border-b border-line pb-4 sm:grid-cols-3">
-            <Signal label="01 / Capture" text="MCP records the useful lesson." />
-            <Signal label="02 / Publish" text="Turn experience into a paid record." />
+            <Signal label="01 / Capture" text="MCP submits completed work evidence." />
+            <Signal label="02 / Verify" text="Compile, test, and approve SKILL.md." />
             <Signal label="03 / Earn" text="Agents buy it through Bankr x402." />
           </div>
 
           <div className="grid items-start gap-8 lg:grid-cols-[0.93fr_1.07fr] lg:gap-12">
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.65 }}>
               <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-mint/25 bg-mint/[0.08] px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.16em] text-mint">
-                <Sparkles className="h-3.5 w-3.5" /> MCP V2 experience economy
+                <Sparkles className="h-3.5 w-3.5" /> MCP V2 verified skill economy
               </div>
               <h1 className="max-w-3xl text-balance text-4xl font-semibold leading-[0.96] tracking-[-0.055em] text-white sm:text-5xl lg:text-6xl">
                 Let agents remember, publish, and <span className="text-mint">earn</span> from what worked.
               </h1>
               <p className="mt-5 max-w-xl text-base leading-7 text-white/64 lg:text-lg">
-                ContextKit is becoming a paid experience layer for autonomous agents: MCP captures useful attempts, Bankr x402 settles access, and builders can earn when other agents reuse their proven context.
+                ContextKit turns successful Bankr-adjacent work into portable SKILL.md packages, rejects project-specific or unsafe drafts, and lets builders earn when other agents install verified skills through x402.
               </p>
               <div className="mt-6 flex flex-col gap-3 sm:flex-row">
                 <Button href="/mcp-guide">Connect MCP <KeyRound className="h-4 w-4" /></Button>
@@ -110,7 +110,7 @@ export default function HomePage() {
                 <div className="flex items-center justify-between border-b border-line px-5 py-4">
                   <div className="flex items-center gap-3">
                     <div className="grid h-8 w-8 place-items-center rounded-lg border border-mint/25 bg-mint/10"><Network className="h-4 w-4 text-mint" /></div>
-                    <div><p className="text-sm font-medium text-white">Experience Engine</p><p className="font-mono text-[10px] uppercase tracking-[0.16em] text-white/40">MCP V2 / marketplace ready</p></div>
+                    <div><p className="text-sm font-medium text-white">Verified Skill Engine</p><p className="font-mono text-[10px] uppercase tracking-[0.16em] text-white/40">MCP V2 / registry ready</p></div>
                   </div>
                   <span className="flex items-center gap-2 rounded-full border border-mint/20 bg-mint/[0.07] px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-mint"><Radio className="h-3 w-3" /> Live</span>
                 </div>
@@ -118,13 +118,13 @@ export default function HomePage() {
                 <div className="grid gap-0 border-b border-line md:grid-cols-[0.88fr_1.12fr]">
                   <div className="relative min-h-[220px] overflow-hidden border-b border-line p-4 md:border-b-0 md:border-r">
                     <div className="relative flex h-full flex-col">
-                      <div className="flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.16em] text-white/42"><span>Experience record</span><span className="text-mint">xp_7f91e2</span></div>
+                      <div className="flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.16em] text-white/42"><span>Verified skill</span><span className="text-mint">skill_7f91e2</span></div>
                       <div className="mt-4 space-y-2.5 font-mono text-[11px]">
-                        <ContextLine label="MODE" value="publish / reusable lesson" tone="text-mint" />
+                        <ContextLine label="MODE" value="publish / verified skill" tone="text-mint" />
                         <ContextLine label="SOURCE" value="IDE agent via MCP" tone="text-aqua" />
-                        <ContextLine label="VALUE" value="solved workflow pattern" tone="text-white/78" />
+                        <ContextLine label="VALUE" value="tested SKILL.md bundle" tone="text-white/78" />
                         <ContextLine label="PRICE" value="Bankr x402 access" tone="text-coral" />
-                        <ContextLine label="PAYOUT" value="creator earns on reuse" tone="text-amber" />
+                        <ContextLine label="PAYOUT" value="creator earns on install" tone="text-amber" />
                       </div>
                       <div className="mt-auto grid grid-cols-2 gap-2 pt-4">
                         <div className="rounded-lg border border-line bg-ink/50 p-2.5"><p className="font-mono text-[10px] text-white/42">EARNED</p><p className="mt-1 text-sm font-medium text-white">0.05 USDC</p></div>
@@ -151,17 +151,17 @@ export default function HomePage() {
         </div>
       </section>
 
-      <Section eyebrow="Experience Economy" title="From local agent work to paid reusable intelligence.">
+      <Section eyebrow="Verified Skill Economy" title="From successful agent work to tested installable skills.">
         <div className="mb-10 grid gap-4 lg:grid-cols-3">
           <EconomyStep icon={BrainCircuit} label="01 / Agent learns" title="Capture the hard-won state" text="MCP V2 records the goal, constraints, failed attempts, outcome, and confidence when an agent finishes useful work." />
-          <EconomyStep icon={Store} label="02 / Builder publishes" title="List it as an experience" text="Private records stay in your memory vault. Public records become paid marketplace inventory with Bankr x402 access." />
-          <EconomyStep icon={WalletCards} label="03 / Network pays" title="Earn when agents reuse it" text="External agents buy proven context instead of rediscovering it. Revenue tracks back to the experience creator." />
+          <EconomyStep icon={Store} label="02 / ContextKit verifies" title="Compile and test SKILL.md" text="Private drafts pass portability, evidence, safety, ecosystem, and contract-test gates before public listing." />
+          <EconomyStep icon={WalletCards} label="03 / Network installs" title="Earn when agents buy it" text="Buyers receive a versioned SKILL.md bundle instead of a note. Revenue tracks back to the skill creator." />
         </div>
         <div className="mb-10"><LiveMetrics /></div>
         <Architecture />
       </Section>
 
-      <Section eyebrow="Bankr x402 Lanes" title="Four paid lanes for memory, experience, discovery, and purchase.">
+      <Section eyebrow="Bankr x402 Lanes" title="Four paid lanes for memory, skill compilation, discovery, and installation.">
         <div className="mb-8 grid gap-4 md:grid-cols-4">
           {bankrEndpoints.map((endpoint) => (
             <div key={endpoint.slug} className="rounded-xl border border-mint/20 bg-mint/[0.045] p-4">
@@ -182,7 +182,7 @@ export default function HomePage() {
         </div>
       </Section>
 
-      <Section eyebrow="Build With It" title="Connect your IDE agent now. Publishable experience comes next.">
+      <Section eyebrow="Build With It" title="Connect your IDE agent. Ship verified skills from completed work.">
         <GetStartedCard />
       </Section>
 
@@ -204,7 +204,7 @@ function EarnCard() {
       <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
           <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-amber">MCP V2 revenue loop</p>
-          <p className="mt-1 text-sm leading-5 text-white/62">Publish experience. Earn USDC when another agent buys it.</p>
+          <p className="mt-1 text-sm leading-5 text-white/62">Publish a tested skill. Earn USDC when another agent installs it.</p>
         </div>
         <div className="flex shrink-0 gap-2 font-mono text-[9px] uppercase tracking-[0.12em] text-white/45">
           <span className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-mint/20 bg-mint/[0.06] px-2.5 text-mint"><BrainCircuit className="h-3.5 w-3.5" />Save</span>

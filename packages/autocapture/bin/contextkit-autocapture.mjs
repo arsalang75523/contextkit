@@ -42,7 +42,7 @@ async function claudeHook() {
     process.stdout.write(JSON.stringify({
       hookSpecificOutput: {
         hookEventName: "Stop",
-        additionalContext: `ContextKit automatically saved private experience draft ${experience.id}: ${experience.title}. Tell the user a private draft was saved and ask whether to publish it publicly for Bankr x402 purchase. Do not publish without explicit approval.`
+        additionalContext: skillDraftMessage(experience)
       }
     }));
   }
@@ -61,7 +61,7 @@ async function codexHook() {
   });
   const experience = savedExperience(result);
   process.stdout.write(JSON.stringify(experience?.id ? {
-    systemMessage: `ContextKit saved private experience draft ${experience.id}: ${experience.title}. Ask the user whether to publish it; never publish without explicit approval.`
+    systemMessage: skillDraftMessage(experience)
   } : {}));
 }
 
@@ -80,7 +80,7 @@ async function hermesHook() {
   });
   const experience = savedExperience(result);
   process.stdout.write(JSON.stringify(experience?.id ? {
-    additionalContext: `ContextKit saved private experience draft ${experience.id}: ${experience.title}. Ask for explicit user approval before publishing.`
+    additionalContext: skillDraftMessage(experience)
   } : {}));
 }
 
@@ -303,7 +303,7 @@ async function mergeHermesHook(configPath, hookCommand) {
 function printCaptureResult(result) {
   const experience = savedExperience(result);
   if (experience?.id) {
-    process.stderr.write(`[ContextKit] Private draft saved: ${experience.id} (${experience.title}). Publish only with explicit user approval.\n`);
+    process.stderr.write(`[ContextKit] Private skill draft saved: ${experience.id} (${experience.title}). Publish only when validation is eligible and the user explicitly approves.\n`);
   } else {
     process.stderr.write(`[ContextKit] ${result?.reason || "No reusable completed experience detected."}\n`);
   }
@@ -315,6 +315,14 @@ function savedExperience(result) {
     if (recovered?.result?.shouldSave && recovered.result.experience?.id) return recovered.result.experience;
   }
   return undefined;
+}
+
+function skillDraftMessage(experience) {
+  const validation = experience?.validation;
+  if (validation?.eligible) {
+    return `ContextKit compiled verified private skill ${experience.id}: ${experience.title} (score ${validation.score}, ${validation.tests?.length ?? 0} contract tests). Show the user the validation result and ask whether to publish it for Bankr x402 installation. Never publish without explicit approval.`;
+  }
+  return `ContextKit saved private skill draft ${experience.id}: ${experience.title}. It is not publishable yet. Report validation findings and keep it private until corrected.`;
 }
 
 function promptFromArgs(args) {

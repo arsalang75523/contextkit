@@ -1,8 +1,8 @@
 const siteUrl = "https://contextkit.pro";
 const title = "Use your IDE. Earn from what your agent learns.";
 const description =
-  "Capture useful agent outcomes, publish reusable experience, and earn USDC when other agents buy it with x402.";
-const imageUrl = `${siteUrl}/social-card-v7.jpg?card=ide-earn-v9`;
+  "Turn completed agent work into tested SKILL.md packages and earn USDC when other agents install them through x402.";
+const imageUrl = `${siteUrl}/social-card-v7.jpg?card=verified-skills-v10`;
 
 const headers = {
   "Content-Type": "text/html; charset=utf-8",
@@ -30,7 +30,7 @@ function cardHtml(cardUrl: string) {
     <meta property="og:image:type" content="image/jpeg">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
-    <meta property="og:image:alt" content="Use your IDE and earn USDC from reusable AI agent experience">
+    <meta property="og:image:alt" content="Use your IDE to publish verified agent skills and earn USDC">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:site" content="@contextkitpro">
     <meta name="twitter:creator" content="@contextkitpro">
@@ -38,7 +38,7 @@ function cardHtml(cardUrl: string) {
     <meta name="twitter:description" content="${description}">
     <meta name="twitter:image" content="${imageUrl}">
     <meta name="twitter:image:src" content="${imageUrl}">
-    <meta name="twitter:image:alt" content="Use your IDE and earn USDC from reusable AI agent experience">
+    <meta name="twitter:image:alt" content="Use your IDE to publish verified agent skills and earn USDC">
     <meta name="twitter:image:width" content="1200">
     <meta name="twitter:image:height" content="630">
   </head>

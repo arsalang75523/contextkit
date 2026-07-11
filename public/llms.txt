@@ -1,6 +1,6 @@
 # ContextKit
 
-> ContextKit is a memory layer for autonomous AI agents. It compresses long conversations, project history, and operational notes into compact continuation state for agent memory, handoffs, profile extraction, and workflow persistence.
+> ContextKit is a memory layer and Verified Skill Registry for autonomous AI agents. It compresses continuation state and compiles completed Bankr-adjacent work into portable, validated SKILL.md packages.
 
 Website: https://contextkit.pro
 GitHub: https://github.com/arsalang75523/contextkit
@@ -30,6 +30,7 @@ MCP Endpoint: https://contextkit.pro/mcp
 - Let autonomous agents pay per request through Bankr-hosted x402 endpoints.
 - Let apps use direct API-key credits without per-request Bankr approval.
 - Let remote MCP-compatible agent hosts use ContextKit through a scoped API key.
+- Compile, validate, sell, search, buy, and install portable Bankr-adjacent agent skills.
 
 ## MCP
 
@@ -38,15 +39,15 @@ ContextKit provides a stateless Streamable HTTP MCP server at https://contextkit
 - Authentication: `Authorization: Bearer <CONTEXTKIT_API_KEY>`.
 - Required scope: `context:write`.
 - Billing: paid generation tools spend normal account credits; insufficient credits return a safe payment error.
-- Tools: `contextkit_summarize`, `contextkit_compress_context`, `contextkit_handoff`, `contextkit_extract_profile`, `contextkit_estimate_tokens`, `contextkit_get_credits`.
+- Tools: `contextkit_summarize`, `contextkit_compress_context`, `contextkit_handoff`, `contextkit_extract_profile`, `contextkit_skill_compile`, `contextkit_skill_publish`, `contextkit_skill_search`, `contextkit_skill_buy`, `contextkit_estimate_tokens`, `contextkit_get_credits`.
 - Never configure admin tokens, internal tokens, Bankr credentials, wallet secrets, or dashboard passwords in an MCP client.
 
 ## Paid Bankr x402 Endpoints
 
-- Summarize: https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-summarize
-- Compress context: https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-compress
-- Handoff: https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-handoff
-- Profile and memory enrichment: https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-profile
+- Core context operations: https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-core
+- Skill compile/publish: https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-experience-write
+- Verified skill search: https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-experience-search
+- Verified skill buy/install: https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-experience-buy
 
 ## Direct API Endpoints
 
@@ -54,6 +55,10 @@ ContextKit provides a stateless Streamable HTTP MCP server at https://contextkit
 - POST https://contextkit.pro/api/compress-context
 - POST https://contextkit.pro/api/handoff
 - POST https://contextkit.pro/api/extract-profile
+- POST https://contextkit.pro/api/skills/compile
+- POST https://contextkit.pro/api/skills/publish
+- POST https://contextkit.pro/api/skills/search
+- POST https://contextkit.pro/api/skills/buy
 - POST https://contextkit.pro/api/tokens/estimate
 - GET https://contextkit.pro/openapi.json
 

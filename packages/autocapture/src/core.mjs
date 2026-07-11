@@ -270,7 +270,7 @@ function captureItem(messages, fingerprint, options) {
       messages,
       minConfidence: options.minConfidence ?? 0.72,
       autoSave: true,
-      priceUsd: options.priceUsd ?? 0.05,
+      priceUsd: 0.05,
       metadata: {
         captureSource: options.source ?? "autocapture-bridge",
         agent: options.agent,

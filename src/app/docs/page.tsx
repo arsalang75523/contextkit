@@ -49,8 +49,29 @@ await client.handoff({ messages });
 await client.extractProfile({ messages });
 await client.extractProfile({ messages, mode: "memory-enrichment" });
 await client.memoryEnrichment({ messages });
+const draft = await client.compileSkill({ messages, autoSave: true });
+await client.publishSkill({ skillId: draft.experience!.id, priceUsd: 0.05 });
+const matches = await client.searchSkills({ query: "x402 timeout", compatibility: ["codex"] });
+await client.buySkill(matches.results[0].id);
 await client.estimateTokens({ modelFamily: "openai", input: messages });
 await client.credits();`;
+
+const skillCompile = bankrX402Command("skill-compile", {
+  mode: "skill-compile",
+  messages: [
+    { role: "user", content: "Repair the Bankr x402 timeout without changing the response contract." },
+    { role: "assistant", content: "Compared origin and gateway latency, precomputed long work, and verified HTTP 200." }
+  ]
+});
+
+const skillSearch = bankrX402Command("skill-search", {
+  query: "x402 timeout recovery",
+  ecosystems: ["x402"],
+  compatibility: ["codex"],
+  verifiedOnly: true
+});
+
+const skillBuy = bankrX402Command("skill-buy", { skillId: "exp_REPLACE_ME" });
 
 const sdkCredits = `${sdkClient}
 
@@ -163,6 +184,7 @@ const navItems = [
   "Bankr Hosted x402",
   "Dashboard And Keys",
   "MCP",
+  "Verified Skills",
   "Long Context",
   "API Credits",
   "Direct API",
@@ -201,7 +223,7 @@ export default function DocsPage() {
           <div className="space-y-12">
             <DocSection id="introduction" title="Introduction">
               <p>
-                ContextKit is a payable context infrastructure service for autonomous agents. Bankr-hosted x402 now exposes four paid lanes: core context operations, experience write, experience search, and experience buy.
+                ContextKit is payable context and verified-skill infrastructure for autonomous agents. Bankr-hosted x402 exposes four paid lanes: core context operations, skill compilation/publishing, verified-skill search, and skill purchase.
               </p>
               <p className="mt-3">
                 The simplest public product path is Bankr-hosted x402. API keys and the SDK are for dashboard operations, server integrations, credit-backed direct calls, MCP hosts, and advanced developer workflows.
@@ -277,7 +299,7 @@ export default function DocsPage() {
               <div className="mt-4 rounded-md border border-amber/25 bg-amber/[0.08] p-4 text-sm leading-6 text-white/68">
                 <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-amber">MCP V2 auto-capture</p>
                 <p className="mt-2">
-                  Connected agents can read <code>contextkit://instructions</code> or call <code>contextkit_get_agent_instructions</code> when they connect. The policy tells them to call <code>contextkit_experience_consider</code> after completed non-trivial work, save only real reusable drafts privately, and ask the user before calling <code>contextkit_experience_publish</code>. For enforced lifecycle capture, use the native Claude, Codex, Hermes, OpenClaw, or OpenCode adapters, or the VS Code-compatible runner in the <Link href="/mcp-guide" className="text-mint underline decoration-mint/30 underline-offset-4">MCP Guide</Link>.
+                  Connected agents can read <code>contextkit://instructions</code> or call <code>contextkit_get_agent_instructions</code>. The policy tells them to call <code>contextkit_skill_compile</code> after completed Bankr-adjacent work. ContextKit saves a private SKILL.md draft, runs portability/security/evidence/contract-test validation, and permits <code>contextkit_skill_publish</code> only after verification and user approval. For enforced lifecycle capture, use the native adapters or VS Code-compatible runner in the <Link href="/mcp-guide" className="text-mint underline decoration-mint/30 underline-offset-4">MCP Guide</Link>.
                 </p>
               </div>
               <div className="mt-4 grid gap-4 lg:grid-cols-2">
@@ -293,11 +315,10 @@ export default function DocsPage() {
                     <li>contextkit_compress_context</li>
                     <li>contextkit_handoff</li>
                     <li>contextkit_extract_profile</li>
-                    <li>contextkit_experience_consider</li>
-                    <li>contextkit_experience_save</li>
-                    <li>contextkit_experience_search</li>
-                    <li>contextkit_experience_publish</li>
-                    <li>contextkit_experience_buy</li>
+                    <li>contextkit_skill_compile</li>
+                    <li>contextkit_skill_publish</li>
+                    <li>contextkit_skill_search</li>
+                    <li>contextkit_skill_buy</li>
                     <li>contextkit_estimate_tokens</li>
                     <li>contextkit_get_credits</li>
                   </ul>
@@ -305,6 +326,25 @@ export default function DocsPage() {
               </div>
               <div className="mt-4 rounded-md border border-mint/20 bg-mint/10 p-4 text-sm leading-6 text-white/65">
                 MCP accepts only scoped API keys and exposes no admin, internal-forwarder, payment-wallet, key-management, or webhook-write operation. Requests are stateless, rate limited, non-cacheable, and use ContextKit&apos;s existing API-key, credit, analytics, and 402 safeguards.
+              </div>
+            </DocSection>
+
+            <DocSection id="verified-skills" title="Verified Skills">
+              <p>
+                Registry listings are installable skills, not raw transcripts. ContextKit compiles completed Bankr-adjacent work into a private <code>SKILL.md</code>, then runs deterministic portability, reproducibility, evidence, ecosystem, safety, and novelty checks. Public listing requires score 75+, three passing contract tests, and explicit user approval.
+              </p>
+              <div className="mt-4 grid gap-3 md:grid-cols-3">
+                <InfoCard title="1. Compile privately" body="The LLM extracts the reusable method; secrets, identities, local paths, and project-only details are removed or rejected." />
+                <InfoCard title="2. Verify + approve" body="The API checks workflow steps, evidence, observable verification, failure handling, rollback, safety boundaries, and three tests." />
+                <InfoCard title="3. Buy + install" body="A purchase returns the full SKILL.md, versioned manifest, validation report, compatibility metadata, and non-resale license." />
+              </div>
+              <div className="mt-4 grid gap-4 lg:grid-cols-3">
+                <div><h3 className="mb-2 font-semibold text-white">Compile</h3><CodeBlock code={skillCompile} /></div>
+                <div><h3 className="mb-2 font-semibold text-white">Search</h3><CodeBlock code={skillSearch} /></div>
+                <div><h3 className="mb-2 font-semibold text-white">Buy</h3><CodeBlock code={skillBuy} /></div>
+              </div>
+              <div className="mt-4 rounded-md border border-amber/25 bg-amber/[0.08] p-4 text-sm leading-6 text-white/68">
+                Compile returns a private <code>skillId</code>, validation report, and a one-draft <code>publishToken</code> for Bankr-hosted calls. After the user approves, call <code>skill-publish</code> with both values and <code>userApproved: true</code>. Tokens are stored only as SHA-256 hashes and cannot publish another draft.
               </div>
             </DocSection>
 
