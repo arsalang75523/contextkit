@@ -3,22 +3,22 @@ import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/button";
 import { site } from "@/lib/site";
 
-const socialImageUrl = `${site.url}/social-card-v6.jpg?card=twitter-root-v8`;
+const socialImageUrl = `${site.url}/social-card-v7.jpg?card=ide-earn-v9`;
 
 export const metadata: Metadata = {
   title: `${site.name} | ${site.tagline}`,
   description: site.description,
   openGraph: {
-    title: `${site.name} | ${site.tagline}`,
-    description: site.description,
+    title: "Use your IDE. Earn from what your agent learns.",
+    description: "Capture useful agent outcomes, publish reusable experience, and earn USDC when other agents buy it with x402.",
     siteName: site.name,
     images: [
       {
         url: socialImageUrl,
         secureUrl: socialImageUrl,
-        width: 2400,
-        height: 1200,
-        alt: "ContextKit memory layer for AI agents",
+        width: 1200,
+        height: 630,
+        alt: "Use your IDE and earn USDC from reusable AI agent experience",
         type: "image/jpeg"
       }
     ],
@@ -28,14 +28,14 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     site: "@contextkitpro",
     creator: "@contextkitpro",
-    title: `${site.name} | ${site.tagline}`,
-    description: site.description,
-    images: [{ url: socialImageUrl, alt: "ContextKit memory layer for AI agents" }]
+    title: "Use your IDE. Earn from what your agent learns.",
+    description: "Capture useful agent outcomes, publish reusable experience, and earn USDC when other agents buy it with x402.",
+    images: [{ url: socialImageUrl, alt: "Use your IDE and earn USDC from reusable AI agent experience" }]
   },
   other: {
     "twitter:image:src": socialImageUrl,
-    "twitter:image:width": "2400",
-    "twitter:image:height": "1200",
+    "twitter:image:width": "1200",
+    "twitter:image:height": "630",
     "twitter:image:type": "image/jpeg"
   }
 };

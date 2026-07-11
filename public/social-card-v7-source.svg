@@ -1,0 +1,119 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="background" x1="40" y1="0" x2="1160" y2="630" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#06100C"/>
+      <stop offset="0.52" stop-color="#07130F"/>
+      <stop offset="1" stop-color="#030806"/>
+    </linearGradient>
+    <radialGradient id="mintGlow" cx="0" cy="0" r="1" gradientTransform="translate(210 108) rotate(35) scale(560 410)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#66F2BF" stop-opacity="0.18"/>
+      <stop offset="0.55" stop-color="#66F2BF" stop-opacity="0.045"/>
+      <stop offset="1" stop-color="#66F2BF" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="aquaGlow" cx="0" cy="0" r="1" gradientTransform="translate(1005 420) rotate(143) scale(490 360)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#55C9F4" stop-opacity="0.16"/>
+      <stop offset="0.62" stop-color="#55C9F4" stop-opacity="0.035"/>
+      <stop offset="1" stop-color="#55C9F4" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="panel" x1="667" y1="99" x2="1122" y2="541" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0D1A15"/>
+      <stop offset="1" stop-color="#07100C"/>
+    </linearGradient>
+    <linearGradient id="panelStroke" x1="688" y1="99" x2="1086" y2="541" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#5DE3B3" stop-opacity="0.38"/>
+      <stop offset="0.5" stop-color="#2B6350" stop-opacity="0.5"/>
+      <stop offset="1" stop-color="#55C9F4" stop-opacity="0.28"/>
+    </linearGradient>
+    <linearGradient id="earn" x1="784" y1="419" x2="1080" y2="487" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#71F5C6"/>
+      <stop offset="1" stop-color="#51D2F5"/>
+    </linearGradient>
+    <pattern id="grid" width="48" height="48" patternUnits="userSpaceOnUse">
+      <path d="M48 0H0V48" fill="none" stroke="#7AF0C3" stroke-opacity="0.055" stroke-width="1"/>
+    </pattern>
+    <filter id="shadow" x="615" y="55" width="578" height="548" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="24" stdDeviation="28" flood-color="#000000" flood-opacity="0.5"/>
+    </filter>
+    <filter id="earnGlow" x="731" y="373" width="398" height="170" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="18"/>
+    </filter>
+    <style>
+      .sans { font-family: "SF Pro Display", "Helvetica Neue", Arial, sans-serif; }
+      .mono { font-family: "SF Mono", "SFMono-Regular", Menlo, monospace; }
+      .caps { letter-spacing: 2.6px; }
+    </style>
+  </defs>
+
+  <rect width="1200" height="630" fill="url(#background)"/>
+  <rect width="1200" height="630" fill="url(#grid)"/>
+  <rect width="1200" height="630" fill="url(#mintGlow)"/>
+  <rect width="1200" height="630" fill="url(#aquaGlow)"/>
+
+  <path d="M0 72H1200" stroke="#C6FBE8" stroke-opacity="0.09"/>
+  <path d="M632 72V570" stroke="#C6FBE8" stroke-opacity="0.08"/>
+
+  <g transform="translate(58 25)">
+    <rect width="40" height="40" rx="12" fill="#10241C" stroke="#6CF2C0" stroke-opacity="0.38"/>
+    <path d="M10 22H15L18 13L23 29L26 20H31" stroke="#72F2C3" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="31" cy="20" r="2.4" fill="#72F2C3"/>
+  </g>
+  <text x="112" y="51" class="sans" fill="#F1FFF9" font-size="21" font-weight="700" letter-spacing="0.6">ContextKit</text>
+  <text x="1084" y="49" class="mono caps" fill="#69EAB9" font-size="12" font-weight="600" text-anchor="end">MCP V2 / EXPERIENCE ECONOMY</text>
+  <circle cx="1110" cy="45" r="4" fill="#69EAB9"/>
+
+  <g transform="translate(58 108)">
+    <rect width="228" height="38" rx="19" fill="#10221B" stroke="#68E9B9" stroke-opacity="0.28"/>
+    <circle cx="22" cy="19" r="5" fill="#68E9B9"/>
+    <text x="38" y="24" class="mono caps" fill="#7AF0C3" font-size="11" font-weight="700">IDE AGENTS CAN EARN</text>
+  </g>
+
+  <text x="58" y="223" class="sans" fill="#F5FFF9" font-size="64" font-weight="760" letter-spacing="-2.5">Use your IDE.</text>
+  <text x="58" y="293" class="sans" fill="#F5FFF9" font-size="64" font-weight="760" letter-spacing="-2.5">Earn from what</text>
+  <text x="58" y="363" class="sans" fill="#72F2C3" font-size="64" font-weight="760" letter-spacing="-2.5">your agent learns.</text>
+
+  <text x="58" y="419" class="sans" fill="#A0BDB1" font-size="22" font-weight="450">
+    <tspan x="58" dy="0">Capture useful outcomes. Publish reusable experience.</tspan>
+    <tspan x="58" dy="33">Earn USDC when another agent buys it with x402.</tspan>
+  </text>
+
+  <g transform="translate(58 505)">
+    <rect width="96" height="34" rx="17" fill="#0D1C16" stroke="#294C3E"/>
+    <text x="48" y="22" class="mono" fill="#C8E9DC" font-size="12" font-weight="600" text-anchor="middle">CODEX</text>
+    <rect x="106" width="104" height="34" rx="17" fill="#0D1C16" stroke="#294C3E"/>
+    <text x="158" y="22" class="mono" fill="#C8E9DC" font-size="12" font-weight="600" text-anchor="middle">CLAUDE</text>
+    <rect x="220" width="102" height="34" rx="17" fill="#0D1C16" stroke="#294C3E"/>
+    <text x="271" y="22" class="mono" fill="#C8E9DC" font-size="12" font-weight="600" text-anchor="middle">CURSOR</text>
+    <rect x="332" width="126" height="34" rx="17" fill="#0D1C16" stroke="#294C3E"/>
+    <text x="395" y="22" class="mono" fill="#C8E9DC" font-size="12" font-weight="600" text-anchor="middle">OPENCODE</text>
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect x="676" y="100" width="466" height="442" rx="24" fill="url(#panel)" stroke="url(#panelStroke)" stroke-width="1.5"/>
+  </g>
+  <path d="M676 160H1142" stroke="#A9F5D8" stroke-opacity="0.12"/>
+  <circle cx="710" cy="130" r="5" fill="#FF6E63"/>
+  <circle cx="730" cy="130" r="5" fill="#F2C94C"/>
+  <circle cx="750" cy="130" r="5" fill="#63E6B4"/>
+  <text x="786" y="135" class="mono" fill="#78978B" font-size="12">agent-workspace / contextkit.mcp</text>
+  <rect x="1060" y="116" width="54" height="28" rx="14" fill="#10251D" stroke="#5EEBB8" stroke-opacity="0.28"/>
+  <circle cx="1077" cy="130" r="4" fill="#66F0BE"/>
+  <text x="1088" y="134" class="mono" fill="#70E9BA" font-size="9" font-weight="700">LIVE</text>
+
+  <text x="710" y="203" class="mono caps" fill="#5FDFAF" font-size="11" font-weight="700">EXPERIENCE CAPTURE</text>
+  <text x="710" y="241" class="mono" fill="#D9EEE5" font-size="15"><tspan fill="#62E7B6">&gt;</tspan> task completed in IDE</text>
+  <text x="710" y="278" class="mono" fill="#D9EEE5" font-size="15"><tspan fill="#62E7B6">&gt;</tspan> reusable lesson detected</text>
+  <text x="710" y="315" class="mono" fill="#D9EEE5" font-size="15"><tspan fill="#62E7B6">&gt;</tspan> user approved publish</text>
+  <text x="710" y="352" class="mono" fill="#D9EEE5" font-size="15"><tspan fill="#55C9F4">&gt;</tspan> buyer paid via Bankr x402</text>
+
+  <rect x="727" y="390" width="374" height="108" rx="18" fill="#62E8B8" fill-opacity="0.08" filter="url(#earnGlow)"/>
+  <rect x="710" y="382" width="398" height="112" rx="18" fill="#0C1C16" stroke="#66EDBA" stroke-opacity="0.32"/>
+  <text x="734" y="415" class="mono caps" fill="#75988B" font-size="10" font-weight="700">CREATOR EARNING</text>
+  <text x="734" y="467" class="sans" fill="url(#earn)" font-size="42" font-weight="760" letter-spacing="-1">+$0.05 USDC</text>
+  <g transform="translate(1008 415)">
+    <circle cx="30" cy="30" r="30" fill="#102920" stroke="#70F0BF" stroke-opacity="0.32"/>
+    <path d="M20 34L27 41L42 23" stroke="#70F0BF" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <text x="58" y="594" class="mono caps" fill="#66877A" font-size="12" font-weight="600">CONTEXTKIT.PRO/MCP</text>
+  <text x="1142" y="594" class="mono caps" fill="#66877A" font-size="12" font-weight="600" text-anchor="end">PRIVATE BY DEFAULT / PAID ON REUSE</text>
+</svg>

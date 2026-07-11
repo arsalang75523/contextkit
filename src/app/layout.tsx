@@ -5,7 +5,7 @@ import "./globals.css";
 import { site } from "@/lib/site";
 
 // Keep a new, stable cache key for social crawlers when the card artwork changes.
-const socialImageUrl = `${site.url}/social-card-v6.jpg?card=twitter-root-v8`;
+const socialImageUrl = `${site.url}/social-card-v7.jpg?card=ide-earn-v9`;
 
 export const metadata: Metadata = {
   metadataBase: new URL(site.url),
@@ -29,8 +29,8 @@ export const metadata: Metadata = {
     "agent handoff"
   ],
   openGraph: {
-    title: `${site.name} | ${site.tagline}`,
-    description: site.description,
+    title: "Use your IDE. Earn from what your agent learns.",
+    description: "Capture useful agent outcomes, publish reusable experience, and earn USDC when other agents buy it with x402.",
     siteName: site.name,
     images: [
       {
@@ -38,7 +38,7 @@ export const metadata: Metadata = {
         secureUrl: socialImageUrl,
         width: 1200,
         height: 630,
-        alt: "ContextKit memory layer for AI agents",
+        alt: "Use your IDE and earn USDC from reusable AI agent experience",
         type: "image/jpeg"
       }
     ],
@@ -48,9 +48,9 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     site: "@contextkitpro",
     creator: "@contextkitpro",
-    title: `${site.name} | ${site.tagline}`,
-    description: site.description,
-    images: [{ url: socialImageUrl, alt: "ContextKit memory layer for AI agents" }]
+    title: "Use your IDE. Earn from what your agent learns.",
+    description: "Capture useful agent outcomes, publish reusable experience, and earn USDC when other agents buy it with x402.",
+    images: [{ url: socialImageUrl, alt: "Use your IDE and earn USDC from reusable AI agent experience" }]
   },
   other: {
     "twitter:image:src": socialImageUrl,

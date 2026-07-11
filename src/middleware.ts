@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-const publicPreviewPaths = new Set(["/", "/share", "/share-card", "/social-card-v6.jpg"]);
+const publicPreviewPaths = new Set(["/", "/share", "/share-card", "/social-card-v7.jpg"]);
 const publicPreviewHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, HEAD, OPTIONS",
@@ -70,5 +70,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/", "/share", "/share-card", "/social-card-v6.jpg", "/dashboard/:path*"]
+  matcher: ["/", "/share", "/share-card", "/social-card-v7.jpg", "/dashboard/:path*"]
 };
