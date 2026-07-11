@@ -1,0 +1,12 @@
+{
+  "name": "@basedchef/openclaw-contextkit-autocapture",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "ContextKit automatic private experience capture for OpenClaw.",
+  "openclaw": {
+    "extensions": [
+      "./index.mjs"
+    ]
+  }
+}

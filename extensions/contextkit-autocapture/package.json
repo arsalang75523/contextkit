@@ -1,0 +1,118 @@
+{
+  "name": "contextkit-autocapture",
+  "displayName": "ContextKit Auto-Capture",
+  "description": "Secure ContextKit MCP V2 auto-capture for VS Code, Cursor, Windsurf, and VSCodium agent tasks.",
+  "version": "0.1.0",
+  "publisher": "contextkit",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/arsalang75523/contextkit.git"
+  },
+  "engines": {
+    "vscode": "^1.96.0"
+  },
+  "categories": [
+    "AI",
+    "Other"
+  ],
+  "keywords": [
+    "contextkit",
+    "mcp",
+    "cursor",
+    "claude",
+    "codex",
+    "windsurf",
+    "vscodium",
+    "agent memory"
+  ],
+  "activationEvents": [
+    "onCommand:contextkit.configureApiKey",
+    "onCommand:contextkit.runCapturedAgent",
+    "onCommand:contextkit.captureTranscript"
+  ],
+  "main": "./extension.cjs",
+  "scripts": {
+    "sync-core": "node scripts/sync-core.mjs",
+    "vscode:prepublish": "npm run sync-core",
+    "package": "npm run sync-core && npx @vscode/vsce package --no-dependencies"
+  },
+  "contributes": {
+    "commands": [
+      {
+        "command": "contextkit.configureApiKey",
+        "title": "ContextKit: Configure API Key",
+        "category": "ContextKit"
+      },
+      {
+        "command": "contextkit.runCapturedAgent",
+        "title": "ContextKit: Run Agent with Guaranteed Auto-Capture",
+        "category": "ContextKit",
+        "icon": "$(sparkle)"
+      },
+      {
+        "command": "contextkit.captureTranscript",
+        "title": "ContextKit: Consider Transcript File",
+        "category": "ContextKit"
+      }
+    ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "contextkit.runCapturedAgent"
+        },
+        {
+          "command": "contextkit.configureApiKey"
+        },
+        {
+          "command": "contextkit.captureTranscript"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "ContextKit Auto-Capture",
+      "properties": {
+        "contextkit.autoCapture.baseUrl": {
+          "type": "string",
+          "default": "https://contextkit.pro",
+          "description": "ContextKit API base URL."
+        },
+        "contextkit.autoCapture.minConfidence": {
+          "type": "number",
+          "default": 0.72,
+          "minimum": 0.5,
+          "maximum": 0.95,
+          "description": "Minimum LLM confidence required before saving a private draft."
+        },
+        "contextkit.autoCapture.defaultPriceUsd": {
+          "type": "number",
+          "default": 0.05,
+          "minimum": 0.01,
+          "maximum": 50,
+          "description": "Suggested public marketplace price. Publishing still requires explicit approval."
+        },
+        "contextkit.autoCapture.cursorExecutable": {
+          "type": "string",
+          "default": "cursor-agent",
+          "description": "Cursor Agent CLI executable."
+        },
+        "contextkit.autoCapture.claudeExecutable": {
+          "type": "string",
+          "default": "claude",
+          "description": "Claude Code CLI executable."
+        },
+        "contextkit.autoCapture.codexExecutable": {
+          "type": "string",
+          "default": "codex",
+          "description": "Codex CLI executable."
+        }
+      }
+    }
+  },
+  "files": [
+    "extension.cjs",
+    "dist/src/core.mjs",
+    "README.md",
+    "LICENSE"
+  ]
+}

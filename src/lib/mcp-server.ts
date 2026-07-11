@@ -32,6 +32,43 @@ type ContextKitApiError = {
 };
 
 const MAX_MCP_CONVERSATION_CHARS = 400_000;
+const MCP_AGENT_INSTRUCTIONS_URI = "contextkit://instructions";
+
+const MCP_AGENT_INSTRUCTIONS = {
+  policyVersion: "mcp-v2.1",
+  purpose: "Help connected agents preserve reusable completed work as private ContextKit experience drafts, then publish only with explicit user approval.",
+  startup: [
+    `Read ${MCP_AGENT_INSTRUCTIONS_URI} or call contextkit_get_agent_instructions when connecting to ContextKit MCP.`,
+    "Use ContextKit memory tools only when they help the user's active task."
+  ],
+  autoCapture: {
+    enabled: true,
+    trigger: "After every completed non-trivial task that produced a reusable workflow, debugging lesson, integration pattern, decision, constraint, or agent technique.",
+    tool: "contextkit_experience_consider",
+    requiredInput: [
+      "initial user request",
+      "important agent actions and method",
+      "final result or outcome",
+      "constraints, decisions, errors, and fixes",
+      "reusable lesson for future agents"
+    ],
+    savePolicy: "Save private drafts only when ContextKit detects a real reusable experience.",
+    rejectPolicy: "Do not save generic chat, incomplete attempts, unsupported claims, secrets, OTPs, API keys, passwords, bearer tokens, private wallet data, or personal data."
+  },
+  publish: {
+    tool: "contextkit_experience_publish",
+    requiresExplicitUserApproval: true,
+    defaultVisibility: "private",
+    instruction: "If shouldSave is true, tell the user a private draft was created and ask whether they want to publish it publicly for Bankr x402 purchase."
+  },
+  recommendedAgentBehavior: [
+    "Do not ask the user to paste this policy each time.",
+    "Call contextkit_experience_consider proactively after useful completed work.",
+    "Keep drafts private by default.",
+    "Ask before public publishing.",
+    "Search existing experiences before repeating similar work."
+  ]
+};
 
 const experienceInput = {
   title: z.string().min(1).max(160).optional(),
@@ -55,6 +92,34 @@ export function createContextKitMcpServer(options: ContextKitMcpOptions) {
     name: "contextkit",
     version: "0.1.0"
   });
+
+  server.registerResource(
+    "contextkit_agent_instructions",
+    MCP_AGENT_INSTRUCTIONS_URI,
+    {
+      title: "ContextKit agent instructions",
+      description: "Policy for connected agents: when to auto-capture reusable experiences, what to save, and when publishing requires user approval.",
+      mimeType: "application/json"
+    },
+    async (uri) => ({
+      contents: [
+        {
+          uri: uri.toString(),
+          mimeType: "application/json",
+          text: JSON.stringify(MCP_AGENT_INSTRUCTIONS, null, 2)
+        }
+      ]
+    })
+  );
+
+  server.registerTool(
+    "contextkit_get_agent_instructions",
+    {
+      title: "Get ContextKit agent instructions",
+      description: `Read ContextKit MCP operating policy. Agents should call this or read ${MCP_AGENT_INSTRUCTIONS_URI} when connecting, then follow the auto-capture rule: call contextkit_experience_consider after useful completed work and never publish without explicit user approval.`
+    },
+    async () => toolResult(MCP_AGENT_INSTRUCTIONS)
+  );
 
   server.registerTool(
     "contextkit_summarize",

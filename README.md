@@ -1,5 +1,45 @@
 # ContextKit
 
+Website: [https://contextkit.pro](https://contextkit.pro)
+
+## MCP V2 guaranteed auto-capture
+
+Remote MCP instructions are portable but a host can ignore proactive tool guidance. ContextKit includes a completion bridge for environments that expose a real lifecycle signal.
+
+```bash
+npm install -g @basedchef/contextkit-autocapture
+export CONTEXTKIT_API_KEY="ck_live_your_scoped_key"
+
+# Automatic after every completed Claude Code turn
+contextkit-autocapture install claude
+
+# Automatic after every completed Codex turn
+contextkit-autocapture install codex
+
+# Automatic after every successful Hermes turn
+contextkit-autocapture install hermes
+
+# Automatic after every completed OpenCode session
+contextkit-autocapture install opencode
+
+# Automatic after every successful OpenClaw agent run
+contextkit-autocapture install openclaw --global
+
+# Guaranteed structured runners
+contextkit-autocapture run cursor -- "Fix the failing checkout tests"
+contextkit-autocapture run claude -- "Implement webhook retries"
+contextkit-autocapture run codex -- "Verify the payment callback"
+```
+
+The bridge locally redacts common secrets, submits only the latest completed task, skips duplicate and failed runs, and auto-saves only qualified private drafts. Public publishing always requires explicit user approval.
+
+The VS Code-compatible extension for VS Code, Cursor, Windsurf, and VSCodium is in `extensions/contextkit-autocapture`:
+
+```bash
+npm run extension:package
+code --install-extension extensions/contextkit-autocapture/contextkit-autocapture-0.1.0.vsix
+```
+
 ContextKit is a memory layer for autonomous AI agents.
 
 Website: https://contextkit.pro

@@ -1,0 +1,35 @@
+{
+  "name": "@basedchef/contextkit-autocapture",
+  "version": "0.1.0",
+  "description": "Secure task-completion bridge for ContextKit MCP V2 experience auto-capture.",
+  "type": "module",
+  "bin": {
+    "contextkit-autocapture": "bin/contextkit-autocapture.mjs"
+  },
+  "files": [
+    "bin",
+    "src",
+    "templates",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  },
+  "keywords": [
+    "contextkit",
+    "mcp",
+    "claude-code",
+    "codex",
+    "hermes",
+    "openclaw",
+    "opencode",
+    "cursor",
+    "agent-memory",
+    "autocapture"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  }
+}

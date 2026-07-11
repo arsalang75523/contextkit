@@ -277,7 +277,7 @@ export default function DocsPage() {
               <div className="mt-4 rounded-md border border-amber/25 bg-amber/[0.08] p-4 text-sm leading-6 text-white/68">
                 <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-amber">MCP V2 auto-capture</p>
                 <p className="mt-2">
-                  Tell connected agents to call <code>contextkit_experience_consider</code> after completed non-trivial work, passing the user request, actions, final result, and reusable lesson. ContextKit saves only real reusable experience drafts privately. Agents must ask the user before calling <code>contextkit_experience_publish</code>.
+                  Connected agents can read <code>contextkit://instructions</code> or call <code>contextkit_get_agent_instructions</code> when they connect. The policy tells them to call <code>contextkit_experience_consider</code> after completed non-trivial work, save only real reusable drafts privately, and ask the user before calling <code>contextkit_experience_publish</code>. For enforced lifecycle capture, use the native Claude, Codex, Hermes, OpenClaw, or OpenCode adapters, or the VS Code-compatible runner in the <Link href="/mcp-guide" className="text-mint underline decoration-mint/30 underline-offset-4">MCP Guide</Link>.
                 </p>
               </div>
               <div className="mt-4 grid gap-4 lg:grid-cols-2">
@@ -288,6 +288,7 @@ export default function DocsPage() {
                 <div className="rounded-md border border-line bg-white/[0.035] p-5 text-sm leading-6 text-white/65">
                   <h3 className="font-semibold text-white">Available tools</h3>
                   <ul className="mt-3 space-y-2 font-mono text-xs text-white/65">
+                    <li>contextkit_get_agent_instructions</li>
                     <li>contextkit_summarize</li>
                     <li>contextkit_compress_context</li>
                     <li>contextkit_handoff</li>
