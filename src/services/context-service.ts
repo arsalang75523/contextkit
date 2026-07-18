@@ -107,8 +107,21 @@ export class ContextService {
     const compactResponseTokens = estimateTokens(JSON.stringify({ mode: "compact", compact, state: responseState, metrics }));
     micro = optimizedMicroCheckpoint(micro, microFacts, inputTokens, compactResponseTokens);
     microTokens = estimateTokens(micro);
-    if (!hasRequiredMicroAnchors(micro) || microResponseTokens(micro, inputTokens) >= compactResponseTokens) {
+    if (!hasRequiredMicroAnchors(micro)) {
       throw new Error("micro_optimization_check_failed");
+    }
+    const optimizedResponseTokens = microResponseTokens(micro, inputTokens);
+    if (optimizedResponseTokens >= compactResponseTokens) {
+      // The mandatory four-anchor capsule can exceed compact for very small
+      // inputs. Record the failed optimization check internally, but return a
+      // valid continuation checkpoint instead of turning a size edge case into
+      // a user-facing 500.
+      log("warn", "Micro response did not beat compact token size", {
+        requestId: this.serviceContext.requestId,
+        inputTokens,
+        microResponseTokens: optimizedResponseTokens,
+        compactResponseTokens
+      });
     }
     return {
       mode: "micro",
@@ -357,16 +370,15 @@ function withLlmGoalFallback(
   return { ...stateValue, goal };
 }
 
-function isTransientGoal(value: string) {
-  return /^(test|verify|validate|configure|implement|fix|resolve|update|debug)\b/i.test(normalizeSummary(value));
-}
-
 function llmGeneratedGoal(output: Record<string, unknown>) {
   const state = output.state && typeof output.state === "object" ? output.state as Record<string, unknown> : {};
   const candidates = [state.goal, output.goal];
   for (const candidate of candidates) {
     const goal = completeGoalText(String(candidate ?? ""));
-    if (goal && !isTransientGoal(goal)) return goal;
+    // The summarize prompt already prefers durable goals when broader context
+    // exists. Rejecting action-led LLM goals here breaks valid short tasks such
+    // as "validate this deployment" and causes needless repair calls.
+    if (goal) return goal;
   }
   return "";
 }
@@ -888,17 +900,22 @@ function sanitizeMicroParts(value: string) {
 }
 
 function optimizedMicroCheckpoint(candidate: string, facts: string[], inputTokens: number, compactOutputTokens: number) {
-  const maxTokens = proportionalTokenBudget(inputTokens, 0.16);
+  const proportionalBudget = proportionalTokenBudget(inputTokens, 0.16);
+  const completeStructural = microCapsule(facts.join("; "), Number.MAX_SAFE_INTEGER);
+  // Tiny inputs cannot encode all mandatory anchors inside an 8-token budget.
+  // Preserve the minimum semantic structure; the micro response still avoids
+  // the much larger duplicated state object returned by compact mode.
+  const maxTokens = Math.max(proportionalBudget, estimateTokens(completeStructural));
   const candidates = [
     microCapsule(candidate, maxTokens),
-    microCapsule(facts.join("; "), maxTokens)
+    completeStructural
   ].filter(Boolean);
 
   for (const value of uniqueStrings(candidates)) {
     if (hasRequiredMicroAnchors(value) && microResponseTokens(value, inputTokens) < compactOutputTokens) return value;
   }
 
-  const structural = microCapsule(facts.join("; "), maxTokens);
+  const structural = completeStructural;
   if (hasRequiredMicroAnchors(structural)) return structural;
   return uniqueStrings(candidates).find(hasRequiredMicroAnchors) ?? structural;
 }
@@ -943,22 +960,33 @@ function strategicMicroFacts(
   limits: SummarizeWordLimits,
   maxTokens: number
 ) {
-  const goal = microGoalFragment(stateValue.goal, limits.goal);
+  // Percentage budgets approach one word for tiny inputs, which cannot carry a
+  // complete goal or the required two-item anchors. These semantic floors only
+  // apply to micro fragments and prevent broken/empty machine state.
+  const microLimits = {
+    ...limits,
+    goal: Math.max(limits.goal, 6),
+    status: Math.max(limits.status, 4),
+    stateItem: Math.max(limits.stateItem, 4),
+    nextItem: Math.max(limits.nextItem, 5),
+    compactItem: Math.max(limits.compactItem, 4)
+  };
+  const goal = microGoalFragment(stateValue.goal, microLimits.goal);
   const goalLike = [goal, stateValue.goal].filter(Boolean);
-  const status = selectMicroStatusFragments([stateValue.status], 1, limits.status);
-  const blockers = selectOperationalFragments(stateValue.blockers, 2, limits.stateItem, goalLike);
+  const status = selectMicroStatusFragments([stateValue.status], 1, microLimits.status);
+  const blockers = selectOperationalFragments(stateValue.blockers, 2, microLimits.stateItem, goalLike);
   const dependencies = selectOperationalFragments([
     ...stateValue.priorities,
     ...stateValue.decisions
-  ], 2, limits.compactItem, [...goalLike, ...blockers]);
+  ], 2, microLimits.compactItem, [...goalLike, ...blockers]);
   const worldview = selectWorldviewFragments([
     stateValue.status,
     ...stateValue.blockers,
     ...stateValue.decisions,
     ...stateValue.priorities,
     ...stateValue.nextSteps
-  ].filter((item) => !containsEquivalent([...goalLike, ...blockers, ...dependencies], item)), 1, limits.compactItem);
-  const nextActions = selectActionFragments(stateValue.nextSteps, 2, limits.nextItem, goalLike);
+  ].filter((item) => !containsEquivalent([...goalLike, ...blockers, ...dependencies], item)), 1, microLimits.compactItem);
+  const nextActions = selectActionFragments(stateValue.nextSteps, 2, microLimits.nextItem, goalLike);
   const llmMicro = usefulMicroCandidate(String(output.micro ?? ""), stateValue, maxTokens);
   return canonicalMicroFacts({
     state: status[0] ?? worldview[0] ?? blockers[0] ?? "",
@@ -966,7 +994,7 @@ function strategicMicroFacts(
     next: fillMicroPair(nextActions, dependencies),
     goal,
     llmMicro
-  }, limits);
+  }, microLimits);
 }
 
 function canonicalMicroFacts(

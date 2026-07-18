@@ -310,47 +310,46 @@ export class ExperienceService {
       {
         role: "system",
         content: [
-          "Return only compact JSON for ContextKit's verified-skill compiler.",
+          "Return only compact JSON for ContextKit's verified-skill compiler, using exactly the short keys in the schema.",
           "Accept only real completed reusable work with: user request, agent method, verified outcome, reusable lesson, and no unresolved core blocker.",
           "Convert it into a portable Bankr-adjacent skill, never a project diary or user-specific note.",
           "Public skill ecosystems are: bankr, x402, base, mcp, wallet, defi, automation, llm-gateway, agent-infrastructure.",
           "Remove names, private paths/domains/IDs, credentials, secrets, and environment-specific values; parameterize necessary values.",
-          "Require 3+ executable steps, verification, failure handling, safety boundaries, rollback, and exactly 3 independent contract tests.",
+          "Require exactly 3 concise executable steps, 1 verification, 1 failure response, 1 safety boundary, 1 rollback, and exactly 3 concise independent contract tests.",
           "Reject plans, brainstorms, incomplete attempts, generic notes, pure summaries, private data, or invented evidence.",
-          `Set shouldSave=true only when confidence >= ${minConfidence}; otherwise return the same schema with concise empty skill fields.`
+          "Keep the full JSON below 450 tokens; each string must be a complete thought and no longer than 160 characters.",
+          `Set save=true only when confidence >= ${minConfidence}; otherwise return the same schema with concise empty skill fields.`
         ].join(" ")
       },
       {
         role: "user",
         content: JSON.stringify({
           responseSchema: {
-            shouldSave: true,
+            save: true,
             confidence: 0.0,
             reason: "string",
-            requiredEvidence: {
-              userRequest: "string",
-              agentMethod: "string",
+            e: {
+              request: "string",
+              method: "string",
               outcome: "string",
-              reusableLesson: "string"
+              lesson: "string"
             },
-            skill: {
+            s: {
               name: "lowercase-kebab-case",
-              description: "what the skill does and when to use it",
-              version: "1.0.0",
-              ecosystem: "bankr|x402|base|mcp|wallet|defi|automation|llm-gateway|agent-infrastructure",
-              compatibility: ["bankr", "claude-code", "codex", "openclaw", "cursor"],
+              desc: "what the skill does and when to use it",
+              eco: "bankr|x402|base|mcp|wallet|defi|automation|llm-gateway|agent-infrastructure",
               trigger: "explicit condition for loading this skill",
-              prerequisites: ["string"],
-              inputs: ["parameterized input"],
-              outputs: ["observable output"],
+              pre: ["string"],
+              inputs: ["string"],
+              outputs: ["string"],
               steps: ["executable step 1", "step 2", "step 3"],
-              verification: ["observable check"],
-              failureHandling: ["failure response"],
-              doNotUseWhen: ["unsafe or inapplicable condition"],
+              verify: ["observable check"],
+              fail: ["failure response"],
+              avoid: ["unsafe or inapplicable condition"],
               rollback: ["safe rollback"],
               tags: ["string"],
-              testCases: [
-                { name: "string", input: "concrete scenario", expectedOutcome: "observable result", successCriteria: ["criterion"] }
+              tests: [
+                ["name", "concrete input", "expected outcome", "success criterion"]
               ]
             }
           },
@@ -359,7 +358,7 @@ export class ExperienceService {
       }
     ], {
       model: readEnv({ env: this.env }).bankrSkillLlmModel,
-      maxTokens: 1_800,
+      maxTokens: 1_200,
       attempts: 1
     });
 
@@ -421,14 +420,14 @@ function normalizeExperience(input: ExperienceSaveInput | ExperiencePublishInput
 }
 
 function normalizeCandidate(output: Record<string, unknown>) {
-  const evidence = objectValue(output.requiredEvidence);
+  const evidence = objectValue(output.requiredEvidence ?? output.e);
   const experience = objectValue(output.experience);
-  const rawSkill = objectValue(output.skill);
+  const rawSkill = objectValue(output.skill ?? output.s);
   const requiredEvidence = {
-    userRequest: redactSensitive(cleanText(String(evidence.userRequest ?? ""))),
-    agentMethod: redactSensitive(cleanText(String(evidence.agentMethod ?? ""))),
+    userRequest: redactSensitive(cleanText(String(evidence.userRequest ?? evidence.request ?? ""))),
+    agentMethod: redactSensitive(cleanText(String(evidence.agentMethod ?? evidence.method ?? ""))),
     outcome: redactSensitive(cleanText(String(evidence.outcome ?? ""))),
-    reusableLesson: redactSensitive(cleanText(String(evidence.reusableLesson ?? "")))
+    reusableLesson: redactSensitive(cleanText(String(evidence.reusableLesson ?? evidence.lesson ?? "")))
   };
   const skill = normalizeSkill(rawSkill as VerifiedSkillInput, requiredEvidence);
   const content = redactSensitive(cleanText(String(experience.content ?? requiredEvidence.agentMethod)));
@@ -437,7 +436,7 @@ function normalizeCandidate(output: Record<string, unknown>) {
   const task = redactSensitive(cleanText(String(experience.task ?? requiredEvidence.userRequest)));
   const validation = validateSkill(skill);
   const candidate = {
-    shouldSave: Boolean(output.shouldSave),
+    shouldSave: Boolean(output.shouldSave ?? output.save),
     confidence: clampConfidence(output.confidence),
     reason: redactSensitive(cleanText(String(output.reason ?? ""))),
     requiredEvidence,
@@ -471,12 +470,21 @@ function normalizeCandidate(output: Record<string, unknown>) {
 
 function normalizeSkill(input: unknown, evidence: VerifiedSkillDraft["evidence"]): VerifiedSkillDraft {
   const value = objectValue(input);
-  const rawEcosystem = normalizeTag(String(value.ecosystem ?? "agent-infrastructure"));
+  const rawEcosystem = normalizeTag(String(value.ecosystem ?? value.eco ?? "agent-infrastructure"));
   const ecosystem = (rawEcosystem || "agent-infrastructure") as PublicSkillEcosystem;
   const name = normalizeTag(String(value.name ?? "reusable-agent-workflow")) || "reusable-agent-workflow";
-  const description = redactSensitive(cleanText(String(value.description ?? "Reusable agent workflow compiled from a completed and verified task outcome.")));
-  const testCases = Array.isArray(value.testCases)
-    ? value.testCases.map((item) => {
+  const description = redactSensitive(cleanText(String(value.description ?? value.desc ?? "Reusable agent workflow compiled from a completed and verified task outcome.")));
+  const rawTests = Array.isArray(value.testCases) ? value.testCases : Array.isArray(value.tests) ? value.tests : [];
+  const testCases = rawTests.length
+    ? rawTests.map((item) => {
+      if (Array.isArray(item)) {
+        return {
+          name: redactSensitive(cleanText(String(item[0] ?? "scenario"))).slice(0, 120),
+          input: redactSensitive(cleanText(String(item[1] ?? ""))).slice(0, 1_200),
+          expectedOutcome: redactSensitive(cleanText(String(item[2] ?? ""))).slice(0, 1_200),
+          successCriteria: cleanList([redactSensitive(String(item[3] ?? ""))])
+        };
+      }
       const test = objectValue(item);
       return {
         name: redactSensitive(cleanText(String(test.name ?? "scenario"))).slice(0, 120),
@@ -495,13 +503,13 @@ function normalizeSkill(input: unknown, evidence: VerifiedSkillDraft["evidence"]
       ? cleanTags(arrayOfStrings(value.compatibility))
       : ["bankr", "claude-code", "codex", "openclaw", "cursor"],
     trigger: redactSensitive(cleanText(String(value.trigger ?? description))),
-    prerequisites: cleanList(arrayOfStrings(value.prerequisites).map(redactSensitive)),
+    prerequisites: cleanList(arrayOfStrings(value.prerequisites ?? value.pre).map(redactSensitive)),
     inputs: cleanList(arrayOfStrings(value.inputs).map(redactSensitive)),
     outputs: cleanList(arrayOfStrings(value.outputs).map(redactSensitive)),
     steps: cleanList(arrayOfStrings(value.steps).map(redactSensitive)).slice(0, 30),
-    verification: cleanList(arrayOfStrings(value.verification).map(redactSensitive)),
-    failureHandling: cleanList(arrayOfStrings(value.failureHandling).map(redactSensitive)),
-    doNotUseWhen: cleanList(arrayOfStrings(value.doNotUseWhen).map(redactSensitive)),
+    verification: cleanList(arrayOfStrings(value.verification ?? value.verify).map(redactSensitive)),
+    failureHandling: cleanList(arrayOfStrings(value.failureHandling ?? value.fail).map(redactSensitive)),
+    doNotUseWhen: cleanList(arrayOfStrings(value.doNotUseWhen ?? value.avoid).map(redactSensitive)),
     rollback: cleanList(arrayOfStrings(value.rollback).map(redactSensitive)),
     tags: cleanTags(arrayOfStrings(value.tags)),
     testCases,

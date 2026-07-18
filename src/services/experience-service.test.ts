@@ -81,6 +81,43 @@ function llmCandidate() {
   };
 }
 
+function compactLlmCandidate() {
+  const candidate = llmCandidate();
+  const skill = candidate.skill;
+  return {
+    save: candidate.shouldSave,
+    confidence: candidate.confidence,
+    reason: candidate.reason,
+    e: {
+      request: candidate.requiredEvidence.userRequest,
+      method: candidate.requiredEvidence.agentMethod,
+      outcome: candidate.requiredEvidence.outcome,
+      lesson: candidate.requiredEvidence.reusableLesson
+    },
+    s: {
+      name: skill.name,
+      desc: skill.description,
+      eco: skill.ecosystem,
+      trigger: skill.trigger,
+      pre: skill.prerequisites,
+      inputs: skill.inputs,
+      outputs: skill.outputs,
+      steps: skill.steps,
+      verify: skill.verification,
+      fail: skill.failureHandling,
+      avoid: skill.doNotUseWhen,
+      rollback: skill.rollback,
+      tags: skill.tags,
+      tests: skill.testCases.map((item) => [
+        item.name,
+        item.input,
+        item.expectedOutcome,
+        item.successCriteria[0]
+      ])
+    }
+  };
+}
+
 test("compiles, protects, publishes, searches, and buys a verified skill", async () => {
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async () => Response.json({
@@ -172,4 +209,35 @@ test("never publishes an uncompiled legacy note", async () => {
     }, owner),
     /skill_required_for_publish/
   );
+});
+
+test("compiles the compact LLM wire format without losing validation", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => Response.json({
+    choices: [{ message: { content: JSON.stringify(compactLlmCandidate()) } }]
+  });
+
+  try {
+    const service = new ExperienceService({
+      CONTEXTKIT_KV: memoryNamespace(),
+      BANKR_LLM_KEY: "bk_test_server_only",
+      BANKR_LLM_BASE_URL: "https://llm.test/v1"
+    });
+    const compiled = await service.consider({
+      messages: [
+        { role: "user", content: "Repair a Bankr x402 timeout without changing the response contract." },
+        { role: "assistant", content: "Compared origin and gateway latency, precomputed long work, and verified HTTP 200." }
+      ],
+      minConfidence: 0.72,
+      autoSave: true,
+      priceUsd: 0.05
+    }, { ownerId: "bankr-hosted" });
+
+    assert.equal(compiled.shouldSave, true);
+    assert.equal(compiled.validation?.eligible, true);
+    assert.ok(compiled.experience && "kind" in compiled.experience);
+    assert.equal(compiled.experience.kind, "verified-skill");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });
