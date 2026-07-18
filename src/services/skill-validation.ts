@@ -17,11 +17,19 @@ export type SkillTestCase = {
   input: string;
   expectedOutcome: string;
   successCriteria: string[];
+  testMethod: string;
+  observedOutcome: string;
+  evidenceType: "command-output" | "test-log" | "http-response" | "artifact" | "assertion";
+  evidenceExcerpt: string;
+  passed: boolean;
+  evidenceVerified: boolean;
+  sourceMessageIndex?: number;
 };
 
 export type VerifiedSkillDraft = {
   name: string;
   description: string;
+  license: string;
   version: string;
   ecosystem: PublicSkillEcosystem;
   compatibility: string[];
@@ -47,10 +55,15 @@ export type VerifiedSkillDraft = {
 
 export type SkillValidationReport = {
   eligible: boolean;
+  writeEligible: boolean;
   status: "verified" | "needs-work" | "rejected";
   score: number;
   threshold: number;
-  validationLevel: "deterministic-contract";
+  validationLevel: "evidence-backed-contract";
+  requirements: {
+    write: { requiredEvidenceTests: 1; passedEvidenceTests: number; met: boolean };
+    publish: { requiredEvidenceTests: 3; passedEvidenceTests: number; independentEvidenceTests: number; met: boolean };
+  };
   breakdown: {
     portability: number;
     reproducibility: number;
@@ -62,6 +75,9 @@ export type SkillValidationReport = {
   tests: Array<{
     name: string;
     passed: boolean;
+    evidenceType: SkillTestCase["evidenceType"];
+    evidenceExcerpt: string;
+    sourceMessageIndex?: number;
     findings: string[];
   }>;
   findings: string[];
@@ -71,6 +87,12 @@ const secretPattern = /(?:\b(?:sk|bk|ck|re|ghp|github_pat)_[A-Za-z0-9_-]{10,}\b|
 const privatePathPattern = /(?:\/Users\/[^/\s]+|\/home\/[^/\s]+|[A-Z]:\\Users\\[^\\\s]+)/i;
 const privateIdentityPattern = /(?:\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b|\b(?:acct|req|ctx|exp)_[a-f0-9]{16,}\b)/i;
 const dangerousCommandPattern = /(?:rm\s+-rf\s+\/|git\s+reset\s+--hard|curl[^\n]+\|\s*(?:sh|bash)|disable[^\n]+security|seed\s+phrase|private\s+key)/i;
+const genericSkillNamePattern = /^(?:untitled-agent-experience|reusable-agent-workflow|test-skill|sample-skill|demo-skill|hello|foo|bar|asdf|qwerty)$/i;
+const placeholderTextPattern = /\b(?:lorem ipsum|todo|tbd|placeholder|dummy content|random text|asdfg+|qwerty+)\b/i;
+const operationalScopePattern = /\b(?:bankr|x402|base|mcp|wallet|defi|automation|llm|agent|gateway|onchain|transaction)\b/i;
+const testMethodPattern = /\b(?:run|ran|call|called|execute|executed|compare|compared|inspect|inspected|validate|validated|verify|verified|build|built|deploy|deployed|request|requested|query|queried|measure|measured|render|rendered|test|tested|curl|npm)\b/i;
+const observableResultPattern = /\b(?:pass(?:ed)?|fail(?:ed)?|success(?:ful(?:ly)?)?|completed?|returned?|responded?|status|exit code|created?|generated?|matched?|verified?|built|compiled|deployed|unchanged|http\s*\/?\d*(?:\.\d+)?\s*[1-5]\d\d|[1-5]\d\d)\b/i;
+const speculativeResultPattern = /\b(?:should|would|will|expected to|planned to|not yet|pending)\b/i;
 
 export function validateSkill(skill: VerifiedSkillDraft, threshold = 75): SkillValidationReport {
   const serialized = JSON.stringify(skill);
@@ -80,34 +102,109 @@ export function validateSkill(skill: VerifiedSkillDraft, threshold = 75): SkillV
   const hasPrivateIdentity = privateIdentityPattern.test(serialized);
   const hasDangerousCommand = dangerousCommandPattern.test(serialized);
   const ecosystemAllowed = publicSkillEcosystems.includes(skill.ecosystem);
+  const hasLicense = String(skill.license ?? "").trim().length >= 3;
+  const operationalContent = [skill.name, skill.description, skill.trigger, ...skill.steps, ...skill.tags].join(" ");
+  const hasOperationalScope = operationalScopePattern.test(operationalContent);
+  const hasPlaceholders = placeholderTextPattern.test([
+    skill.name,
+    skill.description,
+    skill.trigger,
+    ...skill.steps,
+    ...Object.values(skill.evidence)
+  ].join(" "));
+  const hasGenericName = genericSkillNamePattern.test(skill.name.trim());
+  const evidenceNarrativeComplete = Object.values(skill.evidence).every((value) => meaningfulWordCount(value) >= 5);
+  const reusableStructureComplete = Boolean(
+    meaningfulWordCount(skill.description) >= 8 &&
+    meaningfulWordCount(skill.trigger) >= 8 &&
+    skill.prerequisites.length >= 1 &&
+    skill.inputs.length >= 1 &&
+    skill.outputs.length >= 1 &&
+    skill.steps.length >= 3 &&
+    skill.steps.every((step) => meaningfulWordCount(step) >= 5) &&
+    new Set(skill.steps.map(normalizeComparable)).size === skill.steps.length &&
+    skill.verification.length >= 1 &&
+    skill.failureHandling.length >= 1 &&
+    skill.doNotUseWhen.length >= 1 &&
+    skill.rollback.length >= 1 &&
+    skill.tags.length >= 2
+  );
 
   if (hasSecrets) findings.push("Embedded credential or secret-like value detected.");
   if (hasPrivatePaths) findings.push("User-specific filesystem path detected; replace it with a parameter or placeholder.");
   if (hasPrivateIdentity) findings.push("Private identity or request/account identifier detected.");
   if (hasDangerousCommand) findings.push("Unsafe or destructive command pattern detected.");
   if (!ecosystemAllowed) findings.push("Public skills must target an approved Bankr-adjacent ecosystem namespace.");
+  if (!hasLicense) findings.push("Public skill publish requires an explicit reuse license.");
+  if (hasGenericName) findings.push("Skill name is generic or placeholder content.");
+  if (hasPlaceholders) findings.push("Placeholder or junk content detected in the skill.");
+  if (!hasOperationalScope) findings.push("Skill must describe a concrete Bankr-adjacent agent workflow.");
+  if (!evidenceNarrativeComplete) findings.push("Request, method, outcome, and reusable lesson must each contain concrete evidence.");
+  if (!reusableStructureComplete) {
+    findings.push("Reusable skill structure is incomplete; require concrete prerequisites, inputs, outputs, three distinct steps, verification, failure handling, safety boundary, rollback, and tags.");
+  }
 
-  const tests = skill.testCases.map((test) => {
+  const sourceTests = Array.isArray(skill.testCases) ? skill.testCases : [];
+  const tests = sourceTests.map((test) => {
     const testFindings: string[] = [];
-    if (!test.name.trim()) testFindings.push("Missing test name.");
-    if (test.input.trim().length < 12) testFindings.push("Test input is not concrete enough.");
-    if (test.expectedOutcome.trim().length < 12) testFindings.push("Expected outcome is not concrete enough.");
-    if (!test.successCriteria.length || test.successCriteria.some((criterion) => criterion.trim().length < 6)) {
+    const name = String(test.name ?? "");
+    const input = String(test.input ?? "");
+    const expectedOutcome = String(test.expectedOutcome ?? "");
+    const successCriteria = Array.isArray(test.successCriteria) ? test.successCriteria : [];
+    const testMethod = String(test.testMethod ?? "");
+    const observedOutcome = String(test.observedOutcome ?? "");
+    const evidenceExcerpt = String(test.evidenceExcerpt ?? "");
+    const evidenceType = test.evidenceType ?? "assertion";
+    if (!name.trim()) testFindings.push("Missing test name.");
+    if (input.trim().length < 12) testFindings.push("Test input is not concrete enough.");
+    if (expectedOutcome.trim().length < 12) testFindings.push("Expected outcome is not concrete enough.");
+    if (!successCriteria.length || successCriteria.some((criterion) => String(criterion).trim().length < 6)) {
       testFindings.push("Success criteria are missing or incomplete.");
     }
+    if (testMethod.trim().length < 12) testFindings.push("Test method is not concrete enough.");
+    if (observedOutcome.trim().length < 12) testFindings.push("Observed test outcome is not concrete enough.");
+    if (evidenceExcerpt.trim().length < 12) testFindings.push("Test evidence excerpt is missing or too short.");
+    if (evidenceType === "assertion") testFindings.push("A plain assertion is not accepted as executed test evidence.");
+    if (!testMethodPattern.test(testMethod)) testFindings.push("Test method does not describe an executed validation action.");
+    if (!observableResultPattern.test(`${observedOutcome} ${evidenceExcerpt}`)) {
+      testFindings.push("Test evidence has no observable execution result.");
+    }
+    if (speculativeResultPattern.test(`${observedOutcome} ${evidenceExcerpt}`)) {
+      testFindings.push("Test result is speculative or pending instead of observed.");
+    }
+    if (!test.evidenceVerified || test.sourceMessageIndex === undefined) {
+      testFindings.push("Test evidence was not found verbatim in the source conversation.");
+    }
+    if (test.passed !== true) testFindings.push("Test did not pass.");
     if (secretPattern.test(JSON.stringify(test))) testFindings.push("Test contains secret-like data.");
-    return { name: test.name || "unnamed", passed: testFindings.length === 0, findings: testFindings };
+    return {
+      name: name || "unnamed",
+      passed: testFindings.length === 0,
+      evidenceType,
+      evidenceExcerpt,
+      sourceMessageIndex: test.sourceMessageIndex,
+      findings: testFindings
+    };
   });
 
-  if (tests.length < 3) findings.push("At least three independent test scenarios are required.");
-  if (tests.some((test) => !test.passed)) findings.push("One or more skill contract tests failed.");
+  const passedEvidenceTests = tests.filter((test) => test.passed).length;
+  const independentEvidenceTests = new Set(
+    tests.filter((test) => test.passed).map((test) => normalizeComparable(test.evidenceExcerpt))
+  ).size;
+  if (passedEvidenceTests < 1) findings.push("Private skill write requires at least one passing evidence-backed test grounded in the source conversation.");
+  if (passedEvidenceTests < 3 || independentEvidenceTests < 3) {
+    findings.push("Public skill publish requires at least three passing tests with independent source evidence.");
+  }
+  if (tests.some((test) => !test.passed)) findings.push("Every test declared for public publishing must pass with source-grounded evidence.");
 
   const markdownChecks = [
     /^---\n[\s\S]*?\n---/m.test(skill.skillMarkdown),
     /#\s+(?:When to use|Use this skill when)/i.test(skill.skillMarkdown),
     /#\s+(?:Workflow|Procedure|Steps)/i.test(skill.skillMarkdown),
     /#\s+(?:Verification|Validate|Success)/i.test(skill.skillMarkdown),
-    /#\s+(?:Safety|Do not use|Boundaries)/i.test(skill.skillMarkdown)
+    /#\s+(?:Safety|Do not use|Boundaries)/i.test(skill.skillMarkdown),
+    /#\s+Source evidence/i.test(skill.skillMarkdown),
+    /#\s+Test evidence/i.test(skill.skillMarkdown)
   ];
   if (markdownChecks.some((passed) => !passed)) findings.push("SKILL.md is missing required frontmatter or operational sections.");
 
@@ -124,7 +221,7 @@ export function validateSkill(skill: VerifiedSkillDraft, threshold = 75): SkillV
     (skill.prerequisites.length > 0 ? 4 : 0) +
     (skill.outputs.length > 0 ? 4 : 0) +
     (skill.verification.length >= 2 ? 5 : skill.verification.length * 2) +
-    (tests.length >= 3 && tests.every((test) => test.passed) ? 4 : 0),
+    (passedEvidenceTests >= 3 && independentEvidenceTests >= 3 && tests.every((test) => test.passed) ? 4 : 0),
     25
   );
   const evidence = clampScore([
@@ -154,15 +251,28 @@ export function validateSkill(skill: VerifiedSkillDraft, threshold = 75): SkillV
     5
   );
   const score = portability + reproducibility + evidence + ecosystemDemand + safety + novelty;
-  const criticalFailure = hasSecrets || hasPrivatePaths || hasPrivateIdentity || hasDangerousCommand || !ecosystemAllowed || tests.length < 3 || tests.some((test) => !test.passed) || markdownChecks.some((passed) => !passed);
-  const eligible = !criticalFailure && score >= threshold;
+  if (score < threshold) findings.push(`Public skill quality score ${score} is below the required ${threshold}.`);
+  const criticalFailure = hasSecrets || hasPrivatePaths || hasPrivateIdentity || hasDangerousCommand || !ecosystemAllowed || hasGenericName || hasPlaceholders || !hasOperationalScope || !evidenceNarrativeComplete || !reusableStructureComplete || markdownChecks.some((passed) => !passed);
+  const writeEligible = !criticalFailure && passedEvidenceTests >= 1;
+  const publishTestsMet = passedEvidenceTests >= 3 && independentEvidenceTests >= 3 && tests.every((test) => test.passed);
+  const eligible = writeEligible && publishTestsMet && hasLicense && score >= threshold;
 
   return {
     eligible,
-    status: eligible ? "verified" : criticalFailure ? "rejected" : "needs-work",
+    writeEligible,
+    status: eligible ? "verified" : writeEligible ? "needs-work" : "rejected",
     score,
     threshold,
-    validationLevel: "deterministic-contract",
+    validationLevel: "evidence-backed-contract",
+    requirements: {
+      write: { requiredEvidenceTests: 1, passedEvidenceTests, met: writeEligible },
+      publish: {
+        requiredEvidenceTests: 3,
+        passedEvidenceTests,
+        independentEvidenceTests,
+        met: eligible
+      }
+    },
     breakdown: { portability, reproducibility, evidence, ecosystemDemand, safety, novelty },
     tests,
     findings: Array.from(new Set(findings))
@@ -173,22 +283,28 @@ export function renderSkillMarkdown(skill: Omit<VerifiedSkillDraft, "skillMarkdo
   const list = (values: string[], empty = "None.") => values.length ? values.map((value) => `- ${value}`).join("\n") : `- ${empty}`;
   const tests = skill.testCases.map((test, index) => [
     `### ${index + 1}. ${test.name}`,
+    `- Status: ${test.passed && test.evidenceVerified ? "PASS" : "UNVERIFIED"}`,
     `- Input: ${test.input}`,
     `- Expected: ${test.expectedOutcome}`,
+    `- Method: ${test.testMethod}`,
+    `- Observed: ${test.observedOutcome}`,
+    `- Evidence type: ${test.evidenceType}`,
+    `- Evidence excerpt: ${test.evidenceExcerpt}`,
+    `- Source: ${test.sourceMessageIndex === undefined ? "unverified" : `conversation message ${test.sourceMessageIndex + 1}`}`,
     "- Success criteria:",
     ...test.successCriteria.map((criterion) => `  - ${criterion}`)
   ].join("\n")).join("\n\n");
 
   return `---
 name: ${skill.name}
-description: ${skill.description}
-tags: [${skill.tags.join(", ")}]
-version: ${skill.version}
-visibility: private
+description: ${yamlScalar(skill.description)}
+license: ${yamlScalar(skill.license)}
+compatibility: ${yamlScalar(skill.compatibility.join(", "))}
 metadata:
-  contextkit:
-    ecosystem: ${skill.ecosystem}
-    compatibility: [${skill.compatibility.join(", ")}]
+  contextkit-version: ${yamlScalar(skill.version)}
+  contextkit-ecosystem: ${yamlScalar(skill.ecosystem)}
+  contextkit-tags: ${yamlScalar(skill.tags.join(", "))}
+  contextkit-test-policy: ${yamlScalar("Evidence-backed; source excerpts required")}
 ---
 # ${skill.name}
 
@@ -220,7 +336,13 @@ ${list(skill.doNotUseWhen)}
 Rollback:
 ${list(skill.rollback)}
 
-## Contract tests
+## Source evidence
+- User request: ${skill.evidence.userRequest}
+- Agent method: ${skill.evidence.agentMethod}
+- Verified outcome: ${skill.evidence.outcome}
+- Reusable lesson: ${skill.evidence.reusableLesson}
+
+## Test evidence
 ${tests || "No tests defined."}
 `;
 }
@@ -231,4 +353,12 @@ function clampScore(value: number, maximum: number) {
 
 function normalizeComparable(value: string) {
   return value.toLowerCase().replace(/\s+/g, " ").trim();
+}
+
+function meaningfulWordCount(value: string) {
+  return value.trim().split(/\s+/).filter((word) => /[a-z0-9]/i.test(word)).length;
+}
+
+function yamlScalar(value: string) {
+  return JSON.stringify(value);
 }

@@ -31,7 +31,7 @@ contextkit-autocapture run claude -- "Implement webhook retries"
 contextkit-autocapture run codex -- "Verify the payment callback"
 ```
 
-The bridge locally redacts common secrets, submits only the latest completed task, skips duplicate and failed runs, and compiles only qualified Bankr-adjacent work into private `SKILL.md` drafts. Public publishing requires a validation score of at least 75, three passing contract tests, and explicit user approval.
+The bridge locally redacts common secrets, submits only the latest completed task, and skips duplicate or failed runs. Greetings, placeholders, plans, generic notes, project diaries, incomplete workflows, and plain claims are rejected. A private `SKILL.md` write requires a complete reusable Bankr-adjacent workflow plus at least one executed PASS backed by verbatim command output, test log, HTTP response, or artifact evidence from the source conversation. Public publishing requires three independent grounded PASS results, an explicit reuse license, a validation score of at least 75, clean safety checks, and explicit user approval. Test method, observed outcome, evidence excerpt, and source message are embedded in the generated skill.
 
 The VS Code-compatible extension for VS Code, Cursor, Windsurf, and VSCodium is in `extensions/contextkit-autocapture`:
 
@@ -48,12 +48,12 @@ It turns long conversations, project notes, and operational history into compact
 
 ## Verified Skill Registry
 
-ContextKit does not sell raw chat history or project-specific notes. MCP V2 compiles completed agent work into portable skills with declared inputs, executable steps, verification, failure handling, rollback, evidence, compatibility metadata, and contract tests.
+ContextKit does not sell raw chat history or project-specific notes. MCP V2 compiles completed agent work into portable skills with declared inputs, executable steps, verification, failure handling, rollback, compatibility metadata, source evidence, and evidence-backed tests.
 
 The lifecycle is strict:
 
 1. `contextkit_skill_compile` creates a private draft from completed work.
-2. Deterministic validation rejects secrets, private paths/identifiers, unsafe commands, weak evidence, unsupported ecosystems, and incomplete tests.
+2. Evidence-backed validation binds verbatim test proof to source messages and rejects secrets, private paths/identifiers, unsafe commands, weak evidence, unsupported ecosystems, and incomplete tests.
 3. `contextkit_skill_publish` lists only eligible skills after explicit user approval.
 4. `contextkit_skill_search` returns verified previews without exposing paid `SKILL.md` content.
 5. `contextkit_skill_buy` returns a versioned install bundle and non-resale license.

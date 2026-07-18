@@ -309,7 +309,7 @@ skillRoutes.forEach(([path, summary, requestSchema, price]) => {
     method: "post",
     path,
     summary,
-    description: `Requires a Bearer API key with context:write scope and ${formatUsd(price)} in account credits or verified x402 payment. Public publishing also requires userApproved=true; the API rejects unverified drafts.`,
+    description: `Requires a Bearer API key with context:write scope and ${formatUsd(price)} in account credits or verified x402 payment. Generic notes, plans, placeholders, project diaries, and plain assertions are rejected. Private skill writes require a complete reusable Bankr-adjacent workflow and at least one executed PASS with verbatim command output, test-log, HTTP-response, or artifact evidence. Public publishing requires three independent grounded PASS results, score 75+, safety validation, and userApproved=true. Test proof is embedded in the generated SKILL.md.`,
     tags: ["Verified Skills"],
     security: [{ ApiKeyAuth: [], X402Payment: [] }],
     request: {

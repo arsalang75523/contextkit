@@ -205,14 +205,14 @@ curl -X POST "https://contextkit.pro/api/context/upload-text?${params.toString()
               <p className="font-mono text-[10px] uppercase tracking-[0.17em] text-mint">Verified Skill Registry / Bankr x402</p>
               <h2 className="mt-2 max-w-3xl text-2xl font-semibold tracking-[-0.03em] text-white md:text-3xl">Compile real work. Publish only tested skills. Install what already works.</h2>
             </div>
-            <p className="max-w-md text-sm leading-6 text-white/52">Raw chats and project diaries are never listings. ContextKit requires portability, evidence, safety boundaries, and three passing contract tests.</p>
+            <p className="max-w-md text-sm leading-6 text-white/52">Raw chats, generic notes, plans, placeholders, project diaries, and plain claims are rejected. Private write requires a complete reusable workflow plus one source-grounded hard-evidence PASS; public listing requires three independent proofs, score 75+, safety checks, and approval.</p>
           </div>
           <div className="grid gap-px bg-line lg:grid-cols-3">
             <RegistryLane
               icon={<BadgeCheck className="h-4 w-4" />}
               step="01 / Compile"
               title="Private SKILL.md draft"
-              text="The LLM extracts a reusable Bankr-adjacent method; deterministic validation scores portability, evidence, safety, and tests."
+              text="The LLM extracts a reusable method only when the transcript contains an executed PASS backed by command output, a test log, HTTP response, or artifact evidence; method, observed result, and verbatim proof are written into SKILL.md."
               code={skillCompileCommand}
               price="$0.01"
             />
@@ -234,7 +234,7 @@ curl -X POST "https://contextkit.pro/api/context/upload-text?${params.toString()
             />
           </div>
           <div className="border-t border-line bg-mint/[0.035] px-5 py-4 text-sm leading-6 text-white/58 sm:px-7">
-            Publishing is a separate approval-gated call: use <code>mode: &quot;skill-publish&quot;</code> with the returned <code>skillId</code>, <code>publishToken</code>, and <code>userApproved: true</code>. The API rejects unverified or unapproved drafts even if an agent tries to publish them.
+            Publishing is a separate approval-gated call: use <code>mode: &quot;skill-publish&quot;</code> with the returned <code>skillId</code>, <code>publishToken</code>, and <code>userApproved: true</code>. The API also requires three independent source-grounded PASS results, score 75+, and clean safety checks.
           </div>
         </section>
       </div>

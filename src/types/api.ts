@@ -34,12 +34,18 @@ const skillTestCaseSchema = z.object({
   name: z.string().min(1).max(120),
   input: z.string().min(1).max(1_200),
   expectedOutcome: z.string().min(1).max(1_200),
-  successCriteria: z.array(z.string().min(1).max(280)).min(1).max(10)
+  successCriteria: z.array(z.string().min(1).max(280)).min(1).max(10),
+  testMethod: z.string().min(12).max(1_200),
+  observedOutcome: z.string().min(12).max(1_200),
+  evidenceType: z.enum(["command-output", "test-log", "http-response", "artifact", "assertion"]),
+  evidenceExcerpt: z.string().min(12).max(1_200),
+  passed: z.literal(true)
 });
 
 export const verifiedSkillSchema = z.object({
-  name: z.string().min(2).max(80).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
+  name: z.string().min(2).max(64).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
   description: z.string().min(20).max(280),
+  license: z.string().min(3).max(240),
   version: z.string().regex(/^\d+\.\d+\.\d+$/).default("1.0.0"),
   ecosystem: z.enum(["bankr", "x402", "base", "mcp", "wallet", "defi", "automation", "llm-gateway", "agent-infrastructure"]),
   compatibility: z.array(z.string().min(1).max(48)).min(1).max(16),
@@ -53,7 +59,7 @@ export const verifiedSkillSchema = z.object({
   doNotUseWhen: experienceTextListSchema,
   rollback: experienceTextListSchema,
   tags: z.array(z.string().min(1).max(48)).min(1).max(16),
-  testCases: z.array(skillTestCaseSchema).min(3).max(12),
+  testCases: z.array(skillTestCaseSchema).min(1).max(12),
   evidence: z.object({
     userRequest: z.string().min(1).max(1_200),
     agentMethod: z.string().min(1).max(2_500),

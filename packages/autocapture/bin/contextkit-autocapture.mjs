@@ -320,7 +320,8 @@ function savedExperience(result) {
 function skillDraftMessage(experience) {
   const validation = experience?.validation;
   if (validation?.eligible) {
-    return `ContextKit compiled verified private skill ${experience.id}: ${experience.title} (score ${validation.score}, ${validation.tests?.length ?? 0} contract tests). Show the user the validation result and ask whether to publish it for Bankr x402 installation. Never publish without explicit approval.`;
+    const passedEvidenceTests = validation.requirements?.publish?.passedEvidenceTests ?? validation.tests?.filter((test) => test.passed).length ?? 0;
+    return `ContextKit compiled verified private skill ${experience.id}: ${experience.title} (score ${validation.score}, ${passedEvidenceTests} source-grounded PASS results). Show the user the validation result and evidence summary, then ask whether to publish it for Bankr x402 installation. Never publish without explicit approval.`;
   }
   return `ContextKit saved private skill draft ${experience.id}: ${experience.title}. It is not publishable yet. Report validation findings and keep it private until corrected.`;
 }

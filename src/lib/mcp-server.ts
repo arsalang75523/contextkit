@@ -35,7 +35,7 @@ const MAX_MCP_CONVERSATION_CHARS = 400_000;
 const MCP_AGENT_INSTRUCTIONS_URI = "contextkit://instructions";
 
 const MCP_AGENT_INSTRUCTIONS = {
-  policyVersion: "mcp-v2.2-verified-skills",
+  policyVersion: "mcp-v2.4-strict-evidence-skills",
   purpose: "Convert real completed Bankr-adjacent work into tested portable SKILL.md drafts, then publish only verified skills with explicit user approval.",
   startup: [
     `Read ${MCP_AGENT_INSTRUCTIONS_URI} or call contextkit_get_agent_instructions when connecting to ContextKit MCP.`,
@@ -52,15 +52,15 @@ const MCP_AGENT_INSTRUCTIONS = {
       "constraints, decisions, errors, and fixes",
       "reusable lesson for future agents"
     ],
-    savePolicy: "Save a private draft only when ContextKit detects real completed work and can compile a portable Bankr-adjacent skill.",
+    savePolicy: "Write a private draft only for non-trivial reusable Bankr-adjacent work with a complete operational workflow and at least one executed test backed by verbatim hard evidence. Plain claims, placeholders, generic notes, plans, and project diaries are rejected.",
     rejectPolicy: "Reject project diaries, local paths, repo-specific instructions, generic chat, incomplete attempts, unsupported claims, secrets, OTPs, API keys, passwords, bearer tokens, private wallet data, or personal data.",
-    publicEligibility: "Public skills require an approved ecosystem namespace, at least three workflow steps, verification, safety boundaries, rollback, evidence, three passing contract tests, and quality score >= 75."
+    publicEligibility: "Public skills require an explicit reuse license, approved ecosystem namespace, complete workflow structure, quality score >= 75, and at least three passing tests with distinct verbatim hard-evidence excerpts grounded in the source conversation. Assertions are not test evidence. The generated SKILL.md must include Source evidence and Test evidence sections."
   },
   publish: {
     tool: "contextkit_skill_publish",
     requiresExplicitUserApproval: true,
     defaultVisibility: "private",
-    instruction: "If validation.eligible is true, show the skill title, score, test count, and findings; then ask whether the user wants to publish it for Bankr x402 installation. Never publish an unverified draft."
+    instruction: "If validation.eligible is true, show the skill title, score, grounded test count, evidence summary, and findings; then ask whether the user wants to publish it for Bankr x402 installation. Never publish an unverified draft."
   },
   recommendedAgentBehavior: [
     "Do not ask the user to paste this policy each time.",
@@ -127,7 +127,7 @@ export function createContextKitMcpServer(options: ContextKitMcpOptions) {
     "contextkit_skill_compile",
     {
       title: "Compile completed work into a verified skill draft",
-      description: "MCP V2 primary capture tool. After successful non-trivial Bankr, x402, Base, MCP, wallet, DeFi, automation, LLM gateway, or agent-infrastructure work, compile the completed task into a portable tested SKILL.md. Saves privately when qualified; public publishing remains a separate approval-gated action.",
+      description: "MCP V2 primary capture tool. Compile only completed, non-trivial, reusable Bankr-adjacent work with a complete workflow and at least one executed test backed by verbatim command output, test log, HTTP response, or artifact evidence. Generic notes and plain assertions are rejected. Public publishing requires three independent grounded PASS results and explicit approval.",
       inputSchema: {
         ...conversationInput,
         minConfidence: z.number().min(0.5).max(0.95).default(0.72),
@@ -146,7 +146,7 @@ export function createContextKitMcpServer(options: ContextKitMcpOptions) {
     "contextkit_skill_publish",
     {
       title: "Publish a verified paid skill",
-      description: "Publish an existing private skill only after validation.eligible=true and explicit user approval. Unverified, project-specific, unsafe, or under-tested drafts are rejected by the API.",
+      description: "Publish an existing private skill only after validation.eligible=true, three independent source-grounded PASS results, score 75+, safety checks, and explicit user approval. Unverified or under-tested drafts are rejected by the API.",
       inputSchema: {
         skillId: z.string().regex(/^exp_[a-f0-9]{24}$/),
         priceUsd: z.literal(0.05).default(0.05),
@@ -392,11 +392,16 @@ function messageCharacters(messages: Array<{ content: string }>) {
 }
 
 function validateExperienceWrite(input: ConversationInput & Record<string, unknown>) {
-  if (input.messages || input.contextId) return validateConversation(input);
-  if (typeof input.content === "string" && input.content.trim()) return null;
-  if (typeof input.lesson === "string" && input.lesson.trim()) return null;
-  if (typeof input.title === "string" && input.title.trim()) return null;
-  return "Provide messages, contextId, content, lesson, or title.";
+  if (input.messages || input.contextId) {
+    return "Use contextkit_skill_compile for conversation-based writes so ContextKit can verify execution evidence.";
+  }
+  const content = typeof input.content === "string" ? input.content.trim() : "";
+  const task = typeof input.task === "string" ? input.task.trim() : "";
+  const outcome = typeof input.outcome === "string" ? input.outcome.trim() : "";
+  const lesson = typeof input.lesson === "string" ? input.lesson.trim() : "";
+  const tags = Array.isArray(input.tags) ? input.tags.filter((tag) => typeof tag === "string" && tag.trim()) : [];
+  if (content.split(/\s+/).length >= 20 && task && outcome && lesson && tags.length >= 2) return null;
+  return "Raw experience writes require 20+ words of operational content, task, observed outcome, reusable lesson, and at least two tags. Prefer contextkit_skill_compile for tested work.";
 }
 
 function experienceBody(input: Record<string, unknown>, mode: "experience-save" | "experience-publish") {

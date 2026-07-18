@@ -71,6 +71,6 @@ The runner captures structured CLI output and submits it only after a successful
 - Common API keys, bearer tokens, passwords, OTPs, private keys, and seed phrases are redacted locally.
 - File-write tool payloads include the target path, not source-file contents.
 - Public publishing is never automatic and unverified drafts cannot be listed.
-- Public skills must be portable, Bankr-adjacent, free of private paths/identifiers, and include at least three contract tests.
+- Generic notes, plans, placeholders, project diaries, and plain assertions are rejected. Private skill writes require a complete reusable workflow and one source-grounded hard-evidence PASS. Public skills require three independent grounded PASS results, score 75+, approved Bankr-adjacent scope, and no private paths or identifiers. Test proof is included in `SKILL.md`.
 - A local hash cache prevents duplicate consideration calls.
 - A sanitized local outbox (`0600`) retries temporary network/API failures on the next run, so completed tasks are not silently lost.

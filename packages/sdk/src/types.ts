@@ -36,18 +36,31 @@ export type ContextUploadResponse = {
 
 export type SkillValidationReport = {
   eligible: boolean;
+  writeEligible: boolean;
   status: "verified" | "needs-work" | "rejected";
   score: number;
   threshold: number;
-  validationLevel: "deterministic-contract";
+  validationLevel: "evidence-backed-contract";
+  requirements: {
+    write: { requiredEvidenceTests: 1; passedEvidenceTests: number; met: boolean };
+    publish: { requiredEvidenceTests: 3; passedEvidenceTests: number; independentEvidenceTests: number; met: boolean };
+  };
   breakdown: Record<string, number>;
-  tests: Array<{ name: string; passed: boolean; findings: string[] }>;
+  tests: Array<{
+    name: string;
+    passed: boolean;
+    evidenceType: "command-output" | "test-log" | "http-response" | "artifact" | "assertion";
+    evidenceExcerpt: string;
+    sourceMessageIndex?: number;
+    findings: string[];
+  }>;
   findings: string[];
 };
 
 export type VerifiedSkill = {
   name: string;
   description: string;
+  license: string;
   version: string;
   ecosystem: "bankr" | "x402" | "base" | "mcp" | "wallet" | "defi" | "automation" | "llm-gateway" | "agent-infrastructure";
   compatibility: string[];
@@ -62,6 +75,15 @@ export type VerifiedSkill = {
   rollback?: string[];
   tags: string[];
   testCount: number;
+  tests?: Array<{
+    name: string;
+    passed: boolean;
+    testMethod: string;
+    observedOutcome: string;
+    evidenceType: "command-output" | "test-log" | "http-response" | "artifact" | "assertion";
+    evidenceExcerpt: string;
+    sourceMessageIndex?: number;
+  }>;
   skillMarkdown?: string;
 };
 

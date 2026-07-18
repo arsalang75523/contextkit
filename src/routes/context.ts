@@ -541,6 +541,9 @@ async function runExperienceWrite<T>(operation: () => Promise<T>) {
     if (error instanceof Error && error.message === "experience_content_required") {
       throw new HTTPException(422, { message: "Experience content is required. Provide content, lesson, summary, task, outcome, messages, or contextId." });
     }
+    if (error instanceof Error && error.message === "experience_not_reusable") {
+      throw new HTTPException(422, { message: "Raw experience writes require a concrete task, observed outcome, reusable lesson, at least two tags, and enough operational detail. Use skill-compile for tested agent work." });
+    }
     if (error instanceof Error && error.message === "experience_not_found") {
       throw new HTTPException(404, { message: "Experience record was not found." });
     }
@@ -549,6 +552,9 @@ async function runExperienceWrite<T>(operation: () => Promise<T>) {
     }
     if (error instanceof Error && error.message === "skill_required_for_publish") {
       throw new HTTPException(422, { message: "Public listings must contain a compiled ContextKit Verified Skill. Run experience-consider or contextkit_skill_compile first." });
+    }
+    if (error instanceof Error && error.message.startsWith("skill_not_writeable:")) {
+      throw new HTTPException(422, { message: error.message.slice("skill_not_writeable:".length) });
     }
     if (error instanceof Error && error.message.startsWith("skill_not_publishable:")) {
       throw new HTTPException(422, { message: error.message.slice("skill_not_publishable:".length) });

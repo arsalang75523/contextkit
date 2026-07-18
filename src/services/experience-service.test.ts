@@ -40,6 +40,7 @@ function llmCandidate() {
     skill: {
       name: "bankr-x402-timeout-recovery",
       description: "Diagnose Bankr x402 gateway timeouts when an authenticated origin succeeds directly.",
+      license: "Apache-2.0",
       version: "1.0.0",
       ecosystem: "x402",
       compatibility: ["bankr", "claude-code", "codex"],
@@ -62,19 +63,34 @@ function llmCandidate() {
           name: "slow large payload",
           input: "A 2,700-token request succeeds at origin but exceeds the paid forwarding deadline.",
           expectedOutcome: "Precompute the request and return a paid HTTP 200 response.",
-          successCriteria: ["Paid call succeeds", "Response schema is unchanged"]
+          successCriteria: ["Paid call succeeds", "Response schema is unchanged"],
+          testMethod: "Call the authenticated origin and record its final HTTP status.",
+          observedOutcome: "The authenticated origin completed successfully with HTTP 200.",
+          evidenceType: "http-response",
+          evidenceExcerpt: "Origin returned HTTP 200.",
+          passed: true
         },
         {
           name: "origin authentication failure",
           input: "The direct internal endpoint returns HTTP 401 before x402 forwarding.",
           expectedOutcome: "Stop timeout tuning and repair the scoped origin credential.",
-          successCriteria: ["Authentication layer identified", "Gateway deadline remains unchanged"]
+          successCriteria: ["Authentication layer identified", "Gateway deadline remains unchanged"],
+          testMethod: "Retry the precomputed request through the paid Bankr endpoint.",
+          observedOutcome: "The paid endpoint completed successfully with HTTP 200.",
+          evidenceType: "http-response",
+          evidenceExcerpt: "Paid endpoint returned HTTP 200.",
+          passed: true
         },
         {
           name: "payment authorization failure",
           input: "The origin is healthy but Bankr reports x402 payment status 401.",
           expectedOutcome: "Separate wallet authorization from backend latency diagnosis.",
-          successCriteria: ["Payment issue isolated", "Origin configuration is preserved"]
+          successCriteria: ["Payment issue isolated", "Origin configuration is preserved"],
+          testMethod: "Compare the paid response keys with the authenticated origin response keys.",
+          observedOutcome: "The response schema matched after precomputation and paid forwarding.",
+          evidenceType: "test-log",
+          evidenceExcerpt: "Schema comparison test passed.",
+          passed: true
         }
       ]
     }
@@ -97,6 +113,7 @@ function compactLlmCandidate() {
     s: {
       name: skill.name,
       desc: skill.description,
+      license: skill.license,
       eco: skill.ecosystem,
       trigger: skill.trigger,
       pre: skill.prerequisites,
@@ -112,7 +129,12 @@ function compactLlmCandidate() {
         item.name,
         item.input,
         item.expectedOutcome,
-        item.successCriteria[0]
+        item.successCriteria[0],
+        item.testMethod,
+        item.observedOutcome,
+        item.evidenceType,
+        item.evidenceExcerpt,
+        item.passed
       ])
     }
   };
@@ -134,7 +156,7 @@ test("compiles, protects, publishes, searches, and buys a verified skill", async
     const compiled = await service.consider({
       messages: [
         { role: "user", content: "Repair this Bankr x402 timeout without changing the response." },
-        { role: "assistant", content: "Compared origin and gateway latency, precomputed the long work, and verified HTTP 200." }
+        { role: "assistant", content: "Origin returned HTTP 200. Paid endpoint returned HTTP 200. Schema comparison test passed." }
       ],
       minConfidence: 0.72,
       autoSave: true,
@@ -183,7 +205,8 @@ test("compiles, protects, publishes, searches, and buys a verified skill", async
     const purchase = await service.buy({ skillId }, "buyer-account", 0.05);
     assert.equal(purchase.installBundle.format, "contextkit-verified-skill/v1");
     assert.equal(purchase.installBundle.fileName, "SKILL.md");
-    assert.match(purchase.installBundle.skillMarkdown, /## Contract tests/);
+    assert.match(purchase.installBundle.skillMarkdown, /## Test evidence/);
+    assert.match(purchase.installBundle.skillMarkdown, /Evidence excerpt: Origin returned HTTP 200/);
     assert.equal(purchase.experience.sales, 1);
     assert.equal(purchase.experience.earnedUsd, 0.05);
     assert.equal(purchase.license.resale, false);
@@ -196,7 +219,13 @@ test("never publishes an uncompiled legacy note", async () => {
   const service = new ExperienceService({ CONTEXTKIT_KV: memoryNamespace() });
   const owner = { ownerId: "account-test" };
   const saved = await service.save({
-    content: "A project-specific note without a portable skill contract.",
+    experience: {
+      content: "A completed Bankr gateway investigation compared the paid route with the authenticated origin, isolated the timeout layer, and documented the reusable recovery sequence for future agent runs.",
+      task: "Diagnose a repeatable Bankr paid gateway timeout without changing its response contract.",
+      outcome: "The paid route completed successfully after long work was moved before forwarding.",
+      lesson: "Compare the origin and gateway separately before changing timeout or payment configuration.",
+      tags: ["bankr", "x402"]
+    },
     mode: "save"
   }, owner);
 
@@ -209,6 +238,62 @@ test("never publishes an uncompiled legacy note", async () => {
     }, owner),
     /skill_required_for_publish/
   );
+});
+
+test("rejects an unstructured or trivial legacy write", async () => {
+  const service = new ExperienceService({ CONTEXTKIT_KV: memoryNamespace() });
+
+  await assert.rejects(
+    () => service.save({ content: "hello this is a random test", mode: "save" }, { ownerId: "account-test" }),
+    /experience_not_reusable/
+  );
+});
+
+test("writes a private draft with one grounded passing test but blocks public publish", async () => {
+  const originalFetch = globalThis.fetch;
+  const candidate = llmCandidate();
+  candidate.skill.testCases = candidate.skill.testCases.slice(0, 1);
+  globalThis.fetch = async () => Response.json({
+    choices: [{ message: { content: JSON.stringify(candidate) } }]
+  });
+
+  try {
+    const service = new ExperienceService({
+      CONTEXTKIT_KV: memoryNamespace(),
+      BANKR_LLM_KEY: "bk_test_server_only",
+      BANKR_LLM_BASE_URL: "https://llm.test/v1"
+    });
+    const owner = { ownerId: "account-test" };
+    const compiled = await service.consider({
+      messages: [
+        { role: "user", content: "Repair this Bankr x402 timeout without changing the response." },
+        { role: "assistant", content: "Origin returned HTTP 200." }
+      ],
+      minConfidence: 0.72,
+      autoSave: true,
+      priceUsd: 0.05
+    }, owner);
+
+    assert.equal(compiled.shouldSave, true);
+    assert.equal(compiled.validation?.writeEligible, true);
+    assert.equal(compiled.validation?.eligible, false);
+    assert.equal(compiled.validation?.status, "needs-work");
+    assert.equal(compiled.publishRecommendation?.shouldAskUser, false);
+    if (!compiled.experience || !("id" in compiled.experience)) assert.fail("Expected a saved private draft.");
+    const skillId = compiled.experience.id;
+
+    await assert.rejects(
+      () => service.publish({
+        skillId,
+        priceUsd: 0.05,
+        visibility: "public",
+        userApproved: true
+      }, owner),
+      /skill_not_publishable/
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });
 
 test("compiles the compact LLM wire format without losing validation", async () => {
@@ -226,7 +311,7 @@ test("compiles the compact LLM wire format without losing validation", async () 
     const compiled = await service.consider({
       messages: [
         { role: "user", content: "Repair a Bankr x402 timeout without changing the response contract." },
-        { role: "assistant", content: "Compared origin and gateway latency, precomputed long work, and verified HTTP 200." }
+        { role: "assistant", content: "Origin returned HTTP 200. Paid endpoint returned HTTP 200. Schema comparison test passed." }
       ],
       minConfidence: 0.72,
       autoSave: true,
@@ -269,7 +354,7 @@ test("retries skill compilation with the primary model when the configured model
     const compiled = await service.consider({
       messages: [
         { role: "user", content: "Repair a Bankr x402 timeout without changing the response contract." },
-        { role: "assistant", content: "Compared both paths, applied the repair, and verified HTTP 200." }
+        { role: "assistant", content: "Origin returned HTTP 200. Paid endpoint returned HTTP 200. Schema comparison test passed." }
       ],
       minConfidence: 0.72,
       autoSave: false,

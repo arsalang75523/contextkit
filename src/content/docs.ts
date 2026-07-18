@@ -153,7 +153,7 @@ export const bankrEndpoints = [
     path: "contextkit-experience-write",
     price: "$0.01",
     modes: ["skill-compile", "skill-publish", "experience-consider", "experience-save", "experience-publish"],
-    description: "Compile completed Bankr-adjacent work into portable tested SKILL.md drafts, then publish only validation-approved skills."
+    description: "Compile only complete reusable workflows with hard source-grounded execution evidence. Generic notes and assertions are rejected; public skills need three independent PASS proofs, score 75+, safety checks, and approval."
   },
   {
     slug: "contextkit-experience-search",

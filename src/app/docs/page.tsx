@@ -299,7 +299,7 @@ export default function DocsPage() {
               <div className="mt-4 rounded-md border border-amber/25 bg-amber/[0.08] p-4 text-sm leading-6 text-white/68">
                 <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-amber">MCP V2 auto-capture</p>
                 <p className="mt-2">
-                  Connected agents can read <code>contextkit://instructions</code> or call <code>contextkit_get_agent_instructions</code>. The policy tells them to call <code>contextkit_skill_compile</code> after completed Bankr-adjacent work. ContextKit saves a private SKILL.md draft, runs portability/security/evidence/contract-test validation, and permits <code>contextkit_skill_publish</code> only after verification and user approval. For enforced lifecycle capture, use the native adapters or VS Code-compatible runner in the <Link href="/mcp-guide" className="text-mint underline decoration-mint/30 underline-offset-4">MCP Guide</Link>.
+                  Connected agents can read <code>contextkit://instructions</code> or call <code>contextkit_get_agent_instructions</code>. The policy tells them to call <code>contextkit_skill_compile</code> only after completed, non-trivial Bankr-adjacent work. Generic notes, plans, placeholders, project diaries, and plain claims are rejected. A private write requires a complete reusable workflow and at least one executed PASS backed by verbatim command output, test log, HTTP response, or artifact evidence. Public publishing requires three independent grounded PASS results, score 75+, safety checks, and user approval. Every proof is rendered into the skill&apos;s <code>Source evidence</code> and <code>Test evidence</code> sections. For enforced lifecycle capture, use the native adapters or VS Code-compatible runner in the <Link href="/mcp-guide" className="text-mint underline decoration-mint/30 underline-offset-4">MCP Guide</Link>.
                 </p>
               </div>
               <div className="mt-4 grid gap-4 lg:grid-cols-2">
@@ -331,12 +331,13 @@ export default function DocsPage() {
 
             <DocSection id="verified-skills" title="Verified Skills">
               <p>
-                Registry listings are installable skills, not raw transcripts. ContextKit compiles completed Bankr-adjacent work into a private <code>SKILL.md</code>, then runs deterministic portability, reproducibility, evidence, ecosystem, safety, and novelty checks. Public listing requires score 75+, three passing contract tests, and explicit user approval.
+                Registry listings are installable skills, not raw transcripts. ContextKit compiles only complete reusable Bankr-adjacent workflows and binds every accepted test to verbatim hard evidence from the source conversation. Assertions and generic content do not count. A private write needs one grounded execution PASS. Public listing needs three independent grounded PASS results, score 75+, approved ecosystem, safety checks, ownership, and explicit user approval.
               </p>
-              <div className="mt-4 grid gap-3 md:grid-cols-3">
-                <InfoCard title="1. Compile privately" body="The LLM extracts the reusable method; secrets, identities, local paths, and project-only details are removed or rejected." />
-                <InfoCard title="2. Verify + approve" body="The API checks workflow steps, evidence, observable verification, failure handling, rollback, safety boundaries, and three tests." />
-                <InfoCard title="3. Buy + install" body="A purchase returns the full SKILL.md, versioned manifest, validation report, compatibility metadata, and non-resale license." />
+              <div className="mt-4 grid gap-3 md:grid-cols-2">
+                <InfoCard title="Private write gate" body="Non-trivial reusable work, complete prerequisites/inputs/outputs/workflow/verification/failure/safety/rollback structure, and at least one executed PASS with source-grounded hard evidence." />
+                <InfoCard title="Public publish gate" body="Three independent grounded PASS results, every declared test passing, score 75+, explicit reuse license, approved ecosystem, no secrets/private paths/unsafe commands, ownership, publish capability, and userApproved=true." />
+                <InfoCard title="Evidence inside SKILL.md" body="Each test records PASS status, method, expected and observed outcomes, hard evidence type, verbatim excerpt, source message number, and success criteria under Test evidence. Plain assertions are refused." />
+                <InfoCard title="Buy + install" body="A purchase returns the full evidence-bearing SKILL.md, versioned manifest, validation report, compatibility metadata, and non-resale license." />
               </div>
               <div className="mt-4 grid gap-4 lg:grid-cols-3">
                 <div><h3 className="mb-2 font-semibold text-white">Compile</h3><CodeBlock code={skillCompile} /></div>

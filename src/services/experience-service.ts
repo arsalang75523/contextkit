@@ -19,6 +19,7 @@ import {
   renderSkillMarkdown,
   validateSkill,
   type PublicSkillEcosystem,
+  type SkillTestCase,
   type SkillValidationReport,
   type VerifiedSkillDraft
 } from "@/services/skill-validation";
@@ -69,6 +70,10 @@ export class ExperienceService {
     const normalized = normalizeExperience(input, context.messages);
     assertMeaningfulExperience(normalized);
     const validation = normalized.skill ? validateSkill(normalized.skill) : undefined;
+    if (normalized.skill && !validation?.writeEligible) {
+      const details = validation?.findings.join(" ") || "Skill draft has no source-grounded passing test evidence.";
+      throw new Error(`skill_not_writeable:${details}`);
+    }
     const publishToken = context.ownerId === "bankr-hosted" ? createId("pub") : undefined;
     const record: ExperienceRecord = {
       id: createId("exp"),
@@ -164,7 +169,7 @@ export class ExperienceService {
 
     const results = records
       .filter((record) => record.visibility === "public" || record.ownerId === ownerId)
-      .filter((record) => !input.verifiedOnly || record.validation?.eligible === true)
+      .filter((record) => !input.verifiedOnly || Boolean(record.skill && validateSkill(record.skill).eligible))
       .filter((record) => !ecosystems.size || Boolean(record.skill && ecosystems.has(record.skill.ecosystem)))
       .filter((record) => !compatibility.size || Boolean(record.skill?.compatibility.some((host) => compatibility.has(normalizeTag(host)))))
       .map((record) => ({ record, score: scoreRecord(record, query, tags) }))
@@ -184,7 +189,7 @@ export class ExperienceService {
   }
 
   async consider(input: ExperienceConsiderInput, context: ExperienceInputContext) {
-    const messages = context.messages ?? [];
+    const messages = context.messages ?? input.messages ?? [];
     const candidate = await this.generateCandidate(messages, input.minConfidence);
     const shouldSave = Boolean(candidate.shouldSave) && candidate.confidence >= input.minConfidence;
 
@@ -194,6 +199,7 @@ export class ExperienceService {
         reason: candidate.reason || "No completed reusable agent experience detected.",
         confidence: candidate.confidence,
         requiredEvidence: candidate.requiredEvidence,
+        validation: candidate.validation,
         nextAgentAction: "Do not save. Continue working until there is a completed outcome and reusable method."
       };
     }
@@ -211,7 +217,7 @@ export class ExperienceService {
         tags: candidate.experience.tags,
         confidence: candidate.confidence,
         source: "mcp-v2-auto-detect",
-        skill: candidate.skill,
+        skill: candidate.skill as unknown as VerifiedSkillInput,
         metadata: {
           suggestedPriceUsd: input.priceUsd,
           detectionReason: candidate.reason,
@@ -248,11 +254,12 @@ export class ExperienceService {
   async buy(input: ExperienceBuyInput, buyerId: string, amountUsd = 0.05) {
     const id = input.experienceId ?? input.skillId ?? input.listingId ?? "";
     const record = await this.kv.get<ExperienceRecord>(recordKey(id));
-    if (!record || record.visibility !== "public" || !record.skill || !record.validation?.eligible) {
+    if (!record || record.visibility !== "public" || !record.skill) {
       throw new Error("experience_not_found");
     }
     const skill = record.skill;
-    const validation = record.validation;
+    const validation = validateSkill(skill);
+    if (!validation.eligible) throw new Error("experience_not_found");
 
     const now = new Date().toISOString();
     const updated: ExperienceRecord = {
@@ -292,8 +299,10 @@ export class ExperienceService {
           id: updated.id,
           name: skill.name,
           version: skill.version,
+          license: skill.license,
           ecosystem: skill.ecosystem,
           compatibility: skill.compatibility,
+          evidencePolicy: validation.requirements,
           validation
         }
       },
@@ -316,8 +325,13 @@ export class ExperienceService {
           "Convert it into a portable Bankr-adjacent skill, never a project diary or user-specific note.",
           "Public skill ecosystems are: bankr, x402, base, mcp, wallet, defi, automation, llm-gateway, agent-infrastructure.",
           "Remove names, private paths/domains/IDs, credentials, secrets, and environment-specific values; parameterize necessary values.",
-          "Require exactly 3 concise executable steps, 1 verification, 1 failure response, 1 safety boundary, 1 rollback, and exactly 3 concise independent contract tests.",
-          "Reject plans, brainstorms, incomplete attempts, generic notes, pure summaries, private data, or invented evidence.",
+          "Require exactly 3 concise executable steps, 1 verification, 1 failure response, 1 safety boundary, and 1 rollback.",
+          "Return 1-3 tests that were actually executed in the conversation; never invent hypothetical tests or results.",
+          "Each test needs method, observed outcome, PASS=true, hard evidence type (command-output, test-log, http-response, or artifact), and an exact 12+ character evidence excerpt copied verbatim from the conversation.",
+          "Never treat a claim like 'it works', future plan, generic status sentence, or model-authored assertion as test evidence.",
+          "Use distinct evidence excerpts for independent tests. If no executed passing test evidence exists, set save=false.",
+          "Reject greetings, trivial requests, placeholders, plans, brainstorms, incomplete attempts, generic notes, pure summaries, one-off private project details, private data, or invented evidence.",
+          "A reusable skill needs concrete prerequisites, inputs, outputs, exactly 3 distinct executable steps, verification, failure handling, a safety boundary, rollback, and at least 2 tags.",
           "Keep the full JSON below 450 tokens; each string must be a complete thought and no longer than 160 characters.",
           `Set save=true only when confidence >= ${minConfidence}; otherwise return the same schema with concise empty skill fields.`
         ].join(" ")
@@ -338,6 +352,7 @@ export class ExperienceService {
             s: {
               name: "lowercase-kebab-case",
               desc: "what the skill does and when to use it",
+              license: "explicit reuse license",
               eco: "bankr|x402|base|mcp|wallet|defi|automation|llm-gateway|agent-infrastructure",
               trigger: "explicit condition for loading this skill",
               pre: ["string"],
@@ -350,7 +365,7 @@ export class ExperienceService {
               rollback: ["safe rollback"],
               tags: ["string"],
               tests: [
-                ["name", "concrete input", "expected outcome", "success criterion"]
+                ["name", "concrete input", "expected outcome", "success criterion", "test method", "observed outcome", "command-output|test-log|http-response|artifact|assertion", "verbatim source excerpt", true]
               ]
             }
           },
@@ -381,7 +396,7 @@ export class ExperienceService {
       });
     }
 
-    return normalizeCandidate(output);
+    return normalizeCandidate(output, messages);
   }
 
   private async recordsFromIndex(prefix: string) {
@@ -438,7 +453,7 @@ function normalizeExperience(input: ExperienceSaveInput | ExperiencePublishInput
   };
 }
 
-function normalizeCandidate(output: Record<string, unknown>) {
+function normalizeCandidate(output: Record<string, unknown>, messages: ConversationMessage[]) {
   const evidence = objectValue(output.requiredEvidence ?? output.e);
   const experience = objectValue(output.experience);
   const rawSkill = objectValue(output.skill ?? output.s);
@@ -448,7 +463,7 @@ function normalizeCandidate(output: Record<string, unknown>) {
     outcome: redactSensitive(cleanText(String(evidence.outcome ?? ""))),
     reusableLesson: redactSensitive(cleanText(String(evidence.reusableLesson ?? evidence.lesson ?? "")))
   };
-  const skill = normalizeSkill(rawSkill as VerifiedSkillInput, requiredEvidence);
+  const skill = groundSkillTestEvidence(normalizeSkill(rawSkill as VerifiedSkillInput, requiredEvidence), messages);
   const content = redactSensitive(cleanText(String(experience.content ?? requiredEvidence.agentMethod)));
   const lesson = redactSensitive(cleanText(String(experience.lesson ?? requiredEvidence.reusableLesson)));
   const outcome = redactSensitive(cleanText(String(experience.outcome ?? requiredEvidence.outcome)));
@@ -483,7 +498,7 @@ function normalizeCandidate(output: Record<string, unknown>) {
   const hasExperience = Boolean(candidate.experience.content || candidate.experience.lesson || candidate.experience.outcome);
   return {
     ...candidate,
-    shouldSave: candidate.shouldSave && hasEvidence && hasExperience && Boolean(skill.name && skill.steps.length) && validation.status !== "rejected"
+    shouldSave: candidate.shouldSave && hasEvidence && hasExperience && Boolean(skill.name && skill.steps.length) && validation.writeEligible
   };
 }
 
@@ -493,6 +508,7 @@ function normalizeSkill(input: unknown, evidence: VerifiedSkillDraft["evidence"]
   const ecosystem = (rawEcosystem || "agent-infrastructure") as PublicSkillEcosystem;
   const name = normalizeTag(String(value.name ?? "reusable-agent-workflow")) || "reusable-agent-workflow";
   const description = redactSensitive(cleanText(String(value.description ?? value.desc ?? "Reusable agent workflow compiled from a completed and verified task outcome.")));
+  const license = redactSensitive(cleanText(String(value.license ?? "ContextKit Marketplace License; non-resale installation use.")));
   const rawTests = Array.isArray(value.testCases) ? value.testCases : Array.isArray(value.tests) ? value.tests : [];
   const testCases = rawTests.length
     ? rawTests.map((item) => {
@@ -501,7 +517,14 @@ function normalizeSkill(input: unknown, evidence: VerifiedSkillDraft["evidence"]
           name: redactSensitive(cleanText(String(item[0] ?? "scenario"))).slice(0, 120),
           input: redactSensitive(cleanText(String(item[1] ?? ""))).slice(0, 1_200),
           expectedOutcome: redactSensitive(cleanText(String(item[2] ?? ""))).slice(0, 1_200),
-          successCriteria: cleanList([redactSensitive(String(item[3] ?? ""))])
+          successCriteria: cleanList([redactSensitive(String(item[3] ?? ""))]),
+          testMethod: redactSensitive(cleanText(String(item[4] ?? ""))).slice(0, 1_200),
+          observedOutcome: redactSensitive(cleanText(String(item[5] ?? ""))).slice(0, 1_200),
+          evidenceType: normalizeEvidenceType(item[6]),
+          evidenceExcerpt: redactSensitive(cleanText(String(item[7] ?? ""))).slice(0, 1_200),
+          passed: booleanValue(item[8]),
+          evidenceVerified: Boolean(item[9]),
+          sourceMessageIndex: numberValue(item[10])
         };
       }
       const test = objectValue(item);
@@ -509,13 +532,21 @@ function normalizeSkill(input: unknown, evidence: VerifiedSkillDraft["evidence"]
         name: redactSensitive(cleanText(String(test.name ?? "scenario"))).slice(0, 120),
         input: redactSensitive(cleanText(String(test.input ?? ""))).slice(0, 1_200),
         expectedOutcome: redactSensitive(cleanText(String(test.expectedOutcome ?? ""))).slice(0, 1_200),
-        successCriteria: cleanList(arrayOfStrings(test.successCriteria).map(redactSensitive)).slice(0, 10)
+        successCriteria: cleanList(arrayOfStrings(test.successCriteria).map(redactSensitive)).slice(0, 10),
+        testMethod: redactSensitive(cleanText(String(test.testMethod ?? ""))).slice(0, 1_200),
+        observedOutcome: redactSensitive(cleanText(String(test.observedOutcome ?? ""))).slice(0, 1_200),
+        evidenceType: normalizeEvidenceType(test.evidenceType),
+        evidenceExcerpt: redactSensitive(cleanText(String(test.evidenceExcerpt ?? ""))).slice(0, 1_200),
+        passed: booleanValue(test.passed),
+        evidenceVerified: Boolean(test.evidenceVerified),
+        sourceMessageIndex: numberValue(test.sourceMessageIndex)
       };
     }).slice(0, 12)
     : [];
   const draft = {
     name,
     description,
+    license,
     version: /^\d+\.\d+\.\d+$/.test(String(value.version ?? "")) ? String(value.version) : "1.0.0",
     ecosystem,
     compatibility: cleanTags(arrayOfStrings(value.compatibility)).length
@@ -543,7 +574,24 @@ function normalizeSkill(input: unknown, evidence: VerifiedSkillDraft["evidence"]
   return { ...draft, skillMarkdown: renderSkillMarkdown(draft) };
 }
 
-function assertMeaningfulExperience(record: Pick<ExperienceRecord, "content" | "lesson" | "summary" | "task" | "outcome" | "constraints" | "decisions" | "tags">) {
+function groundSkillTestEvidence(skill: VerifiedSkillDraft, messages: ConversationMessage[]): VerifiedSkillDraft {
+  const sanitizedMessages = messages.map((message) => redactSensitive(cleanText(message.content)));
+  const testCases = skill.testCases.map((test) => {
+    const evidence = normalizeComparable(test.evidenceExcerpt);
+    const sourceMessageIndex = evidence.length >= 12
+      ? sanitizedMessages.findIndex((message) => normalizeComparable(message).includes(evidence))
+      : -1;
+    return {
+      ...test,
+      evidenceVerified: sourceMessageIndex >= 0,
+      sourceMessageIndex: sourceMessageIndex >= 0 ? sourceMessageIndex : undefined
+    };
+  });
+  const grounded = { ...skill, testCases };
+  return { ...grounded, skillMarkdown: renderSkillMarkdown(grounded) };
+}
+
+function assertMeaningfulExperience(record: Pick<ExperienceRecord, "content" | "lesson" | "summary" | "task" | "outcome" | "constraints" | "decisions" | "tags" | "skill">) {
   const hasContent = Boolean(
     record.content.trim() ||
     record.lesson?.trim() ||
@@ -555,6 +603,18 @@ function assertMeaningfulExperience(record: Pick<ExperienceRecord, "content" | "
     record.tags.length
   );
   if (!hasContent) throw new Error("experience_content_required");
+  if (record.skill) return;
+
+  const legacyFields = [record.task ?? "", record.outcome ?? "", record.lesson ?? ""];
+  const reusableLegacyRecord = meaningfulWordCount(record.content) >= 20 &&
+    legacyFields.every((value) => meaningfulWordCount(value) >= 5) &&
+    record.tags.length >= 2 &&
+    !/\b(?:lorem ipsum|todo|tbd|placeholder|dummy content|random text|asdfg+|qwerty+)\b/i.test(
+      [record.content, ...legacyFields].join(" ")
+    );
+  if (!reusableLegacyRecord) {
+    throw new Error("experience_not_reusable");
+  }
 }
 
 function experienceFields(record: ExperienceRecord) {
@@ -616,9 +676,11 @@ function publishTokenMatches(token: string, expectedHash: string) {
 }
 
 function publicSkill(skill: VerifiedSkillDraft, includeMarkdown: boolean) {
+  const testCases = Array.isArray(skill.testCases) ? skill.testCases : [];
   return {
     name: skill.name,
     description: skill.description,
+    license: skill.license,
     version: skill.version,
     ecosystem: skill.ecosystem,
     compatibility: skill.compatibility,
@@ -632,7 +694,16 @@ function publicSkill(skill: VerifiedSkillDraft, includeMarkdown: boolean) {
     doNotUseWhen: includeMarkdown ? skill.doNotUseWhen : undefined,
     rollback: includeMarkdown ? skill.rollback : undefined,
     tags: skill.tags,
-    testCount: skill.testCases.length,
+    testCount: testCases.length,
+    tests: includeMarkdown ? testCases.map((test) => ({
+      name: test.name,
+      passed: test.passed && test.evidenceVerified,
+      testMethod: test.testMethod,
+      observedOutcome: test.observedOutcome,
+      evidenceType: test.evidenceType,
+      evidenceExcerpt: test.evidenceExcerpt,
+      sourceMessageIndex: test.sourceMessageIndex
+    })) : undefined,
     skillMarkdown: includeMarkdown ? skill.skillMarkdown : undefined
   };
 }
@@ -702,6 +773,10 @@ function cleanText(value: string) {
   return value.replace(/\s+/g, " ").trim();
 }
 
+function meaningfulWordCount(value: string) {
+  return value.trim().split(/\s+/).filter((word) => /[a-z0-9]/i.test(word)).length;
+}
+
 function optionalText(value?: string) {
   const cleaned = value ? cleanText(value) : "";
   return cleaned || undefined;
@@ -746,6 +821,27 @@ function clampConfidence(value: unknown) {
   const number = Number(value);
   if (!Number.isFinite(number)) return 0;
   return Math.max(0, Math.min(1, Number(number.toFixed(2))));
+}
+
+function normalizeEvidenceType(value: unknown): SkillTestCase["evidenceType"] {
+  const normalized = cleanText(String(value ?? "assertion")).toLowerCase();
+  if (["command-output", "test-log", "http-response", "artifact", "assertion"].includes(normalized)) {
+    return normalized as SkillTestCase["evidenceType"];
+  }
+  return "assertion";
+}
+
+function booleanValue(value: unknown) {
+  return value === true || String(value).toLowerCase() === "true" || String(value).toLowerCase() === "pass";
+}
+
+function numberValue(value: unknown) {
+  const number = Number(value);
+  return Number.isInteger(number) && number >= 0 ? number : undefined;
+}
+
+function normalizeComparable(value: string) {
+  return cleanText(value).toLowerCase();
 }
 
 function redactSensitive(value: string) {
