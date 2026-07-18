@@ -1,6 +1,7 @@
 import { AppKV } from "@/storage/app-kv";
 import { createHash, timingSafeEqual } from "node:crypto";
 import { BankrLlmClient } from "@/lib/bankr-llm";
+import { readEnv } from "@/lib/env";
 import type { AppBindings } from "@/types/bindings";
 import type {
   ConversationMessage,
@@ -309,18 +310,14 @@ export class ExperienceService {
       {
         role: "system",
         content: [
-          "You are ContextKit MCP V2 experience detector.",
-          "Return only JSON.",
-          "Detect only REAL reusable agent experiences created during this conversation.",
-          "A real experience requires all evidence: initial user request, agent actions/method, completed or meaningfully advanced outcome, reusable lesson, and no unresolved core blocker.",
-          "Convert qualifying work into a PORTABLE Bankr-adjacent agent skill, never a project diary or user-specific note.",
+          "Return only compact JSON for ContextKit's verified-skill compiler.",
+          "Accept only real completed reusable work with: user request, agent method, verified outcome, reusable lesson, and no unresolved core blocker.",
+          "Convert it into a portable Bankr-adjacent skill, never a project diary or user-specific note.",
           "Public skill ecosystems are: bankr, x402, base, mcp, wallet, defi, automation, llm-gateway, agent-infrastructure.",
-          "Remove repository names, local paths, domains, account IDs, request IDs, personal identities, credentials, and environment-specific values. Replace necessary values with descriptive inputs or placeholders.",
-          "The skill needs at least 3 executable workflow steps, verification, failure handling, safety boundaries, rollback, and 3 independent contract test scenarios.",
-          "Reject generic notes, plans, brainstorms, empty records, incomplete attempts, pure summaries, secrets, credentials, OTPs, passwords, private keys, or user-private personal data.",
-          "Do not invent. Redact secrets completely.",
-          "If evidence is weak, set shouldSave=false.",
-          `Only set shouldSave=true when confidence >= ${minConfidence}.`
+          "Remove names, private paths/domains/IDs, credentials, secrets, and environment-specific values; parameterize necessary values.",
+          "Require 3+ executable steps, verification, failure handling, safety boundaries, rollback, and exactly 3 independent contract tests.",
+          "Reject plans, brainstorms, incomplete attempts, generic notes, pure summaries, private data, or invented evidence.",
+          `Set shouldSave=true only when confidence >= ${minConfidence}; otherwise return the same schema with concise empty skill fields.`
         ].join(" ")
       },
       {
@@ -335,17 +332,6 @@ export class ExperienceService {
               agentMethod: "string",
               outcome: "string",
               reusableLesson: "string"
-            },
-            experience: {
-              title: "string",
-              summary: "string",
-              content: "string",
-              task: "string",
-              outcome: "string",
-              lesson: "string",
-              constraints: ["string"],
-              decisions: ["string"],
-              tags: ["string"]
             },
             skill: {
               name: "lowercase-kebab-case",
@@ -371,7 +357,11 @@ export class ExperienceService {
           conversation: messages
         })
       }
-    ]);
+    ], {
+      model: readEnv({ env: this.env }).bankrSkillLlmModel,
+      maxTokens: 1_800,
+      attempts: 1
+    });
 
     return normalizeCandidate(output);
   }
@@ -434,8 +424,6 @@ function normalizeCandidate(output: Record<string, unknown>) {
   const evidence = objectValue(output.requiredEvidence);
   const experience = objectValue(output.experience);
   const rawSkill = objectValue(output.skill);
-  const content = redactSensitive(cleanText(String(experience.content ?? experience.lesson ?? experience.outcome ?? "")));
-  const lesson = redactSensitive(cleanText(String(experience.lesson ?? "")));
   const requiredEvidence = {
     userRequest: redactSensitive(cleanText(String(evidence.userRequest ?? ""))),
     agentMethod: redactSensitive(cleanText(String(evidence.agentMethod ?? ""))),
@@ -443,6 +431,10 @@ function normalizeCandidate(output: Record<string, unknown>) {
     reusableLesson: redactSensitive(cleanText(String(evidence.reusableLesson ?? "")))
   };
   const skill = normalizeSkill(rawSkill as VerifiedSkillInput, requiredEvidence);
+  const content = redactSensitive(cleanText(String(experience.content ?? requiredEvidence.agentMethod)));
+  const lesson = redactSensitive(cleanText(String(experience.lesson ?? requiredEvidence.reusableLesson)));
+  const outcome = redactSensitive(cleanText(String(experience.outcome ?? requiredEvidence.outcome)));
+  const task = redactSensitive(cleanText(String(experience.task ?? requiredEvidence.userRequest)));
   const validation = validateSkill(skill);
   const candidate = {
     shouldSave: Boolean(output.shouldSave),
@@ -450,15 +442,15 @@ function normalizeCandidate(output: Record<string, unknown>) {
     reason: redactSensitive(cleanText(String(output.reason ?? ""))),
     requiredEvidence,
     experience: {
-      title: redactSensitive(cleanText(String(experience.title ?? titleFromContent(content || lesson)))),
-      summary: redactSensitive(cleanText(String(experience.summary ?? summarizeContent(content || lesson)))),
+      title: redactSensitive(cleanText(String(experience.title ?? skill.name ?? titleFromContent(content || lesson)))),
+      summary: redactSensitive(cleanText(String(experience.summary ?? skill.description ?? summarizeContent(content || lesson)))),
       content,
-      task: redactSensitive(cleanText(String(experience.task ?? ""))),
-      outcome: redactSensitive(cleanText(String(experience.outcome ?? ""))),
+      task,
+      outcome,
       lesson,
       constraints: cleanList(arrayOfStrings(experience.constraints).map(redactSensitive)),
       decisions: cleanList(arrayOfStrings(experience.decisions).map(redactSensitive)),
-      tags: cleanTags(arrayOfStrings(experience.tags))
+      tags: cleanTags(arrayOfStrings(experience.tags).length ? arrayOfStrings(experience.tags) : skill.tags)
     },
     skill,
     validation

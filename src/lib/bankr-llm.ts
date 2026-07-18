@@ -4,6 +4,11 @@ import type { ContextEndpoint, ConversationMessage } from "@/types/api";
 import { buildContextPrompt } from "@/prompts/context";
 
 type JsonObject = Record<string, unknown>;
+type GenerationOptions = {
+  model?: string;
+  maxTokens?: number;
+  attempts?: number;
+};
 
 export class BankrLlmClient {
   constructor(private readonly context?: { env?: Record<string, unknown> }) {}
@@ -28,7 +33,11 @@ export class BankrLlmClient {
     ]);
   }
 
-  async generateJsonFromPrompt(endpoint: ContextEndpoint, promptMessages: readonly { role: string; content: string }[]): Promise<JsonObject> {
+  async generateJsonFromPrompt(
+    endpoint: ContextEndpoint,
+    promptMessages: readonly { role: string; content: string }[],
+    options: GenerationOptions = {}
+  ): Promise<JsonObject> {
     const env = readEnv(this.context);
     if (!env.bankrLlmKey) {
       throw new Error("BANKR_LLM_KEY is required for ContextKit generation.");
@@ -36,7 +45,8 @@ export class BankrLlmClient {
 
     let lastError: unknown;
 
-    for (let attempt = 1; attempt <= 2; attempt += 1) {
+    const attempts = Math.max(1, Math.min(options.attempts ?? 2, 2));
+    for (let attempt = 1; attempt <= attempts; attempt += 1) {
       try {
         const response = await fetch(`${env.bankrLlmBaseUrl.replace(/\/$/, "")}/chat/completions`, {
           method: "POST",
@@ -45,9 +55,10 @@ export class BankrLlmClient {
             "Content-Type": "application/json"
           },
           body: JSON.stringify({
-            model: env.bankrLlmModel,
+            model: options.model ?? env.bankrLlmModel,
             temperature: 0,
             response_format: { type: "json_object" },
+            ...(options.maxTokens ? { max_tokens: options.maxTokens } : {}),
             messages: attempt === 1 ? promptMessages : repairPrompt(promptMessages)
           })
         });

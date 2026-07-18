@@ -11,6 +11,7 @@ export function readEnv(c?: { env?: Record<string, unknown> }) {
     bankrLlmKey: get("BANKR_LLM_KEY"),
     bankrLlmBaseUrl: get("BANKR_LLM_BASE_URL", "https://llm.bankr.bot/v1"),
     bankrLlmModel: get("BANKR_LLM_MODEL", "claude-sonnet-4.5"),
+    bankrSkillLlmModel: get("BANKR_SKILL_LLM_MODEL", "gemini-2.5-flash"),
     contextkitBaseUrl: get("CONTEXTKIT_BASE_URL"),
     internalToken: get("CONTEXTKIT_INTERNAL_TOKEN"),
     webhookSecret: get("CONTEXTKIT_WEBHOOK_SECRET", "dev-webhook-secret-change-me"),

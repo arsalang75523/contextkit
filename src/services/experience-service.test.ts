@@ -37,17 +37,6 @@ function llmCandidate() {
       outcome: "The paid request returned HTTP 200 with the original response contract.",
       reusableLesson: "Precompute long origin work when it exceeds the hosted x402 forwarding deadline."
     },
-    experience: {
-      title: "Bankr x402 timeout recovery",
-      summary: "Recover long paid requests without changing their response contract.",
-      content: "Compare direct origin latency with the Bankr x402 deadline, precompute long work, then forward the cached result.",
-      task: "Repair long Bankr x402 calls.",
-      outcome: "Paid request returned HTTP 200.",
-      lesson: "Move long computation before the paid forwarding window.",
-      constraints: ["Preserve the original response schema"],
-      decisions: ["Precompute only payloads that exceed the forwarding deadline"],
-      tags: ["bankr", "x402", "timeouts"]
-    },
     skill: {
       name: "bankr-x402-timeout-recovery",
       description: "Diagnose Bankr x402 gateway timeouts when an authenticated origin succeeds directly.",

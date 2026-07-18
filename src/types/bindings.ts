@@ -29,6 +29,7 @@ export type AppBindings = {
     BANKR_LLM_KEY?: string;
     BANKR_LLM_BASE_URL?: string;
     BANKR_LLM_MODEL?: string;
+    BANKR_SKILL_LLM_MODEL?: string;
     CONTEXTKIT_WEBHOOK_SECRET?: string;
     CONTEXTKIT_ADMIN_TOKEN?: string;
     CONTEXTKIT_INTERNAL_TOKEN?: string;

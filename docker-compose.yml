@@ -30,6 +30,7 @@ services:
       BANKR_LLM_KEY: ${BANKR_LLM_KEY}
       BANKR_LLM_BASE_URL: ${BANKR_LLM_BASE_URL:-https://llm.bankr.bot/v1}
       BANKR_LLM_MODEL: ${BANKR_LLM_MODEL:-claude-sonnet-4.5}
+      BANKR_SKILL_LLM_MODEL: ${BANKR_SKILL_LLM_MODEL:-gemini-2.5-flash}
       X402_PAY_TO: ${X402_PAY_TO}
       X402_NETWORK: ${X402_NETWORK:-base}
       X402_FACILITATOR_URL: ${X402_FACILITATOR_URL:-https://facilitator.x402.org}

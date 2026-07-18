@@ -26,11 +26,6 @@
     "vscodium",
     "agent memory"
   ],
-  "activationEvents": [
-    "onCommand:contextkit.configureApiKey",
-    "onCommand:contextkit.runCapturedAgent",
-    "onCommand:contextkit.captureTranscript"
-  ],
   "main": "./extension.cjs",
   "scripts": {
     "sync-core": "node scripts/sync-core.mjs",
