@@ -2,6 +2,7 @@ import { AppKV } from "@/storage/app-kv";
 import { createHash, timingSafeEqual } from "node:crypto";
 import { BankrLlmClient } from "@/lib/bankr-llm";
 import { readEnv } from "@/lib/env";
+import { log } from "@/lib/logger";
 import type { AppBindings } from "@/types/bindings";
 import type {
   ConversationMessage,
@@ -306,7 +307,7 @@ export class ExperienceService {
 
   private async generateCandidate(messages: ConversationMessage[], minConfidence: number) {
     const llm = new BankrLlmClient({ env: this.env });
-    const output = await llm.generateJsonFromPrompt("summarize", [
+    const prompt = [
       {
         role: "system",
         content: [
@@ -356,11 +357,29 @@ export class ExperienceService {
           conversation: messages
         })
       }
-    ], {
-      model: readEnv({ env: this.env }).bankrSkillLlmModel,
-      maxTokens: 1_200,
-      attempts: 1
-    });
+    ] as const;
+    const env = readEnv({ env: this.env });
+    let output: Record<string, unknown>;
+
+    try {
+      output = await llm.generateJsonFromPrompt("summarize", prompt, {
+        model: env.bankrSkillLlmModel,
+        maxTokens: 1_200,
+        attempts: 1
+      });
+    } catch (error) {
+      if (env.bankrSkillLlmModel === env.bankrLlmModel) throw error;
+      log("warn", "Skill compiler model failed; retrying with primary Bankr LLM model", {
+        configuredModel: env.bankrSkillLlmModel,
+        fallbackModel: env.bankrLlmModel,
+        error: String(error)
+      });
+      output = await llm.generateJsonFromPrompt("summarize", prompt, {
+        model: env.bankrLlmModel,
+        maxTokens: 1_200,
+        attempts: 1
+      });
+    }
 
     return normalizeCandidate(output);
   }

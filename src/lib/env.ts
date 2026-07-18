@@ -6,12 +6,13 @@ export function readEnv(c?: { env?: Record<string, unknown> }) {
 
   const get = (key: string, fallback = "") =>
     String(runtimeEnv[key] ?? processEnv[key] ?? fallback);
+  const bankrLlmModel = get("BANKR_LLM_MODEL", "claude-sonnet-4.5");
 
   return {
     bankrLlmKey: get("BANKR_LLM_KEY"),
     bankrLlmBaseUrl: get("BANKR_LLM_BASE_URL", "https://llm.bankr.bot/v1"),
-    bankrLlmModel: get("BANKR_LLM_MODEL", "claude-sonnet-4.5"),
-    bankrSkillLlmModel: get("BANKR_SKILL_LLM_MODEL", "gemini-2.5-flash"),
+    bankrLlmModel,
+    bankrSkillLlmModel: get("BANKR_SKILL_LLM_MODEL", bankrLlmModel),
     contextkitBaseUrl: get("CONTEXTKIT_BASE_URL"),
     internalToken: get("CONTEXTKIT_INTERNAL_TOKEN"),
     webhookSecret: get("CONTEXTKIT_WEBHOOK_SECRET", "dev-webhook-secret-change-me"),

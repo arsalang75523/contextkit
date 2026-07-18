@@ -241,3 +241,45 @@ test("compiles the compact LLM wire format without losing validation", async () 
     globalThis.fetch = originalFetch;
   }
 });
+
+test("retries skill compilation with the primary model when the configured model returns non-JSON", async () => {
+  const originalFetch = globalThis.fetch;
+  let calls = 0;
+  globalThis.fetch = async () => {
+    calls += 1;
+    return Response.json({
+      choices: [{
+        message: {
+          content: calls === 1
+            ? "The requested skill is ready."
+            : JSON.stringify(compactLlmCandidate())
+        }
+      }]
+    });
+  };
+
+  try {
+    const service = new ExperienceService({
+      CONTEXTKIT_KV: memoryNamespace(),
+      BANKR_LLM_KEY: "bk_test_server_only",
+      BANKR_LLM_BASE_URL: "https://llm.test/v1",
+      BANKR_LLM_MODEL: "claude-sonnet-4.5",
+      BANKR_SKILL_LLM_MODEL: "gemini-2.5-flash"
+    });
+    const compiled = await service.consider({
+      messages: [
+        { role: "user", content: "Repair a Bankr x402 timeout without changing the response contract." },
+        { role: "assistant", content: "Compared both paths, applied the repair, and verified HTTP 200." }
+      ],
+      minConfidence: 0.72,
+      autoSave: false,
+      priceUsd: 0.05
+    }, { ownerId: "bankr-hosted" });
+
+    assert.equal(calls, 2);
+    assert.equal(compiled.shouldSave, true);
+    assert.equal(compiled.validation?.eligible, true);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
