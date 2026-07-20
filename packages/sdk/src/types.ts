@@ -105,6 +105,13 @@ export type SkillRecord = {
   kind: "verified-skill" | "legacy-experience";
   skill?: VerifiedSkill;
   validation?: SkillValidationReport;
+  repository?: {
+    name: string;
+    version: string;
+    digest: string;
+    manifest: SkillBundleManifest;
+    validation: SkillBundleValidationReport;
+  };
 };
 
 export type SkillCompileResponse = {
@@ -131,13 +138,148 @@ export type SkillPurchaseResponse = {
   purchase: { id: string; experienceId: string; amountUsd: number; createdAt: string };
   skill: VerifiedSkill;
   validation?: SkillValidationReport;
-  installBundle: {
-    format: "contextkit-verified-skill/v1";
-    fileName: "SKILL.md";
-    skillMarkdown: string;
-    manifest: Record<string, unknown>;
-  };
+  installBundle: LegacySkillInstallBundle | SkillRepositoryInstallBundle;
   license: { use: "agent-skill-installation"; resale: false; attribution: string };
+};
+
+export type SkillBundleFormat = "contextkit-skill-repository/v1";
+
+export type SkillBundleFile = {
+  /** POSIX-style path relative to the repository root. */
+  path: string;
+  content: string;
+  encoding?: "utf8" | "base64";
+  /** Git-style normalized file mode: 0644 or executable 0755. */
+  mode?: 420 | 493;
+  size?: number;
+  sha256?: string;
+};
+
+export type SkillBundle = {
+  files: SkillBundleFile[];
+};
+
+export type SkillRepositoryRef = {
+  name: string;
+  version: string;
+  digest: string;
+};
+
+export type SkillBundleValidationReport = {
+  valid: boolean;
+  writeEligible: boolean;
+  publishEligible: boolean;
+  policyVersion: "skill-repository-v1";
+  findings: string[];
+  warnings: string[];
+  limits: { maxFiles: number; maxFileBytes: number; maxBundleBytes: number };
+  checks: {
+    safePaths: boolean;
+    secretScan: boolean;
+    requiredFiles: boolean;
+    executableContract: boolean;
+    identityMatch: boolean;
+    immutableVersion: boolean;
+  };
+};
+
+export type SkillBundleManifest = {
+  format: SkillBundleFormat;
+  repository: string;
+  version: string;
+  digest: string;
+  fileCount: number;
+  totalBytes: number;
+  createdAt: string;
+  skillId?: string;
+  skill: { name: string; version: string; license: string; ecosystem: string };
+  runtime?: string;
+  entrypoint?: string;
+  testCommand?: string;
+  files: Array<{ path: string; sha256: string; size: number; encoding: "utf8" | "base64"; mode: 420 | 493 }>;
+};
+
+export type SkillBundleValidateRequest = {
+  skillId: string;
+  publishToken?: string;
+  repository: string;
+  version: string;
+  files: SkillBundleFile[];
+  metadata?: Record<string, unknown>;
+};
+
+export type SkillBundleValidateResponse = {
+  stored: false;
+  repository: SkillBundleManifest;
+  validation: SkillBundleValidationReport;
+};
+
+export type SkillBundlePushRequest = SkillBundleValidateRequest;
+
+export type SkillBundlePushResponse = {
+  stored: true;
+  experience: SkillRecord;
+  repository: SkillBundleManifest;
+  validation: SkillBundleValidationReport;
+  nextAgentAction: string;
+};
+
+export type SkillVersionPublishRequest = {
+  skillId: string;
+  publishToken?: string;
+  priceUsd?: 0.05;
+  userApproved?: true;
+};
+
+export type SkillVersionPublishResponse = {
+  experience: SkillRecord;
+  marketplace: { listed: true; priceUsd: number; access: string };
+};
+
+export type SkillRepositoryInspectRequest = { skillId: string };
+
+export type SkillRepositoryInspectResponse = {
+  results: Array<SkillRecord & { score: number }>;
+  count: number;
+  query: string | null;
+};
+
+export type SkillRepositorySearchRequest = SkillSearchRequest;
+export type SkillRepositorySearchResult = SkillRecord & { score: number };
+export type SkillRepositorySearchResponse = {
+  results: SkillRepositorySearchResult[];
+  count: number;
+  query: string | null;
+};
+
+export type SkillVersionBuyRequest = { skillId: string };
+export type SkillVersionCloneRequest = { skillId: string };
+export type SkillVersionBuyResponse = SkillPurchaseResponse;
+export type SkillVersionCloneResponse = SkillPurchaseResponse;
+export type SkillVersionPurchase = SkillPurchaseResponse["purchase"];
+export type SkillVersionRef = SkillRepositoryRef;
+export type SkillRepositoryVisibility = "private" | "public";
+export type SkillRepositoryVersion = SkillBundleManifest;
+export type SkillRepository = SkillRecord["repository"];
+export type SkillBundleValidationFinding = string;
+export type SkillBundleValidationCheck = SkillBundleValidationReport["checks"];
+
+export type LegacySkillInstallBundle = {
+  format: "contextkit-verified-skill/v1";
+  fileName: "SKILL.md";
+  skillMarkdown: string;
+  manifest: Record<string, unknown>;
+};
+
+export type SkillRepositoryInstallBundle = {
+  format: SkillBundleFormat;
+  repository: string;
+  version: string;
+  digest: string;
+  manifest: SkillBundleManifest;
+  files: Array<Required<Pick<SkillBundleFile, "path" | "content" | "encoding" | "mode" | "size" | "sha256">>>;
+  validation: SkillBundleValidationReport;
+  materialize: { root: string; overwrite: false; verifyChecksums: true };
 };
 
 type SummarizeState = {

@@ -23,10 +23,26 @@ Turn this into a concise state update for the next planning agent, preserving go
 const skillCompileCommand = bankrX402Command("skill-compile", {
   mode: "skill-compile",
   messages: [
-    { role: "user", content: "Fix a completed Bankr-adjacent task and preserve the reusable method." },
-    { role: "assistant", content: "Describe the actions taken, verified outcome, constraints, and reusable lesson." }
+    { role: "user", content: "Repair a Bankr x402 timeout without changing the response contract, then verify the paid path." },
+    { role: "assistant", content: "Compared origin and gateway latency, moved long work before payment, and preserved the schema. Executed curl against the paid endpoint; exact output: HTTP/2 200 and mode=compact. Reusable lesson: precompute slow work and keep the paid forwarding call bounded." }
   ]
 });
+
+const repositoryFiles = [
+  { path: "SKILL.md", content: "---\\nname: bankr-x402-timeout-recovery\\ndescription: Tested bounded forwarding for Bankr x402.\\nlicense: MIT\\n---\\n# Bankr x402 timeout recovery" },
+  { path: "skill.json", content: '{"schemaVersion":1,"name":"bankr-x402-timeout-recovery","version":"1.0.0","runtime":"node22","entrypoint":"src/index.js","testCommand":"npm test"}' },
+  { path: "LICENSE", content: "MIT License" },
+  { path: "package.json", content: '{"name":"bankr-x402-timeout-recovery","version":"1.0.0","type":"module","scripts":{"test":"node --test tests/*.test.js"}}' },
+  { path: "package-lock.json", content: '{"name":"bankr-x402-timeout-recovery","version":"1.0.0","lockfileVersion":3,"packages":{"":{"name":"bankr-x402-timeout-recovery","version":"1.0.0"}}}' },
+  { path: "config.schema.json", content: '{"type":"object","properties":{"backendUrl":{"type":"string"}},"required":["backendUrl"]}' },
+  { path: "src/index.js", content: "export const boundedTimeout = (originMs) => Math.min(originMs + 8000, 55000);" },
+  { path: "tests/timeout.test.js", content: "import test from 'node:test'; import assert from 'node:assert/strict'; import { boundedTimeout } from '../src/index.js'; test('bounded', () => assert.equal(boundedTimeout(42000), 50000));" },
+  { path: "examples/basic.js", content: "import { boundedTimeout } from '../src/index.js'; console.log(boundedTimeout(42000));" }
+];
+
+const skillValidateCommand = bankrX402Command("skill-validate", { mode: "skill-validate", skillId: "exp_REPLACE_ME", publishToken: "pub_REPLACE_ME", repository: "bankr-x402-timeout-recovery", version: "1.0.0", files: repositoryFiles });
+const skillPushCommand = bankrX402Command("skill-push", { mode: "skill-push", skillId: "exp_REPLACE_ME", publishToken: "pub_REPLACE_ME", repository: "bankr-x402-timeout-recovery", version: "1.0.0", files: repositoryFiles });
+const skillPublishCommand = bankrX402Command("skill-repository-publish", { mode: "skill-repository-publish", skillId: "exp_REPLACE_ME", publishToken: "pub_REPLACE_ME", userApproved: true, priceUsd: 0.05 });
 
 const skillSearchCommand = bankrX402Command("skill-search", {
   query: "x402 timeout recovery",
@@ -36,7 +52,8 @@ const skillSearchCommand = bankrX402Command("skill-search", {
   limit: 5
 });
 
-const skillBuyCommand = bankrX402Command("skill-buy", { skillId: "exp_REPLACE_ME" });
+const skillInspectCommand = bankrX402Command("skill-inspect", { mode: "skill-inspect", skillId: "exp_REPLACE_ME" });
+const skillCloneCommand = bankrX402Command("skill-clone", { mode: "skill-clone", skillId: "exp_REPLACE_ME" });
 
 export default function PlaygroundPage() {
   const [endpoint, setEndpoint] = useState("summarize");
@@ -203,38 +220,62 @@ curl -X POST "https://contextkit.pro/api/context/upload-text?${params.toString()
           <div className="flex flex-col gap-4 border-b border-line px-5 py-6 sm:px-7 md:flex-row md:items-end md:justify-between">
             <div>
               <p className="font-mono text-[10px] uppercase tracking-[0.17em] text-mint">Verified Skill Registry / Bankr x402</p>
-              <h2 className="mt-2 max-w-3xl text-2xl font-semibold tracking-[-0.03em] text-white md:text-3xl">Compile real work. Publish only tested skills. Install what already works.</h2>
+              <h2 className="mt-2 max-w-3xl text-2xl font-semibold tracking-[-0.03em] text-white md:text-3xl">Compile proof. Push every file. Clone an immutable skill repository.</h2>
             </div>
-            <p className="max-w-md text-sm leading-6 text-white/52">Raw chats, generic notes, plans, placeholders, project diaries, and plain claims are rejected. Private write requires a complete reusable workflow plus one source-grounded hard-evidence PASS; public listing requires three independent proofs, score 75+, safety checks, and approval.</p>
+            <p className="max-w-md text-sm leading-6 text-white/52">Repository V1 separates transcript proof from file proof. Validation rejects missing contracts, unsafe paths, secrets, install hooks, identity mismatches, and decoded bundles above 320KB before anything becomes public.</p>
           </div>
-          <div className="grid gap-px bg-line lg:grid-cols-3">
+          <div className="grid gap-px bg-line lg:grid-cols-2 xl:grid-cols-3">
             <RegistryLane
               icon={<BadgeCheck className="h-4 w-4" />}
               step="01 / Compile"
-              title="Private SKILL.md draft"
-              text="The LLM extracts a reusable method only when the transcript contains an executed PASS backed by command output, a test log, HTTP response, or artifact evidence; method, observed result, and verbatim proof are written into SKILL.md."
+              title="Prove the reusable method"
+              text="Compile completed work into a private evidence-backed skillId. Generic claims and unverified transcripts are rejected."
               code={skillCompileCommand}
               price="$0.01"
             />
             <RegistryLane
-              icon={<Search className="h-4 w-4" />}
-              step="02 / Search"
-              title="Verified previews only"
-              text="Filter by problem, ecosystem, and agent compatibility. Paid SKILL.md content stays private until purchase."
-              code={skillSearchCommand}
+              icon={<PackageCheck className="h-4 w-4" />}
+              step="02 / Validate"
+              title="Dry-run the complete bundle"
+              text="Require SKILL.md, skill.json, LICENSE and, for executable public skills, package metadata, lockfile, config schema, source, tests, and examples."
+              code={skillValidateCommand}
               price="$0.01"
             />
             <RegistryLane
               icon={<PackageCheck className="h-4 w-4" />}
-              step="03 / Buy + install"
-              title="Versioned skill bundle"
-              text="Receive SKILL.md, manifest, validation report, compatibility metadata, and a non-resale installation license."
-              code={skillBuyCommand}
+              step="03 / Push"
+              title="Store immutable semver"
+              text="Create a content-addressed version with per-file SHA-256 checksums. A published version cannot be overwritten."
+              code={skillPushCommand}
+              price="$0.01"
+            />
+            <RegistryLane
+              icon={<BadgeCheck className="h-4 w-4" />}
+              step="04 / Publish"
+              title="Approve the public listing"
+              text="Use the dedicated repository-publish mode only after the user approves. The executable and evidence policies still run server-side."
+              code={skillPublishCommand}
+              price="$0.01"
+            />
+            <RegistryLane
+              icon={<Search className="h-4 w-4" />}
+              step="05 / Search + inspect"
+              title="Preview metadata, not paid files"
+              text="Search by problem and inspect digest, manifest, semantic version, and validation without revealing repository contents."
+              code={`${skillSearchCommand}\n\n${skillInspectCommand}`}
+              price="$0.01"
+            />
+            <RegistryLane
+              icon={<PackageCheck className="h-4 w-4" />}
+              step="06 / Paid clone"
+              title="Receive the complete file tree"
+              text="The $0.05 clone returns source, tests, examples, config, lockfile, checksums, manifest, validation, and safe no-overwrite materialization instructions."
+              code={skillCloneCommand}
               price="$0.05"
             />
           </div>
           <div className="border-t border-line bg-mint/[0.035] px-5 py-4 text-sm leading-6 text-white/58 sm:px-7">
-            Publishing is a separate approval-gated call: use <code>mode: &quot;skill-publish&quot;</code> with the returned <code>skillId</code>, <code>publishToken</code>, and <code>userApproved: true</code>. The API also requires three independent source-grounded PASS results, score 75+, and clean safety checks.
+            Exact flow: <code>compile → skill-validate → skill-push → skill-repository-publish → skill-search/inspect → skill-clone</code>. Bankr-hosted writes reuse the compile response&apos;s one-draft <code>publishToken</code>. Legacy SKILL.md purchases remain available, while repository-backed clones return <code>contextkit-skill-repository/v1</code> with every file and checksum.
           </div>
         </section>
       </div>

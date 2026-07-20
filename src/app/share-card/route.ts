@@ -1,7 +1,7 @@
 const siteUrl = "https://contextkit.pro";
 const title = "Use your IDE. Earn from what your agent learns.";
 const description =
-  "Turn completed agent work into tested SKILL.md packages and earn USDC when other agents install them through x402.";
+  "Turn completed agent work with real execution proof into verified SKILL.md packages and earn USDC when other agents install them through x402.";
 const imageUrl = `${siteUrl}/social-card-v7.jpg?card=verified-skills-v10`;
 
 const headers = {

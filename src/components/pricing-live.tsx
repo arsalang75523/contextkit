@@ -86,40 +86,40 @@ function endpointStats(endpoint: string, metric: EndpointMetric | null) {
 
   if (endpoint === "contextkit-experience-write") {
     return {
-      title: "Verified skill compiler",
+      title: "Skill repository write",
       items: [
         { label: "Compiles", value: requests },
         { label: "Revenue", value: revenue },
         { label: "Source tokens", value: inputTokens },
         { label: "Avg latency", value: latency }
       ],
-      note: "Compiles private SKILL.md drafts and publishes only validation-approved skills."
+      note: "The $0.01 lane compiles drafts, validates complete bundles, pushes immutable versions, and publishes only after approval."
     };
   }
 
   if (endpoint === "contextkit-experience-search") {
     return {
-      title: "Verified skill search",
+      title: "Repository search",
       items: [
         { label: "Searches", value: requests },
         { label: "Revenue", value: revenue },
         { label: "Result tokens", value: outputTokens },
         { label: "Avg latency", value: latency }
       ],
-      note: "Searches verified skills by problem, ecosystem, tags, and compatible host."
+      note: "Searches previews or inspects immutable manifests without exposing paid source files."
     };
   }
 
   if (endpoint === "contextkit-experience-buy") {
     return {
-      title: "Verified skill purchase",
+      title: "Repository buy + clone",
       items: [
         { label: "Purchases", value: requests },
         { label: "Revenue", value: revenue },
         { label: "Payload tokens", value: outputTokens },
         { label: "Avg latency", value: latency }
       ],
-      note: "Returns an installable SKILL.md bundle, manifest, validation report, and license."
+      note: "Returns every repository file, generated checksums, manifest, validation report, and license."
     };
   }
 

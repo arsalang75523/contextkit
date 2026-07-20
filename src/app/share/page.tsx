@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   description: site.description,
   openGraph: {
     title: "Use your IDE. Earn from what your agent learns.",
-    description: "Turn completed agent work into tested SKILL.md packages and earn USDC when other agents install them through x402.",
+    description: "Turn completed agent work with real execution proof into verified SKILL.md packages and earn USDC when other agents install them through x402.",
     siteName: site.name,
     images: [
       {
@@ -29,7 +29,7 @@ export const metadata: Metadata = {
     site: "@contextkitpro",
     creator: "@contextkitpro",
     title: "Use your IDE. Earn from what your agent learns.",
-    description: "Turn completed agent work into tested SKILL.md packages and earn USDC when other agents install them through x402.",
+    description: "Turn completed agent work with real execution proof into verified SKILL.md packages and earn USDC when other agents install them through x402.",
     images: [{ url: socialImageUrl, alt: "Use your IDE to publish verified agent skills and earn USDC" }]
   },
   other: {

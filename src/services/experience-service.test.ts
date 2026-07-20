@@ -140,7 +140,7 @@ function compactLlmCandidate() {
   };
 }
 
-test("compiles, protects, publishes, searches, and buys a verified skill", async () => {
+test("compiles a verified draft but blocks SKILL.md-only public publishing", async () => {
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async () => Response.json({
     choices: [{ message: { content: JSON.stringify(llmCandidate()) } }]
@@ -178,38 +178,112 @@ test("compiles, protects, publishes, searches, and buys a verified skill", async
       /experience_forbidden/
     );
 
+    await assert.rejects(
+      () => service.publish({
+        skillId,
+        publishToken: compiled.publishToken,
+        priceUsd: 0.05,
+        visibility: "public",
+        userApproved: true
+      }, owner),
+      /skill_bundle_required_for_publish/
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("pushes, publishes, and clones a complete immutable skill repository", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => Response.json({ choices: [{ message: { content: JSON.stringify(llmCandidate()) } }] });
+
+  try {
+    const service = new ExperienceService({
+      CONTEXTKIT_KV: memoryNamespace(),
+      BANKR_LLM_KEY: "bk_test_server_only",
+      BANKR_LLM_BASE_URL: "https://llm.test/v1"
+    });
+    const owner = { ownerId: "bankr-hosted" };
+    const compiled = await service.consider({
+      messages: [
+        { role: "user", content: "Repair this Bankr x402 timeout without changing the response." },
+        { role: "assistant", content: "Origin returned HTTP 200. Paid endpoint returned HTTP 200. Schema comparison test passed." }
+      ],
+      minConfidence: 0.72,
+      autoSave: true,
+      priceUsd: 0.05
+    }, owner);
+    if (!compiled.experience || !("id" in compiled.experience) || !compiled.experience.skill?.skillMarkdown) {
+      assert.fail("Expected a compiled private skill with SKILL.md.");
+    }
+
+    const skillId = compiled.experience.id;
+    const repository = compiled.experience.skill.name;
+    const version = compiled.experience.skill.version;
+    const bundleFiles = [
+      { path: "SKILL.md", content: compiled.experience.skill.skillMarkdown, encoding: "utf8" as const, mode: 420 as const },
+      { path: "LICENSE", content: "Apache License 2.0\n", encoding: "utf8" as const, mode: 420 as const },
+      { path: "skill.json", content: JSON.stringify({ schemaVersion: 1, name: repository, version, runtime: "node>=20", entrypoint: "src/index.ts", testCommand: "npm test" }), encoding: "utf8" as const, mode: 420 as const },
+      { path: "package.json", content: JSON.stringify({ name: repository, version, scripts: { test: "node --test" } }), encoding: "utf8" as const, mode: 420 as const },
+      { path: "package-lock.json", content: JSON.stringify({ name: repository, version, lockfileVersion: 3, packages: {} }), encoding: "utf8" as const, mode: 420 as const },
+      { path: "config.schema.json", content: JSON.stringify({ type: "object", additionalProperties: false }), encoding: "utf8" as const, mode: 420 as const },
+      { path: "src/index.ts", content: "export function recover() { return 'ok'; }\n", encoding: "utf8" as const, mode: 420 as const },
+      { path: "tests/recovery.test.ts", content: "import test from 'node:test';\nimport assert from 'node:assert/strict';\ntest('recovers', () => assert.equal(1, 1));\n", encoding: "utf8" as const, mode: 420 as const },
+      { path: "examples/basic.ts", content: "import { recover } from '../src/index';\nrecover();\n", encoding: "utf8" as const, mode: 420 as const }
+    ];
+
+    const pushed = await service.pushBundle({
+      mode: "skill-push",
+      skillId,
+      publishToken: compiled.publishToken,
+      repository,
+      version,
+      files: bundleFiles
+    }, owner);
+    assert.equal(pushed.stored, true);
+    assert.equal(pushed.validation.publishEligible, true);
+    assert.match(pushed.repository.digest, /^sha256:[a-f0-9]{64}$/);
+
+    await assert.rejects(
+      () => service.pushBundle({
+        mode: "skill-push",
+        skillId,
+        publishToken: compiled.publishToken,
+        repository,
+        version,
+        files: bundleFiles.map((file) => file.path === "src/index.ts" ? { ...file, content: "export const changed = true;\n" } : file)
+      }, owner),
+      /skill_version_immutable/
+    );
+
     const published = await service.publish({
+      mode: "skill-repository-publish",
       skillId,
       publishToken: compiled.publishToken,
       priceUsd: 0.05,
       visibility: "public",
       userApproved: true
     }, owner);
-    assert.equal(published.experience.visibility, "public");
-    assert.equal(published.experience.validation?.status, "verified");
+    assert.equal(published.experience.repository?.validation.publishEligible, true);
 
-    const search = await service.search({
-      query: "timeout",
-      ecosystems: ["x402"],
-      compatibility: ["codex"],
+    const inspected = await service.search({
+      mode: "skill-inspect",
+      skillId,
       verifiedOnly: true,
       includePrivate: false,
-      limit: 5
+      limit: 1
     });
-    assert.equal(search.count, 1);
-    assert.equal(search.results[0]?.id, skillId);
-    assert.equal(search.results[0]?.skill?.skillMarkdown, undefined);
-    assert.equal(search.results[0]?.lesson, undefined);
-    assert.equal(search.results[0]?.decisions, undefined);
+    assert.equal(inspected.count, 1);
+    assert.equal(inspected.results[0]?.repository?.manifest.digest, pushed.repository.digest);
+    assert.equal("content" in (inspected.results[0]?.repository?.manifest.files[0] ?? {}), false);
 
-    const purchase = await service.buy({ skillId }, "buyer-account", 0.05);
-    assert.equal(purchase.installBundle.format, "contextkit-verified-skill/v1");
-    assert.equal(purchase.installBundle.fileName, "SKILL.md");
-    assert.match(purchase.installBundle.skillMarkdown, /## Test evidence/);
-    assert.match(purchase.installBundle.skillMarkdown, /Evidence excerpt: Origin returned HTTP 200/);
-    assert.equal(purchase.experience.sales, 1);
-    assert.equal(purchase.experience.earnedUsd, 0.05);
-    assert.equal(purchase.license.resale, false);
+    const purchase = await service.buy({ mode: "skill-clone", skillId }, "repository-buyer", 0.05);
+    assert.equal(purchase.installBundle.format, "contextkit-skill-repository/v1");
+    if (!("files" in purchase.installBundle) || !("materialize" in purchase.installBundle)) assert.fail("Expected repository install bundle.");
+    const installBundle = purchase.installBundle as { files: Array<{ path: string }>; materialize: { overwrite: boolean } };
+    assert.ok(installBundle.files.some((file) => file.path === "src/index.ts"));
+    assert.ok(installBundle.files.some((file) => file.path === "checksums.json"));
+    assert.equal(installBundle.materialize.overwrite, false);
   } finally {
     globalThis.fetch = originalFetch;
   }

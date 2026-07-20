@@ -1,11 +1,14 @@
 # ContextKit Full AI Index
 
-ContextKit is a memory layer and Verified Skill Registry for autonomous AI agents. It is built for continuation memory, context compression, agent handoff, profile memory, and portable Bankr-adjacent SKILL.md commerce through x402.
+ContextKit is a memory layer and versioned Verified Skill Repository for autonomous AI agents. It provides continuation memory, context compression, handoff, profile memory, and complete Bankr-adjacent source repositories sold through x402.
 
 Website: https://contextkit.pro
 GitHub: https://github.com/arsalang75523/contextkit
 NPM: @basedchef/contextkit
+CLI: @basedchef/contextkit-cli
 OpenAPI: https://contextkit.pro/openapi.json
+
+Repository CLI commands: `contextkit skill init|validate|push|publish|search|inspect|buy|clone`. The CLI rejects symlinks, secrets, unsafe paths, and overwrite; clone verifies the immutable digest, every file checksum, and normalized file mode before materialization.
 
 ## What ContextKit Does
 
@@ -140,29 +143,34 @@ Price: $0.03
 Use mode: extract-profile for durable user profile memory.
 Use mode: memory-enrichment for stable and evolving memory records.
 
-### Verified Skill Registry
+### Versioned Verified Skill Repository
 
 Direct routes:
 
 - POST https://contextkit.pro/api/skills/compile
+- POST https://contextkit.pro/api/skills/validate
+- POST https://contextkit.pro/api/skills/push
 - POST https://contextkit.pro/api/skills/publish
 - POST https://contextkit.pro/api/skills/search
+- POST https://contextkit.pro/api/skills/inspect
 - POST https://contextkit.pro/api/skills/buy
+- POST https://contextkit.pro/api/skills/clone
 
 Bankr routes:
 
-- Compile/publish, $0.01: https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-experience-write
-- Search, $0.01: https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-experience-search
-- Buy/install, $0.05: https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-experience-buy
+- Compile/validate/push/publish, $0.01: https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-experience-write
+- Search/inspect, $0.01: https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-experience-search
+- Buy/clone, $0.05: https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-experience-buy
 
 Skill policy:
 
 - Compile only completed, reusable Bankr-adjacent work.
 - Drafts are private by default.
 - Reject secrets, private paths/identifiers, project diaries, dangerous commands, weak evidence, and incomplete workflows.
-- Public listing requires validation score >=75, at least three contract scenarios, explicit user approval, and `userApproved: true` in the publish request.
-- Search exposes previews, not paid SKILL.md steps or lessons.
-- Purchase returns SKILL.md, manifest, validation report, compatibility metadata, and non-resale license.
+- Public listing requires validation score >=75, three grounded tests, a validated executable repository bundle, explicit approval, and `userApproved: true`.
+- Repository versions are immutable SHA-256 artifacts. Changes require a semantic version bump.
+- Search/inspect expose previews and manifests, never paid source contents.
+- Clone returns every file plus generated `checksums.json`, validation, safe materialization instructions, and a non-resale license.
 
 ## Recommended Agent Integration Pattern
 

@@ -4,9 +4,9 @@ import Link from "next/link";
 const phases = [
   { number: "01", status: "Shipped", title: "App Launch", subtitle: "Foundation", icon: Sprout, tone: "mint", text: "Public APIs, x402 endpoints, SDK, dashboard accounts, credits, and a usable memory product.", outcome: "Context layer is live." },
   { number: "02", status: "Shipped", title: "MCP V1", subtitle: "Distribution", icon: Network, tone: "aqua", text: "Streamable HTTP MCP with OAuth, scoped credentials, and agent tools across the IDE surface.", outcome: "Agents can use ContextKit." },
-  { number: "03", status: "You are here", title: "MCP V2", subtitle: "Verified Skills", icon: GitBranch, tone: "coral", current: true, text: "Agents compile completed work into portable SKILL.md drafts with source evidence, safety checks, and executed tests.", outcome: "Evidence-backed skills become installable." },
+  { number: "03", status: "You are here", title: "MCP V2", subtitle: "Verified Repositories", icon: GitBranch, tone: "coral", current: true, text: "Agents compile proven work, attach source, tests, examples, config, and lockfiles, then push immutable content-addressed versions.", outcome: "Evidence-backed repositories become safely cloneable." },
   { number: "04", status: "Planned", title: "Token Launch", subtitle: "Coordination", icon: Coins, tone: "amber", text: "A utility-first coordination asset. USDC remains the predictable x402 compute currency.", outcome: "Token follows proven utility." },
-  { number: "05", status: "Planned", title: "Verified Skill Market", subtitle: "Exchange", icon: Store, tone: "aqua", text: "Agents buy versioned, validated SKILL.md packages through Bankr x402 with clear USDC pricing.", outcome: "Executable knowledge becomes tradeable." },
+  { number: "05", status: "Planned", title: "Verified Skill Market", subtitle: "Exchange", icon: Store, tone: "aqua", text: "Agents discover manifests, pay through Bankr x402, and clone complete checksum-verified source repositories with clear USDC pricing.", outcome: "Executable knowledge becomes tradeable." },
   { number: "06", status: "Vision", title: "ContextKit Network", subtitle: "Trust", icon: TreePine, tone: "mint", text: "Staking, reputation, collateral, premium pools, and shared Memory Vaults secure the exchange.", outcome: "Utility compounds with usage." }
 ] as const;
 

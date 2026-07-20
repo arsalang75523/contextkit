@@ -11,6 +11,7 @@ import type {
   ExperiencePublishInput,
   ExperienceSaveInput,
   ExperienceSearchInput,
+  SkillBundlePushInput,
   VerifiedSkillInput
 } from "@/types/api";
 import { createId } from "@/utils/id";
@@ -23,6 +24,11 @@ import {
   type SkillValidationReport,
   type VerifiedSkillDraft
 } from "@/services/skill-validation";
+import {
+  SkillBundleService,
+  type SkillBundleManifest,
+  type SkillBundleValidation
+} from "@/services/skill-bundle-service";
 
 export type ExperienceRecord = {
   id: string;
@@ -50,6 +56,13 @@ export type ExperienceRecord = {
   skill?: VerifiedSkillDraft;
   validation?: SkillValidationReport;
   publishSecretHash?: string;
+  repository?: {
+    name: string;
+    version: string;
+    digest: string;
+    manifest: SkillBundleManifest;
+    validation: SkillBundleValidation;
+  };
 };
 
 export type ExperienceInputContext = {
@@ -118,6 +131,9 @@ export class ExperienceService {
       const details = validation.findings.join(" ") || `Skill quality score ${validation.score} is below ${validation.threshold}.`;
       throw new Error(`skill_not_publishable:${details}`);
     }
+    if (!existing?.repository?.validation.publishEligible) {
+      throw new Error("skill_bundle_required_for_publish");
+    }
 
     const record: ExperienceRecord = {
       ...(existing ?? {
@@ -131,6 +147,7 @@ export class ExperienceService {
       skill,
       kind: "verified-skill",
       validation,
+      repository: existing?.repository,
       ownerId: existing?.ownerId ?? context.ownerId,
       visibility: "public",
       priceUsd: input.priceUsd,
@@ -169,6 +186,7 @@ export class ExperienceService {
 
     const results = records
       .filter((record) => record.visibility === "public" || record.ownerId === ownerId)
+      .filter((record) => !input.skillId || record.id === input.skillId)
       .filter((record) => !input.verifiedOnly || Boolean(record.skill && validateSkill(record.skill).eligible))
       .filter((record) => !ecosystems.size || Boolean(record.skill && ecosystems.has(record.skill.ecosystem)))
       .filter((record) => !compatibility.size || Boolean(record.skill?.compatibility.some((host) => compatibility.has(normalizeTag(host)))))
@@ -185,6 +203,76 @@ export class ExperienceService {
       results,
       count: results.length,
       query: input.query ?? null
+    };
+  }
+
+  async pushBundle(input: SkillBundlePushInput, context: ExperienceInputContext) {
+    const skillId = input.skillId ?? "";
+    const record = await this.requireOwned(skillId, context.ownerId, input.publishToken);
+    if (!record.skill || !record.validation?.writeEligible) throw new Error("skill_required_for_bundle");
+
+    const bundleService = new SkillBundleService(this.env);
+    const versionKey = repositoryVersionKey(context.ownerId, input.repository, input.version);
+    const existingVersion = await this.kv.get<{ digest: string; skillId: string }>(versionKey);
+    const bundle = bundleService.build({
+      repository: input.repository,
+      version: input.version,
+      files: input.files,
+      skill: record.skill,
+      skillId,
+      immutableVersion: true
+    });
+
+    if (!bundle.validation.writeEligible) {
+      throw new Error(`skill_bundle_invalid:${bundle.validation.findings.join(" ")}`);
+    }
+    if (existingVersion && (existingVersion.digest !== bundle.manifest.digest || existingVersion.skillId !== skillId)) {
+      throw new Error("skill_version_immutable");
+    }
+
+    if (input.mode === "skill-validate") {
+      return {
+        stored: false,
+        repository: bundle.manifest,
+        validation: bundle.validation
+      };
+    }
+
+    await bundleService.put(bundle);
+    const updated: ExperienceRecord = {
+      ...record,
+      updatedAt: new Date().toISOString(),
+      repository: {
+        name: input.repository,
+        version: input.version,
+        digest: bundle.manifest.digest,
+        manifest: bundle.manifest,
+        validation: bundle.validation
+      },
+      metadata: {
+        ...(record.metadata ?? {}),
+        ...(input.metadata ?? {}),
+        repositoryFormat: bundle.manifest.format
+      }
+    };
+    await Promise.all([
+      this.writeRecord(updated),
+      this.kv.set(versionKey, {
+        ownerId: context.ownerId,
+        skillId,
+        repository: input.repository,
+        version: input.version,
+        digest: bundle.manifest.digest,
+        createdAt: bundle.manifest.createdAt
+      })
+    ]);
+
+    return {
+      stored: true,
+      experience: publicExperience(updated, { includeContent: true }),
+      repository: bundle.manifest,
+      validation: bundle.validation,
+      nextAgentAction: "Request explicit user approval, then publish this immutable repository version with skill-repository-publish."
     };
   }
 
@@ -260,6 +348,10 @@ export class ExperienceService {
     const skill = record.skill;
     const validation = validateSkill(skill);
     if (!validation.eligible) throw new Error("experience_not_found");
+    const repositoryBundle = record.repository
+      ? await new SkillBundleService(this.env).get(record.repository.digest)
+      : null;
+    if (record.repository && !repositoryBundle) throw new Error("skill_bundle_not_found");
 
     const now = new Date().toISOString();
     const updated: ExperienceRecord = {
@@ -291,21 +383,36 @@ export class ExperienceService {
       },
       experience: publicExperience(updated, { includeContent: true }),
       skill: publicSkill(skill, true),
-      installBundle: {
-        format: "contextkit-verified-skill/v1",
-        fileName: "SKILL.md",
-        skillMarkdown: skill.skillMarkdown,
-        manifest: {
-          id: updated.id,
-          name: skill.name,
-          version: skill.version,
-          license: skill.license,
-          ecosystem: skill.ecosystem,
-          compatibility: skill.compatibility,
-          evidencePolicy: validation.requirements,
-          validation
-        }
-      },
+      installBundle: repositoryBundle
+        ? {
+            format: repositoryBundle.manifest.format,
+            repository: repositoryBundle.manifest.repository,
+            version: repositoryBundle.manifest.version,
+            digest: repositoryBundle.manifest.digest,
+            manifest: repositoryBundle.manifest,
+            files: repositoryBundle.files,
+            validation: repositoryBundle.validation,
+            materialize: {
+              root: repositoryBundle.manifest.repository,
+              overwrite: false,
+              verifyChecksums: true
+            }
+          }
+        : {
+            format: "contextkit-verified-skill/v1",
+            fileName: "SKILL.md",
+            skillMarkdown: skill.skillMarkdown,
+            manifest: {
+              id: updated.id,
+              name: skill.name,
+              version: skill.version,
+              license: skill.license,
+              ecosystem: skill.ecosystem,
+              compatibility: skill.compatibility,
+              evidencePolicy: validation.requirements,
+              validation
+            }
+          },
       license: {
         use: "agent-skill-installation",
         resale: false,
@@ -661,7 +768,14 @@ function publicExperience(record: ExperienceRecord, options: { includeContent: b
     publishedAt: record.publishedAt,
     kind: record.kind ?? (record.skill ? "verified-skill" : "legacy-experience"),
     skill: record.skill ? publicSkill(record.skill, options.includeContent) : undefined,
-    validation: record.validation
+    validation: record.validation,
+    repository: record.repository ? {
+      name: record.repository.name,
+      version: record.repository.version,
+      digest: record.repository.digest,
+      manifest: record.repository.manifest,
+      validation: record.repository.validation
+    } : undefined
   };
 }
 
@@ -767,6 +881,10 @@ function ownerIndexKey(ownerId: string, id: string) {
 
 function publicIndexKey(id: string) {
   return `experience-public:${id}`;
+}
+
+function repositoryVersionKey(ownerId: string, repository: string, version: string) {
+  return `skill-repository:${ownerId}:${repository}:${version}`;
 }
 
 function cleanText(value: string) {

@@ -13,6 +13,12 @@ const conversationInput = {
   contextId: z.string().regex(/^ctx_[a-f0-9]{24}$/).optional()
 };
 
+const skillBundleFileInput = z.object({
+  path: z.string().min(1).max(240),
+  content: z.string().max(450_000),
+  encoding: z.enum(["utf8", "base64"]).default("utf8")
+});
+
 type ConversationInput = {
   messages?: Array<{ role: "system" | "user" | "assistant" | "tool"; content: string }>;
   contextId?: string;
@@ -35,8 +41,8 @@ const MAX_MCP_CONVERSATION_CHARS = 400_000;
 const MCP_AGENT_INSTRUCTIONS_URI = "contextkit://instructions";
 
 const MCP_AGENT_INSTRUCTIONS = {
-  policyVersion: "mcp-v2.4-strict-evidence-skills",
-  purpose: "Convert real completed Bankr-adjacent work into tested portable SKILL.md drafts, then publish only verified skills with explicit user approval.",
+  policyVersion: "mcp-v2.5-versioned-skill-repositories",
+  purpose: "Convert completed Bankr-adjacent work into tested skills, attach complete immutable source bundles, and publish only executable verified repository versions with explicit user approval.",
   startup: [
     `Read ${MCP_AGENT_INSTRUCTIONS_URI} or call contextkit_get_agent_instructions when connecting to ContextKit MCP.`,
     "Use ContextKit memory tools only when they help the user's active task."
@@ -54,13 +60,13 @@ const MCP_AGENT_INSTRUCTIONS = {
     ],
     savePolicy: "Write a private draft only for non-trivial reusable Bankr-adjacent work with a complete operational workflow and at least one executed test backed by verbatim hard evidence. Plain claims, placeholders, generic notes, plans, and project diaries are rejected.",
     rejectPolicy: "Reject project diaries, local paths, repo-specific instructions, generic chat, incomplete attempts, unsupported claims, secrets, OTPs, API keys, passwords, bearer tokens, private wallet data, or personal data.",
-    publicEligibility: "Public skills require an explicit reuse license, approved ecosystem namespace, complete workflow structure, quality score >= 75, and at least three passing tests with distinct verbatim hard-evidence excerpts grounded in the source conversation. Assertions are not test evidence. The generated SKILL.md must include Source evidence and Test evidence sections."
+    publicEligibility: "Public skills require an explicit reuse license, approved ecosystem namespace, quality score >= 75, three source-grounded passing tests, and a validated executable repository bundle. Bundles require SKILL.md, skill.json, LICENSE, package/lock, config schema, src, tests, and examples; assertions are not evidence."
   },
   publish: {
     tool: "contextkit_skill_publish",
     requiresExplicitUserApproval: true,
     defaultVisibility: "private",
-    instruction: "If validation.eligible is true, show the skill title, score, grounded test count, evidence summary, and findings; then ask whether the user wants to publish it for Bankr x402 installation. Never publish an unverified draft."
+    instruction: "After compile, validate and push the complete versioned file bundle. If both skill and bundle are publish eligible, show title, score, digest, tests, and findings; then ask whether the user wants to publish. Never publish an unverified or source-incomplete draft."
   },
   recommendedAgentBehavior: [
     "Do not ask the user to paste this policy each time.",
@@ -68,7 +74,8 @@ const MCP_AGENT_INSTRUCTIONS = {
     "Keep drafts private by default.",
     "Ask before public publishing.",
     "Search verified skills before repeating similar work.",
-    "Install purchased SKILL.md content as an agent skill; do not treat it as conversational advice."
+    "For executable work, push the complete repository before asking to publish.",
+    "Materialize every purchased repository file only after verifying checksums; never overwrite an existing directory implicitly."
   ]
 };
 
@@ -127,18 +134,17 @@ export function createContextKitMcpServer(options: ContextKitMcpOptions) {
     "contextkit_skill_compile",
     {
       title: "Compile completed work into a verified skill draft",
-      description: "MCP V2 primary capture tool. Compile only completed, non-trivial, reusable Bankr-adjacent work with a complete workflow and at least one executed test backed by verbatim command output, test log, HTTP response, or artifact evidence. Generic notes and plain assertions are rejected. Public publishing requires three independent grounded PASS results and explicit approval.",
+      description: "Paid ContextKit write call ($0.01). Creates a private draft only; it does not publish or spend the future $0.05 listing price. Compile only completed, non-trivial, reusable Bankr-adjacent work with a complete workflow and at least one executed test backed by verbatim command output, test log, HTTP response, or artifact evidence. Generic notes and plain assertions are rejected.",
       inputSchema: {
         ...conversationInput,
         minConfidence: z.number().min(0.5).max(0.95).default(0.72),
-        autoSave: z.boolean().default(true),
-        priceUsd: z.literal(0.05).default(0.05)
+        autoSave: z.boolean().default(true)
       }
     },
-    async ({ messages, contextId, minConfidence, autoSave, priceUsd }) => {
+    async ({ messages, contextId, minConfidence, autoSave }) => {
       const invalid = validateConversation({ messages, contextId });
       if (invalid) return toolError(invalid);
-      return callContextKit(options, "/skills/compile", { messages, contextId, minConfidence, autoSave, priceUsd });
+      return callContextKit(options, "/skills/compile", { messages, contextId, minConfidence, autoSave });
     }
   );
 
@@ -146,7 +152,7 @@ export function createContextKitMcpServer(options: ContextKitMcpOptions) {
     "contextkit_skill_publish",
     {
       title: "Publish a verified paid skill",
-      description: "Publish an existing private skill only after validation.eligible=true, three independent source-grounded PASS results, score 75+, safety checks, and explicit user approval. Unverified or under-tested drafts are rejected by the API.",
+      description: "Compatibility publish tool. New public skills still require a pushed executable repository bundle, validation.eligible=true, three grounded PASS results, score 75+, safety checks, and explicit user approval.",
       inputSchema: {
         skillId: z.string().regex(/^exp_[a-f0-9]{24}$/),
         priceUsd: z.literal(0.05).default(0.05),
@@ -154,6 +160,50 @@ export function createContextKitMcpServer(options: ContextKitMcpOptions) {
       }
     },
     async ({ skillId, priceUsd }) => callContextKit(options, "/skills/publish", { skillId, priceUsd, userApproved: true })
+  );
+
+  server.registerTool(
+    "contextkit_skill_validate_bundle",
+    {
+      title: "Validate a complete skill repository bundle",
+      description: "Validate a private compiled skill's complete source bundle without storing it. Checks safe paths, secrets, identity/version alignment, source/tests/examples, package lock, config schema, and executable contract.",
+      inputSchema: {
+        skillId: z.string().regex(/^exp_[a-f0-9]{24}$/),
+        repository: z.string().min(2).max(80).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
+        version: z.string().regex(/^\d+\.\d+\.\d+$/),
+        files: z.array(skillBundleFileInput).min(1).max(128)
+      }
+    },
+    async (input) => callContextKit(options, "/skills/validate", { ...input, mode: "skill-validate" })
+  );
+
+  server.registerTool(
+    "contextkit_skill_push",
+    {
+      title: "Push an immutable skill repository version",
+      description: "Store a validated content-addressed source bundle for a private compiled skill. A published version cannot be overwritten; changes require a semantic version bump.",
+      inputSchema: {
+        skillId: z.string().regex(/^exp_[a-f0-9]{24}$/),
+        repository: z.string().min(2).max(80).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
+        version: z.string().regex(/^\d+\.\d+\.\d+$/),
+        files: z.array(skillBundleFileInput).min(1).max(128)
+      }
+    },
+    async (input) => callContextKit(options, "/skills/push", { ...input, mode: "skill-push" })
+  );
+
+  server.registerTool(
+    "contextkit_skill_repository_publish",
+    {
+      title: "Publish an executable skill repository",
+      description: "Publish a compiled skill only after its immutable executable bundle passes repository validation and the user explicitly approves the public $0.05 Bankr x402 listing.",
+      inputSchema: {
+        skillId: z.string().regex(/^exp_[a-f0-9]{24}$/),
+        priceUsd: z.literal(0.05).default(0.05),
+        userApproved: z.literal(true)
+      }
+    },
+    async ({ skillId, priceUsd }) => callContextKit(options, "/skills/publish", { skillId, priceUsd, userApproved: true, mode: "skill-repository-publish" })
   );
 
   server.registerTool(
@@ -174,15 +224,35 @@ export function createContextKitMcpServer(options: ContextKitMcpOptions) {
   );
 
   server.registerTool(
+    "contextkit_skill_inspect",
+    {
+      title: "Inspect a skill repository manifest",
+      description: "Inspect public skill metadata, repository version, digest, file manifest, and validation without revealing paid file contents.",
+      inputSchema: { skillId: z.string().regex(/^exp_[a-f0-9]{24}$/) }
+    },
+    async ({ skillId }) => callContextKit(options, "/skills/inspect", { mode: "skill-inspect", skillId })
+  );
+
+  server.registerTool(
     "contextkit_skill_buy",
     {
       title: "Buy and install a verified skill",
-      description: "Buy a public verified skill. The response includes SKILL.md, a versioned manifest, compatibility metadata, validation report, and a non-resale installation license.",
+      description: "Buy a public verified skill. Repository-backed skills return all source, tests, examples, config, lockfile, generated checksums, validation, and safe materialization instructions.",
       inputSchema: {
         skillId: z.string().regex(/^exp_[a-f0-9]{24}$/)
       }
     },
     async ({ skillId }) => callContextKit(options, "/skills/buy", { skillId })
+  );
+
+  server.registerTool(
+    "contextkit_skill_clone",
+    {
+      title: "Buy and clone a complete skill repository",
+      description: "Settle the $0.05 Bankr/API-credit purchase and return every immutable repository file. Verify checksums and create a new directory; never overwrite files implicitly.",
+      inputSchema: { skillId: z.string().regex(/^exp_[a-f0-9]{24}$/) }
+    },
+    async ({ skillId }) => callContextKit(options, "/skills/clone", { skillId, mode: "skill-clone" })
   );
 
   server.registerTool(
@@ -272,14 +342,13 @@ export function createContextKitMcpServer(options: ContextKitMcpOptions) {
       inputSchema: {
         ...conversationInput,
         minConfidence: z.number().min(0.5).max(0.95).default(0.72),
-        autoSave: z.boolean().default(true),
-        priceUsd: z.literal(0.05).default(0.05)
+        autoSave: z.boolean().default(true)
       }
     },
-    async ({ messages, contextId, minConfidence, autoSave, priceUsd }) => {
+    async ({ messages, contextId, minConfidence, autoSave }) => {
       const invalid = validateConversation({ messages, contextId });
       if (invalid) return toolError(invalid);
-      return callContextKit(options, "/experience/consider", { messages, contextId, minConfidence, autoSave, priceUsd });
+      return callContextKit(options, "/experience/consider", { messages, contextId, minConfidence, autoSave });
     }
   );
 

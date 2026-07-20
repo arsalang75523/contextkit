@@ -104,9 +104,9 @@ export const experienceSaveSchema = experienceWriteBaseSchema.refine((value) => 
 });
 
 export const experiencePublishSchema = experienceWriteBaseSchema.extend({
-  mode: z.enum(["skill-publish", "experience-publish", "publish"]).optional(),
-  operation: z.enum(["skill-publish", "experience-publish", "publish"]).optional(),
-  action: z.enum(["skill-publish", "experience-publish", "publish"]).optional(),
+  mode: z.enum(["skill-publish", "skill-repository-publish", "experience-publish", "publish"]).optional(),
+  operation: z.enum(["skill-publish", "skill-repository-publish", "experience-publish", "publish"]).optional(),
+  action: z.enum(["skill-publish", "skill-repository-publish", "experience-publish", "publish"]).optional(),
   experienceId: z.string().regex(/^exp_[a-f0-9]{24}$/).optional(),
   skillId: z.string().regex(/^exp_[a-f0-9]{24}$/).optional(),
   publishToken: z.string().regex(/^pub_[a-f0-9]{24}$/).optional(),
@@ -118,6 +118,8 @@ export const experiencePublishSchema = experienceWriteBaseSchema.extend({
 });
 
 export const experienceSearchSchema = z.object({
+  mode: z.enum(["skill-search", "skill-inspect"]).optional(),
+  skillId: z.string().regex(/^exp_[a-f0-9]{24}$/).optional(),
   query: z.string().max(800).optional(),
   tags: z.array(z.string().min(1).max(48)).max(16).optional(),
   ecosystems: z.array(z.enum(["bankr", "x402", "base", "mcp", "wallet", "defi", "automation", "llm-gateway", "agent-infrastructure"])).max(9).optional(),
@@ -125,6 +127,10 @@ export const experienceSearchSchema = z.object({
   verifiedOnly: z.boolean().default(true),
   includePrivate: z.boolean().default(true),
   limit: z.number().int().min(1).max(20).default(10)
+}).superRefine((value, ctx) => {
+  if (value.mode === "skill-inspect" && !value.skillId) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["skillId"], message: "skillId is required for skill-inspect." });
+  }
 });
 
 export const experienceConsiderSchema = z.object({
@@ -140,12 +146,34 @@ export const experienceConsiderSchema = z.object({
 });
 
 export const experienceBuySchema = z.object({
+  mode: z.enum(["skill-buy", "skill-clone"]).optional(),
   experienceId: z.string().regex(/^exp_[a-f0-9]{24}$/).optional(),
   skillId: z.string().regex(/^exp_[a-f0-9]{24}$/).optional(),
   listingId: z.string().regex(/^exp_[a-f0-9]{24}$/).optional(),
   buyerId: z.string().min(1).max(120).optional()
 }).refine((value) => Boolean(value.experienceId || value.skillId || value.listingId), {
   message: "Provide experienceId, skillId, or listingId."
+});
+
+export const skillBundleFileSchema = z.object({
+  path: z.string().min(1).max(240),
+  content: z.string().max(450_000),
+  encoding: z.enum(["utf8", "base64"]).default("utf8"),
+  mode: z.union([z.literal(420), z.literal(493)]).default(420)
+});
+
+export const skillBundlePushSchema = z.object({
+  mode: z.enum(["skill-validate", "skill-push"]).default("skill-push"),
+  skillId: z.string().regex(/^exp_[a-f0-9]{24}$/).optional(),
+  publishToken: z.string().regex(/^pub_[a-f0-9]{24}$/).optional(),
+  repository: z.string().min(2).max(80).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
+  version: z.string().regex(/^\d+\.\d+\.\d+$/),
+  files: z.array(skillBundleFileSchema).min(1).max(128),
+  metadata: z.record(z.string(), z.unknown()).optional()
+}).superRefine((value, ctx) => {
+  if (!value.skillId) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["skillId"], message: "skillId is required for skill bundle validation and push." });
+  }
 });
 
 function hasExperienceContent(value: { experience?: z.infer<typeof experienceRecordSchema>; title?: string; content?: string; tags?: string[] }) {
@@ -249,6 +277,8 @@ export type ExperiencePublishInput = z.infer<typeof experiencePublishSchema>;
 export type ExperienceSearchInput = z.infer<typeof experienceSearchSchema>;
 export type ExperienceConsiderInput = z.infer<typeof experienceConsiderSchema>;
 export type ExperienceBuyInput = z.infer<typeof experienceBuySchema>;
+export type SkillBundlePushInput = z.infer<typeof skillBundlePushSchema>;
+export type SkillBundleFileInput = z.infer<typeof skillBundleFileSchema>;
 export type VerifiedSkillInput = z.infer<typeof verifiedSkillSchema>;
 
 export type ApiError = {

@@ -8,6 +8,7 @@ import {
   experienceConsiderSchema,
   experiencePublishSchema,
   experienceSearchSchema,
+  skillBundlePushSchema,
   loginSchema,
   revokeApiKeySchema,
   signupSchema,
@@ -299,9 +300,13 @@ routes.forEach(([path, summary, responseSchema, price]) => {
 
 const skillRoutes = [
   ["/api/skills/compile", "Compile completed work into a private verified-skill draft", experienceConsiderSchema, endpointPricing["experience-save"]],
-  ["/api/skills/publish", "Publish an approved validation-eligible skill", experiencePublishSchema, endpointPricing["experience-publish"]],
+  ["/api/skills/validate", "Validate a complete skill repository bundle without storing it", skillBundlePushSchema, endpointPricing["experience-save"]],
+  ["/api/skills/push", "Push an immutable content-addressed skill repository version", skillBundlePushSchema, endpointPricing["experience-save"]],
+  ["/api/skills/publish", "Publish an approved validation-eligible skill or executable repository version", experiencePublishSchema, endpointPricing["experience-publish"]],
   ["/api/skills/search", "Search verified skill previews", experienceSearchSchema, endpointPricing["experience-search"]],
-  ["/api/skills/buy", "Buy a verified SKILL.md install bundle", experienceBuySchema, endpointPricing["experience-buy"]]
+  ["/api/skills/inspect", "Inspect a verified repository manifest without paid file contents", experienceSearchSchema, endpointPricing["experience-search"]],
+  ["/api/skills/buy", "Buy a verified skill install bundle", experienceBuySchema, endpointPricing["experience-buy"]],
+  ["/api/skills/clone", "Buy and return every immutable repository file with checksums", experienceBuySchema, endpointPricing["experience-buy"]]
 ] as const;
 
 skillRoutes.forEach(([path, summary, requestSchema, price]) => {
@@ -309,7 +314,7 @@ skillRoutes.forEach(([path, summary, requestSchema, price]) => {
     method: "post",
     path,
     summary,
-    description: `Requires a Bearer API key with context:write scope and ${formatUsd(price)} in account credits or verified x402 payment. Generic notes, plans, placeholders, project diaries, and plain assertions are rejected. Private skill writes require a complete reusable Bankr-adjacent workflow and at least one executed PASS with verbatim command output, test-log, HTTP-response, or artifact evidence. Public publishing requires three independent grounded PASS results, score 75+, safety validation, and userApproved=true. Test proof is embedded in the generated SKILL.md.`,
+    description: `Requires a Bearer API key with context:write scope and ${formatUsd(price)} in account credits or verified x402 payment. Generic notes, plans, placeholders, project diaries, and plain assertions are rejected. Private skill writes require at least one source-grounded executed PASS. Repository pushes are immutable and SHA-256 addressed; unsafe paths, credentials, install hooks, incomplete source/tests/examples, and identity mismatches are rejected. Public repository publishing requires three grounded PASS results, score 75+, an executable validated bundle, safety checks, and userApproved=true.`,
     tags: ["Verified Skills"],
     security: [{ ApiKeyAuth: [], X402Payment: [] }],
     request: {

@@ -16,8 +16,13 @@ const hostedSlugs: Record<string, string> = {
   "experience-buy": "contextkit-experience-buy",
   "skill-compile": "contextkit-experience-write",
   "skill-publish": "contextkit-experience-write",
+  "skill-validate": "contextkit-experience-write",
+  "skill-push": "contextkit-experience-write",
+  "skill-repository-publish": "contextkit-experience-write",
   "skill-search": "contextkit-experience-search",
+  "skill-inspect": "contextkit-experience-search",
   "skill-buy": "contextkit-experience-buy",
+  "skill-clone": "contextkit-experience-buy",
   "contextkit-core": "contextkit-core",
   "contextkit-experience-write": "contextkit-experience-write",
   "contextkit-experience-search": "contextkit-experience-search",
@@ -25,7 +30,7 @@ const hostedSlugs: Record<string, string> = {
 };
 
 const coreOperations = new Set(["summarize", "compress-context", "handoff", "extract-profile", "memory-enrichment"]);
-const experienceWriteOperations = new Set(["experience-save", "experience-publish", "skill-compile", "skill-publish"]);
+const experienceWriteOperations = new Set(["experience-save", "experience-publish", "skill-compile", "skill-publish", "skill-validate", "skill-push", "skill-repository-publish"]);
 
 export function bankrHostedUrl(slug: string) {
   return `${bankrHostedBaseUrl.replace(/\/$/, "")}/${hostedSlugs[slug] ?? slug}`;

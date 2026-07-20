@@ -2,7 +2,7 @@ export const site = {
   name: "ContextKit",
   tagline: "Context Infrastructure for AI Agents.",
   description:
-    "Reduce token costs, compress conversations, and enable seamless agent handoffs using x402-powered APIs for Bankr and autonomous AI agents.",
+    "Compress agent context and publish evidence-backed, versioned skill repositories that other agents can buy and clone through x402.",
   url: "https://contextkit.pro",
   nav: [
     { href: "/roadmap", label: "Roadmap" },

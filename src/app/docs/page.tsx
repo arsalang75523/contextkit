@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { ArrowRight, BookOpen, KeyRound, Network, Sparkles, Terminal } from "lucide-react";
+import { ArrowRight, BadgeCheck, BookOpen, KeyRound, Network, Sparkles, Terminal } from "lucide-react";
 import { CodeBlock } from "@/components/code-block";
 import { bankrEndpoints, endpoints } from "@/content/docs";
 import { bankrHostedUrl, bankrX402Command } from "@/lib/bankr-x402";
@@ -22,6 +22,18 @@ const summarizePayload = {
 const directApiExample = directApiCurl("/api/summarize", summarizePayload);
 
 const sdkInstall = `npm install @basedchef/contextkit`;
+
+const repositoryCli = `npm install --global @basedchef/contextkit-cli
+export CONTEXTKIT_API_KEY="ck_live_replace_me"
+
+contextkit skill init ./my-skill --name my-skill --version 1.0.0
+contextkit skill validate ./my-skill --skill-id exp_REPLACE_ME
+contextkit skill push ./my-skill --skill-id exp_REPLACE_ME
+contextkit skill publish ./my-skill
+
+contextkit skill search "x402 timeout"
+contextkit skill inspect exp_REPLACE_ME
+contextkit skill clone exp_REPLACE_ME ./installed-skill`;
 
 const mcpConfig = `{
   "mcpServers": {
@@ -50,17 +62,46 @@ await client.extractProfile({ messages });
 await client.extractProfile({ messages, mode: "memory-enrichment" });
 await client.memoryEnrichment({ messages });
 const draft = await client.compileSkill({ messages, autoSave: true });
-await client.publishSkill({ skillId: draft.experience!.id, priceUsd: 0.05 });
-const matches = await client.searchSkills({ query: "x402 timeout", compatibility: ["codex"] });
-await client.buySkill(matches.results[0].id);
+if (draft.experience && draft.validation?.eligible) {
+  await client.validateSkillBundle({
+    skillId: draft.experience.id,
+    repository: draft.experience.skill!.name,
+    version: draft.experience.skill!.version,
+    files
+  });
+  await client.pushSkillBundle({
+    skillId: draft.experience.id,
+    repository: draft.experience.skill!.name,
+    version: draft.experience.skill!.version,
+    files
+  });
+  await client.publishSkillVersion({
+    skillId: draft.experience.id
+  }); // Call only after explicit user approval.
+}
+const matches = await client.searchSkillRepositories({ query: "x402 timeout", compatibility: ["codex"] });
+await client.inspectSkillRepository({ skillId: matches.results[0].id });
+const clone = await client.cloneSkillVersion({ skillId: matches.results[0].id });
 await client.estimateTokens({ modelFamily: "openai", input: messages });
 await client.credits();`;
+
+const skillRepositoryFiles = [
+  { path: "SKILL.md", content: "---\\nname: bankr-x402-timeout-recovery\\ndescription: Recover bounded Bankr x402 forwarding without changing response contracts.\\nlicense: MIT\\n---\\n# Bankr x402 timeout recovery\\n\\nUse the tested source, verification, and rollback included in this repository." },
+  { path: "skill.json", content: '{"schemaVersion":1,"name":"bankr-x402-timeout-recovery","version":"1.0.0","runtime":"node22","entrypoint":"src/index.js","testCommand":"npm test"}' },
+  { path: "LICENSE", content: "MIT License" },
+  { path: "package.json", content: '{"name":"bankr-x402-timeout-recovery","version":"1.0.0","type":"module","scripts":{"test":"node --test tests/*.test.js"}}' },
+  { path: "package-lock.json", content: '{"name":"bankr-x402-timeout-recovery","version":"1.0.0","lockfileVersion":3,"requires":true,"packages":{"":{"name":"bankr-x402-timeout-recovery","version":"1.0.0"}}}' },
+  { path: "config.schema.json", content: '{"type":"object","properties":{"backendUrl":{"type":"string","format":"uri"}},"required":["backendUrl"],"additionalProperties":false}' },
+  { path: "src/index.js", content: "export function boundedTimeout(originMs, gatewayMs) { return Math.max(1000, Math.min(originMs + gatewayMs, 55000)); }" },
+  { path: "tests/timeout.test.js", content: "import test from 'node:test'; import assert from 'node:assert/strict'; import { boundedTimeout } from '../src/index.js'; test('keeps paid forwarding bounded', () => assert.equal(boundedTimeout(42000, 8000), 50000));" },
+  { path: "examples/basic.js", content: "import { boundedTimeout } from '../src/index.js'; console.log(boundedTimeout(42000, 8000));" }
+];
 
 const skillCompile = bankrX402Command("skill-compile", {
   mode: "skill-compile",
   messages: [
-    { role: "user", content: "Repair the Bankr x402 timeout without changing the response contract." },
-    { role: "assistant", content: "Compared origin and gateway latency, precomputed long work, and verified HTTP 200." }
+    { role: "user", content: "Repair the Bankr x402 timeout without changing the response contract, then verify the paid path." },
+    { role: "assistant", content: "Compared origin and gateway latency, moved long work before payment, and preserved the schema. Executed curl against the paid endpoint; exact output: HTTP/2 200 and mode=compact. Reusable lesson: precompute slow work and keep the paid forwarding call bounded." }
   ]
 });
 
@@ -71,7 +112,34 @@ const skillSearch = bankrX402Command("skill-search", {
   verifiedOnly: true
 });
 
-const skillBuy = bankrX402Command("skill-buy", { skillId: "exp_REPLACE_ME" });
+const skillValidate = bankrX402Command("skill-validate", {
+  mode: "skill-validate",
+  skillId: "exp_REPLACE_ME",
+  publishToken: "pub_REPLACE_ME",
+  repository: "bankr-x402-timeout-recovery",
+  version: "1.0.0",
+  files: skillRepositoryFiles
+});
+
+const skillPush = bankrX402Command("skill-push", {
+  mode: "skill-push",
+  skillId: "exp_REPLACE_ME",
+  publishToken: "pub_REPLACE_ME",
+  repository: "bankr-x402-timeout-recovery",
+  version: "1.0.0",
+  files: skillRepositoryFiles
+});
+
+const skillRepositoryPublish = bankrX402Command("skill-repository-publish", {
+  mode: "skill-repository-publish",
+  skillId: "exp_REPLACE_ME",
+  publishToken: "pub_REPLACE_ME",
+  userApproved: true,
+  priceUsd: 0.05
+});
+
+const skillInspect = bankrX402Command("skill-inspect", { mode: "skill-inspect", skillId: "exp_REPLACE_ME" });
+const skillClone = bankrX402Command("skill-clone", { mode: "skill-clone", skillId: "exp_REPLACE_ME" });
 
 const sdkCredits = `${sdkClient}
 
@@ -184,7 +252,7 @@ const navItems = [
   "Bankr Hosted x402",
   "Dashboard And Keys",
   "MCP",
-  "Verified Skills",
+  "Skill Repositories",
   "Long Context",
   "API Credits",
   "Direct API",
@@ -205,12 +273,12 @@ export default function DocsPage() {
       <div className="relative mx-auto max-w-7xl">
         <section className="overflow-hidden rounded-[1.55rem] border border-white/[0.13] bg-carbon/80 shadow-[0_24px_90px_rgba(0,0,0,0.3)] backdrop-blur-xl">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-3 font-mono text-[10px] uppercase tracking-[0.16em] text-white/42 sm:px-7"><span className="flex items-center gap-2"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-mint" /> ContextKit docs / v1</span><span className="hidden sm:inline">bankr, SDK, direct API, MCP</span><span className="text-mint">developer reference</span></div>
-          <div className="grid gap-7 px-6 py-8 sm:px-9 lg:grid-cols-[1.08fr_0.92fr] lg:px-12 lg:py-10"><div><div className="inline-flex items-center gap-2 rounded-full border border-mint/25 bg-mint/[0.07] px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.16em] text-mint"><Sparkles className="h-3.5 w-3.5" /> Integration guide</div><h1 className="mt-5 max-w-3xl text-balance text-4xl font-semibold leading-[0.98] tracking-[-0.05em] text-white sm:text-5xl">Everything an agent needs to keep context moving.</h1><p className="mt-4 max-w-2xl leading-7 text-white/60">Start with a hosted x402 command, wire direct API credits into your backend, or connect MCP to a coding agent. This guide covers the full path.</p><div className="mt-7 flex flex-wrap gap-3"><Link href="/playground" className="inline-flex h-10 items-center gap-2 rounded-lg bg-mint px-4 text-sm font-semibold text-ink transition hover:bg-white">Try playground <ArrowRight className="h-4 w-4" /></Link><Link href="/api-reference" className="inline-flex h-10 items-center gap-2 rounded-lg border border-line bg-ink/45 px-4 text-sm text-white/75 transition hover:border-mint/45 hover:text-white">API reference <ArrowRight className="h-4 w-4" /></Link></div></div><div className="grid content-start gap-px overflow-hidden rounded-2xl border border-line bg-line"><DocsPulse icon={<Terminal className="h-4 w-4" />} title="Bankr x402" text="Public paid calls with USDC settlement." /><DocsPulse icon={<KeyRound className="h-4 w-4" />} title="SDK + credits" text="Scoped keys and direct production routes." /><DocsPulse icon={<Network className="h-4 w-4" />} title="Remote MCP" text="OAuth-connected agent tools over HTTP." /></div></div>
+          <div className="grid gap-7 px-6 py-8 sm:px-9 lg:grid-cols-[1.08fr_0.92fr] lg:px-12 lg:py-10"><div><div className="inline-flex items-center gap-2 rounded-full border border-mint/25 bg-mint/[0.07] px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.16em] text-mint"><Sparkles className="h-3.5 w-3.5" /> Integration guide</div><h1 className="mt-5 max-w-3xl text-balance text-4xl font-semibold leading-[0.98] tracking-[-0.05em] text-white sm:text-5xl">Preserve agent context. Ship only proven skills.</h1><p className="mt-4 max-w-2xl leading-7 text-white/60">Connect through Bankr x402, direct API credits, the TypeScript SDK, or MCP. This guide covers continuation memory plus evidence-gated skill compilation, approval, discovery, and installation.</p><div className="mt-7 flex flex-wrap gap-3"><Link href="/playground" className="inline-flex h-10 items-center gap-2 rounded-lg bg-mint px-4 text-sm font-semibold text-ink transition hover:bg-white">Try playground <ArrowRight className="h-4 w-4" /></Link><Link href="/api-reference" className="inline-flex h-10 items-center gap-2 rounded-lg border border-line bg-ink/45 px-4 text-sm text-white/75 transition hover:border-mint/45 hover:text-white">API reference <ArrowRight className="h-4 w-4" /></Link></div></div><div className="grid content-start gap-px overflow-hidden rounded-2xl border border-line bg-line"><DocsPulse icon={<Terminal className="h-4 w-4" />} title="Bankr x402" text="Public paid calls with USDC settlement." /><DocsPulse icon={<KeyRound className="h-4 w-4" />} title="SDK + credits" text="Scoped keys and direct production routes." /><DocsPulse icon={<Network className="h-4 w-4" />} title="Remote MCP" text="OAuth-connected agent tools over HTTP." /><DocsPulse icon={<BadgeCheck className="h-4 w-4" />} title="Verified skills" text="Proof-gated drafts and approval-only publishing." /></div></div>
         </section>
 
         <section className="mt-14 grid gap-8 lg:grid-cols-[250px_minmax(0,1fr)]">
           <aside className="h-fit rounded-[1.25rem] border border-line bg-carbon/70 p-3 text-sm text-white/65 lg:sticky lg:top-24">
-            <div className="border-b border-line px-3 pb-3 pt-2"><p className="font-mono text-[10px] uppercase tracking-[0.17em] text-mint">On this page</p><p className="mt-1 text-sm text-white/48">14 integration topics</p></div>
+            <div className="border-b border-line px-3 pb-3 pt-2"><p className="font-mono text-[10px] uppercase tracking-[0.17em] text-mint">On this page</p><p className="mt-1 text-sm text-white/48">{navItems.length} integration topics</p></div>
             <nav className="mt-2 max-h-[calc(100vh-9rem)] overflow-y-auto pr-1">
             {navItems.map((item, index) => (
               <a key={item} href={`#${slugify(item)}`} className="group flex items-center gap-3 rounded-lg px-3 py-2.5 transition hover:bg-white/[0.05] hover:text-white">
@@ -316,9 +384,12 @@ export default function DocsPage() {
                     <li>contextkit_handoff</li>
                     <li>contextkit_extract_profile</li>
                     <li>contextkit_skill_compile</li>
-                    <li>contextkit_skill_publish</li>
+                    <li>contextkit_skill_validate_bundle</li>
+                    <li>contextkit_skill_push</li>
+                    <li>contextkit_skill_repository_publish</li>
                     <li>contextkit_skill_search</li>
-                    <li>contextkit_skill_buy</li>
+                    <li>contextkit_skill_inspect</li>
+                    <li>contextkit_skill_clone</li>
                     <li>contextkit_estimate_tokens</li>
                     <li>contextkit_get_credits</li>
                   </ul>
@@ -329,23 +400,40 @@ export default function DocsPage() {
               </div>
             </DocSection>
 
-            <DocSection id="verified-skills" title="Verified Skills">
+            <DocSection id="skill-repositories" title="Skill Repositories">
               <p>
-                Registry listings are installable skills, not raw transcripts. ContextKit compiles only complete reusable Bankr-adjacent workflows and binds every accepted test to verbatim hard evidence from the source conversation. Assertions and generic content do not count. A private write needs one grounded execution PASS. Public listing needs three independent grounded PASS results, score 75+, approved ecosystem, safety checks, ownership, and explicit user approval.
+                ContextKit repositories turn proven agent work into immutable, cloneable skill versions. The complete lifecycle is <code>compile → skill-validate → skill-push → skill-repository-publish → skill-search/inspect → skill-clone</code>. Compilation proves the method; repository validation proves the files; publishing always requires a separate explicit approval.
               </p>
-              <div className="mt-4 grid gap-3 md:grid-cols-2">
-                <InfoCard title="Private write gate" body="Non-trivial reusable work, complete prerequisites/inputs/outputs/workflow/verification/failure/safety/rollback structure, and at least one executed PASS with source-grounded hard evidence." />
-                <InfoCard title="Public publish gate" body="Three independent grounded PASS results, every declared test passing, score 75+, explicit reuse license, approved ecosystem, no secrets/private paths/unsafe commands, ownership, publish capability, and userApproved=true." />
-                <InfoCard title="Evidence inside SKILL.md" body="Each test records PASS status, method, expected and observed outcomes, hard evidence type, verbatim excerpt, source message number, and success criteria under Test evidence. Plain assertions are refused." />
-                <InfoCard title="Buy + install" body="A purchase returns the full evidence-bearing SKILL.md, versioned manifest, validation report, compatibility metadata, and non-resale license." />
+              <div className="mt-4 grid gap-3 md:grid-cols-3">
+                <InfoCard title="Minimum repository" body="Every version requires SKILL.md, skill.json, and LICENSE. Repository name, skill identity, and semantic version must match exactly." />
+                <InfoCard title="Executable repository" body="Public executable bundles also require package.json, package-lock.json, config.schema.json, meaningful src/, tests/, and examples/. Install lifecycle hooks are forbidden." />
+                <InfoCard title="Content addressed" body="Files receive SHA-256 checksums and a deterministic bundle digest. A published semantic version is immutable; changes require a new version." />
+                <InfoCard title="Security gate" body="ContextKit rejects traversal and absolute paths, secret-like values, private key material, build/vendor directories, unsafe install hooks, incomplete executable contracts, and decoded bundles above 320KB." />
+                <InfoCard title="Paid clone" body="After the $0.05 purchase, skill-clone returns every file with path, content, encoding, size, SHA-256, manifest, validation, license, and safe no-overwrite materialization instructions." />
+                <InfoCard title="Legacy compatible" body="Older verified listings still return the evidence-bearing SKILL.md install format. Repository-backed versions add the complete source tree without breaking existing buyers." />
               </div>
-              <div className="mt-4 grid gap-4 lg:grid-cols-3">
-                <div><h3 className="mb-2 font-semibold text-white">Compile</h3><CodeBlock code={skillCompile} /></div>
-                <div><h3 className="mb-2 font-semibold text-white">Search</h3><CodeBlock code={skillSearch} /></div>
-                <div><h3 className="mb-2 font-semibold text-white">Buy</h3><CodeBlock code={skillBuy} /></div>
+              <div className="mt-5 grid gap-px overflow-hidden rounded-xl border border-line bg-line md:grid-cols-3 xl:grid-cols-6">
+                {["Compile proof", "Validate files", "Push version", "Approve publish", "Search / inspect", "Paid clone"].map((label, index) => (
+                  <div key={label} className="bg-carbon/95 p-4"><span className="font-mono text-[10px] text-mint">{String(index + 1).padStart(2, "0")}</span><p className="mt-2 text-sm font-medium text-white">{label}</p></div>
+                ))}
+              </div>
+              <div className="mt-5 grid gap-4 lg:grid-cols-[1.05fr_0.95fr]">
+                <div><h3 className="mb-2 font-semibold text-white">Repository CLI</h3><CodeBlock code={repositoryCli} /></div>
+                <div className="rounded-md border border-aqua/20 bg-aqua/[0.06] p-5 text-sm leading-6 text-white/65">
+                  <h3 className="font-semibold text-white">Git-like, but paid and verified</h3>
+                  <p className="mt-3">The CLI collects safe files, rejects symlinks and local secrets, preserves Git-style <code>0644/0755</code> modes, and verifies every checksum before clone writes anything. Direct CLI calls use dashboard API-key credits; the equivalent Bankr commands below settle each lane through x402.</p>
+                </div>
+              </div>
+              <div className="mt-5 grid gap-4 lg:grid-cols-2">
+                <div><h3 className="mb-2 font-semibold text-white">1. Compile evidence-backed draft</h3><CodeBlock code={skillCompile} /></div>
+                <div><h3 className="mb-2 font-semibold text-white">2. Validate complete files</h3><CodeBlock code={skillValidate} /></div>
+                <div><h3 className="mb-2 font-semibold text-white">3. Push immutable version</h3><CodeBlock code={skillPush} /></div>
+                <div><h3 className="mb-2 font-semibold text-white">4. Explicit repository publish</h3><CodeBlock code={skillRepositoryPublish} /></div>
+                <div><h3 className="mb-2 font-semibold text-white">5. Search then inspect manifest</h3><CodeBlock code={`${skillSearch}\n\n${skillInspect}`} /></div>
+                <div><h3 className="mb-2 font-semibold text-white">6. Pay and clone every file</h3><CodeBlock code={skillClone} /></div>
               </div>
               <div className="mt-4 rounded-md border border-amber/25 bg-amber/[0.08] p-4 text-sm leading-6 text-white/68">
-                Compile returns a private <code>skillId</code>, validation report, and a one-draft <code>publishToken</code> for Bankr-hosted calls. After the user approves, call <code>skill-publish</code> with both values and <code>userApproved: true</code>. Tokens are stored only as SHA-256 hashes and cannot publish another draft.
+                Bankr-hosted drafts use the one-draft <code>publishToken</code> returned by compile for validate, push, and publish. Direct API/MCP owners use their authenticated account ownership. <code>skill-validate</code> never stores files; <code>skill-push</code> stores the immutable content-addressed version; only <code>skill-repository-publish</code> lists it. Write-lane operations cost <code>$0.01</code>; search/inspect cost <code>$0.01</code>; paid clone costs <code>$0.05</code>.
               </div>
             </DocSection>
 
@@ -509,6 +597,8 @@ curl https://contextkit.pro/api/public/metrics`} />
                 <ErrorRow code="401 invalid_api_key" text="API key is missing, invalid, or revoked." />
                 <ErrorRow code="402 payment_required" text="Credits are insufficient or direct x402 payment is required." />
                 <ErrorRow code="403 forbidden" text="The caller is authenticated but not allowed to perform the requested operation." />
+                <ErrorRow code="409 skill_version_immutable" text="That semantic version already exists with a different digest. Bump the version; published artifacts cannot be overwritten." />
+                <ErrorRow code="422 skill_bundle_invalid" text="Repository files failed path, secret, identity, required-file, executable-contract, or size validation." />
                 <ErrorRow code="429 rate_limited" text="The caller exceeded the configured rate limit." />
                 <ErrorRow code="503 internal_not_configured" text="Required server environment variable is missing." />
                 <ErrorRow code="payment_not_verified" text="Credit top-up transaction did not match the invoice transfer requirements." />
@@ -527,6 +617,8 @@ curl https://contextkit.pro/api/public/metrics`} />
                   "Use /dashboard/credits for USDC credit purchases.",
                   "Use SDK only when building a TypeScript integration.",
                   "Configure webhook secrets before production webhooks.",
+                  "Validate before push; push before skill-repository-publish; never reuse a published semantic version for different bytes.",
+                  "Keep decoded repository bundles below 320KB and verify every SHA-256 before materializing a paid clone.",
                   "Never commit .env, real API keys, Bankr keys, or GitHub tokens."
                 ].map((item) => (
                   <div key={item} className="rounded-md border border-line bg-white/[0.035] p-3 text-sm text-white/65">

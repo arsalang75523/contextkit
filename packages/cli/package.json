@@ -1,0 +1,43 @@
+{
+  "name": "@basedchef/contextkit-cli",
+  "version": "0.1.0",
+  "description": "Secure CLI for ContextKit versioned skill repositories.",
+  "type": "module",
+  "bin": {
+    "contextkit": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "license": "MIT",
+  "author": "basedchef",
+  "homepage": "https://contextkit.pro",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/arsalang75523/contextkit.git",
+    "directory": "packages/cli"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json && node --input-type=module -e \"import { chmodSync } from 'node:fs'; chmodSync('dist/cli.js', 0o755)\"",
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test test/*.test.ts",
+    "prepublishOnly": "npm run test && npm run typecheck && npm run build"
+  },
+  "dependencies": {
+    "@basedchef/contextkit": "0.1.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}

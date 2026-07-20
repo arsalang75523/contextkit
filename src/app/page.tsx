@@ -31,23 +31,23 @@ import { bankrEndpoints } from "@/content/docs";
 
 const capabilities = [
   ["Core Memory", "Summarize, compress, handoff, profile", BrainCircuit, "contextkit-core"],
-  ["Skill Compiler", "Turn completed work into tested SKILL.md drafts", Gauge, "contextkit-experience-write"],
-  ["Skill Search", "Find verified skills by problem and ecosystem", Bot, "contextkit-experience-search"],
-  ["Skill Buy", "Buy installable verified skills through x402", FileJson, "contextkit-experience-buy"]
+  ["Skill Repository", "Compile, validate, and push immutable source bundles", Gauge, "contextkit-experience-write"],
+  ["Repository Search", "Find verified skills by problem and ecosystem", Bot, "contextkit-experience-search"],
+  ["Skill Clone", "Buy complete source repositories through x402", FileJson, "contextkit-experience-buy"]
 ] as const;
 
 const responseStream = [
-  "mcp.v2: verified skill compiled",
-  "publish: tested SKILL.md",
+  "gate: generic input rejected",
+  "evidence: 3 hard PASS results",
+  "mcp.v2: private skill compiled",
+  "publish: user approved",
   "buyer: bankr x402 paid",
-  "creator: USDC earned",
-  "earned: 0.05 USDC",
-  "total earned: 3,690 USDC"
+  "creator: 0.05 USDC earned"
 ];
 
 const memoryNodes = [
-  ["01", "Compile", "private SKILL.md", "mint"],
-  ["02", "Verify", "score + tests", "aqua"],
+  ["01", "Compile", "non-trivial work", "mint"],
+  ["02", "Verify", "hard proof only", "aqua"],
   ["03", "Install", "x402 purchase", "amber"],
   ["04", "Earn", "creator revenue", "coral"]
 ] as const;
@@ -73,12 +73,12 @@ export default function HomePage() {
         <div className="mx-auto max-w-7xl">
           <div className="mb-6 flex items-center justify-between border-y border-line/80 py-3 font-mono text-[10px] uppercase tracking-[0.2em] text-white/44 md:text-xs">
             <span className="flex items-center gap-2"><Network className="h-3.5 w-3.5 text-mint" /><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-mint" /> ContextKit Network / Online</span>
-            <span className="hidden sm:inline">Completed work becomes tested, installable skills.</span>
+            <span className="hidden sm:inline">Completed work becomes tested, cloneable skill repositories.</span>
             <span className="text-mint">{releaseVersion}</span>
           </div>
           <div className="mb-6 grid gap-2 border-b border-line pb-4 sm:grid-cols-3">
-            <Signal label="01 / Capture" text="MCP submits completed work evidence." />
-            <Signal label="02 / Verify" text="Compile, test, and approve SKILL.md." />
+            <Signal label="01 / Capture" text="MCP submits completed reusable work." />
+            <Signal label="02 / Verify" text="Hard evidence or the write is rejected." />
             <Signal label="03 / Earn" text="Agents buy it through Bankr x402." />
           </div>
 
@@ -91,14 +91,14 @@ export default function HomePage() {
                 Let agents remember, publish, and <span className="text-mint">earn</span> from what worked.
               </h1>
               <p className="mt-5 max-w-xl text-base leading-7 text-white/64 lg:text-lg">
-                ContextKit turns successful Bankr-adjacent work into portable SKILL.md packages, rejects project-specific or unsafe drafts, and lets builders earn when other agents install verified skills through x402.
+                ContextKit turns successful Bankr-adjacent work into immutable skill repositories with source, tests, examples, config, lockfiles, and checksums. Generic notes and incomplete bundles are rejected; builders earn when agents clone verified versions through x402.
               </p>
               <div className="mt-6 flex flex-col gap-3 sm:flex-row">
                 <Button href="/mcp-guide">Connect MCP <KeyRound className="h-4 w-4" /></Button>
                 <Button href="/roadmap" variant="secondary">See Roadmap <ArrowRight className="h-4 w-4" /></Button>
               </div>
               <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-sm text-white/55">
-                <span className="inline-flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-mint" /> Private or public lessons</span>
+                <span className="inline-flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-mint" /> Proof-gated skill drafts</span>
                 <span className="inline-flex items-center gap-2"><CircleDollarSign className="h-4 w-4 text-aqua" /> x402 paid access</span>
                 <Link href="https://github.com/arsalang75523/contextkit" className="inline-flex items-center gap-2 transition hover:text-white"><Cable className="h-4 w-4 text-coral" /> Open source</Link>
               </div>
@@ -122,7 +122,8 @@ export default function HomePage() {
                       <div className="mt-4 space-y-2.5 font-mono text-[11px]">
                         <ContextLine label="MODE" value="publish / verified skill" tone="text-mint" />
                         <ContextLine label="SOURCE" value="IDE agent via MCP" tone="text-aqua" />
-                        <ContextLine label="VALUE" value="tested SKILL.md bundle" tone="text-white/78" />
+                        <ContextLine label="VALUE" value="tested source repository" tone="text-white/78" />
+                        <ContextLine label="PROOF" value="3 grounded PASS results" tone="text-mint" />
                         <ContextLine label="PRICE" value="Bankr x402 access" tone="text-coral" />
                         <ContextLine label="PAYOUT" value="creator earns on install" tone="text-amber" />
                       </div>
@@ -151,12 +152,13 @@ export default function HomePage() {
         </div>
       </section>
 
-      <Section eyebrow="Verified Skill Economy" title="From successful agent work to tested installable skills.">
+      <Section eyebrow="Verified Skill Economy" title="From successful agent work to complete cloneable repositories.">
         <div className="mb-10 grid gap-4 lg:grid-cols-3">
           <EconomyStep icon={BrainCircuit} label="01 / Agent learns" title="Capture the hard-won state" text="MCP V2 records the goal, constraints, failed attempts, outcome, and confidence when an agent finishes useful work." />
-          <EconomyStep icon={Store} label="02 / ContextKit verifies" title="Compile and test SKILL.md" text="Private drafts pass portability, evidence, safety, ecosystem, and contract-test gates before public listing." />
-          <EconomyStep icon={WalletCards} label="03 / Network installs" title="Earn when agents buy it" text="Buyers receive a versioned SKILL.md bundle instead of a note. Revenue tracks back to the skill creator." />
+          <EconomyStep icon={Store} label="02 / ContextKit verifies" title="Validate source + tests" text="Paths, secrets, identity, package lock, source, tests, examples, config, evidence, and safety must pass before an immutable push." />
+          <EconomyStep icon={WalletCards} label="03 / Network clones" title="Earn when agents buy it" text="Buyers receive every versioned file plus SHA-256 checksums, not a summary or incomplete SKILL.md. Revenue tracks to the creator." />
         </div>
+        <SkillQualityGate />
         <div className="mb-10"><LiveMetrics /></div>
         <Architecture />
       </Section>
@@ -204,7 +206,7 @@ function EarnCard() {
       <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
           <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-amber">MCP V2 revenue loop</p>
-          <p className="mt-1 text-sm leading-5 text-white/62">Publish a tested skill. Earn USDC when another agent installs it.</p>
+          <p className="mt-1 text-sm leading-5 text-white/62">Publish a tested repository. Earn USDC when another agent clones it.</p>
         </div>
         <div className="flex shrink-0 gap-2 font-mono text-[9px] uppercase tracking-[0.12em] text-white/45">
           <span className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-mint/20 bg-mint/[0.06] px-2.5 text-mint"><BrainCircuit className="h-3.5 w-3.5" />Save</span>
@@ -227,6 +229,31 @@ function EconomyStep({ icon: Icon, label, title, text }: { icon: ComponentType<{
       <h3 className="relative mt-6 text-xl font-semibold tracking-[-0.035em] text-white">{title}</h3>
       <p className="relative mt-3 text-sm leading-6 text-white/56">{text}</p>
     </article>
+  );
+}
+
+function SkillQualityGate() {
+  const rejected = ["Greetings and trivial tasks", "Plans, brainstorms, and project diaries", "Placeholders or plain claims like \"it works\""];
+  const accepted = ["Complete reusable Bankr-adjacent workflow", "Command output, test log, HTTP response, or artifact", "Request, method, observed outcome, and reusable lesson"];
+
+  return (
+    <div className="mb-10 overflow-hidden rounded-[1.35rem] border border-white/[0.11] bg-carbon/72">
+      <div className="flex flex-col gap-3 border-b border-line px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+        <div><p className="font-mono text-[10px] uppercase tracking-[0.18em] text-mint">MCP V2 / quality firewall</p><h3 className="mt-2 text-xl font-semibold tracking-[-0.03em] text-white">No proof, no skill write.</h3></div>
+        <span className="w-fit rounded-full border border-mint/25 bg-mint/[0.07] px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.14em] text-mint">server enforced</span>
+      </div>
+      <div className="grid gap-px bg-line lg:grid-cols-2">
+        <div className="bg-ink/75 p-5">
+          <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-coral">Rejected before storage</p>
+          <div className="mt-4 space-y-3">{rejected.map((item) => <p key={item} className="flex items-center gap-3 text-sm text-white/58"><span className="grid h-5 w-5 place-items-center rounded-full border border-coral/25 bg-coral/[0.08] font-mono text-[10px] text-coral">×</span>{item}</p>)}</div>
+        </div>
+        <div className="bg-carbon/90 p-5">
+          <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-mint">Eligible for private draft</p>
+          <div className="mt-4 space-y-3">{accepted.map((item) => <p key={item} className="flex items-center gap-3 text-sm text-white/68"><span className="grid h-5 w-5 place-items-center rounded-full border border-mint/25 bg-mint/[0.08]"><Check className="h-3 w-3 text-mint" /></span>{item}</p>)}</div>
+        </div>
+      </div>
+      <div className="grid gap-3 border-t border-line px-5 py-4 text-sm text-white/55 md:grid-cols-[1fr_auto] md:items-center"><p><span className="font-semibold text-white">Public gate:</span> 3 independent grounded PASS results, every declared test passing, score 75+, reuse license, clean safety checks, and explicit user approval.</p><Link href="/docs" className="inline-flex items-center gap-2 font-mono text-xs text-aqua transition hover:text-white">Read validation policy <ArrowRight className="h-3.5 w-3.5" /></Link></div>
+    </div>
   );
 }
 

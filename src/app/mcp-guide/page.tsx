@@ -291,7 +291,7 @@ ContextKit: Run Agent with Guaranteed Auto-Capture`,
 
 export const metadata = {
   title: "MCP Guide",
-  description: "Connect ContextKit MCP and automatic experience capture from Claude, Codex, Hermes, OpenClaw, OpenCode, Cursor, and popular IDEs."
+  description: "Connect ContextKit MCP and evidence-gated verified skill capture from Claude, Codex, Hermes, OpenClaw, OpenCode, Cursor, and popular IDEs."
 };
 
 export default function McpGuidePage() {
@@ -304,8 +304,8 @@ export default function McpGuidePage() {
         <section className="overflow-hidden rounded-[1.55rem] border border-white/[0.13] bg-carbon/80 shadow-[0_24px_90px_rgba(0,0,0,0.3)] backdrop-blur-xl">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-3 font-mono text-[10px] uppercase tracking-[0.16em] text-white/42 sm:px-7"><span className="flex items-center gap-2"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-mint" /> ContextKit MCP / online</span><span className="hidden sm:inline">Streamable HTTP + OAuth</span><span className="text-mint">context:write</span></div>
           <div className="grid gap-7 px-6 py-8 sm:px-9 lg:grid-cols-[1.08fr_0.92fr] lg:px-12 lg:py-10">
-            <div><div className="inline-flex items-center gap-2 rounded-full border border-mint/25 bg-mint/[0.07] px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.16em] text-mint"><Sparkles className="h-3.5 w-3.5" /> Remote agent memory</div><h1 className="mt-5 max-w-3xl text-balance text-4xl font-semibold leading-[0.98] tracking-[-0.05em] text-white sm:text-5xl">Give every coding agent durable context tools.</h1><p className="mt-4 max-w-2xl leading-7 text-white/60">Connect once, authenticate with OAuth, then let Claude, Codex, Cursor, or another MCP host summarize, compress, hand off, extract profile memory, estimate tokens, and inspect credits.</p><div className="mt-7 flex flex-col gap-3 rounded-xl border border-aqua/25 bg-aqua/[0.06] p-4 sm:flex-row sm:items-center sm:justify-between"><code className="break-all font-mono text-sm text-white">{endpoint}</code><CopyMcpButton endpoint={endpoint} /></div></div>
-            <div className="grid content-start gap-px overflow-hidden rounded-2xl border border-line bg-line"><FlowStep index="01" icon={<Wrench className="h-4 w-4" />} title="Add remote server" text="Choose Streamable HTTP, never STDIO." /><FlowStep index="02" icon={<LockKeyhole className="h-4 w-4" />} title="Sign in with OAuth" text="ContextKit registers the client and uses PKCE." /><FlowStep index="03" icon={<CheckCircle2 className="h-4 w-4" />} title="Approve access" text="Tools now spend the same scoped account credits." /><FlowStep index="04" icon={<Sparkles className="h-4 w-4" />} title="Auto-capture policy" text="After useful completed work, call consider; publish only after user approval." /></div>
+            <div><div className="inline-flex items-center gap-2 rounded-full border border-mint/25 bg-mint/[0.07] px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.16em] text-mint"><Sparkles className="h-3.5 w-3.5" /> Remote memory + skill repositories</div><h1 className="mt-5 max-w-3xl text-balance text-4xl font-semibold leading-[0.98] tracking-[-0.05em] text-white sm:text-5xl">Give every coding agent durable context and cloneable methods.</h1><p className="mt-4 max-w-2xl leading-7 text-white/60">Connect once with OAuth. Agents can preserve context, compile proven work, validate and push complete source bundles, publish immutable versions with approval, and paid-clone every repository file.</p><div className="mt-7 flex flex-col gap-3 rounded-xl border border-aqua/25 bg-aqua/[0.06] p-4 sm:flex-row sm:items-center sm:justify-between"><code className="break-all font-mono text-sm text-white">{endpoint}</code><CopyMcpButton endpoint={endpoint} /></div></div>
+            <div className="grid content-start gap-px overflow-hidden rounded-2xl border border-line bg-line"><FlowStep index="01" icon={<Wrench className="h-4 w-4" />} title="Add remote server" text="Choose Streamable HTTP, never STDIO." /><FlowStep index="02" icon={<LockKeyhole className="h-4 w-4" />} title="Sign in with OAuth" text="ContextKit registers the client and uses PKCE." /><FlowStep index="03" icon={<CheckCircle2 className="h-4 w-4" />} title="Approve access" text="Tools now spend the same scoped account credits." /><FlowStep index="04" icon={<Sparkles className="h-4 w-4" />} title="Versioned repository" text="Compile, validate, push, approve, inspect, then clone." /></div>
           </div>
         </section>
 
@@ -335,11 +335,28 @@ export default function McpGuidePage() {
             <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-amber">Auto-capture rule</p>
             <p className="mt-2">Agents can read <code>contextkit://instructions</code> or call <code>contextkit_get_agent_instructions</code>. Policy: call <code>contextkit_skill_compile</code> only after completed, non-trivial Bankr-adjacent work. ContextKit rejects generic notes, plans, placeholders, project diaries, and plain assertions. A private draft requires a complete reusable workflow plus one executed PASS backed by verbatim command output, test log, HTTP response, or artifact evidence. Public publishing requires three independent grounded PASS results, score 75+, safety checks, and user approval. The generated SKILL.md carries the proof in <code>Source evidence</code> and <code>Test evidence</code>.</p>
           </div>
-          <div className="mt-8 grid gap-px overflow-hidden rounded-[1.3rem] border border-line bg-line sm:grid-cols-2 lg:grid-cols-3">{["contextkit_get_agent_instructions", "contextkit_summarize", "contextkit_compress_context", "contextkit_handoff", "contextkit_extract_profile", "contextkit_skill_compile", "contextkit_skill_publish", "contextkit_skill_search", "contextkit_skill_buy", "contextkit_estimate_tokens", "contextkit_get_credits"].map((tool, index) => <div key={tool} className="flex items-center gap-3 bg-carbon/90 p-4"><span className="font-mono text-[10px] text-white/35">{String(index + 1).padStart(2, "0")}</span><code className="text-sm text-mint">{tool}</code></div>)}</div>
+          <div className="mt-8 grid gap-px overflow-hidden rounded-[1.3rem] border border-line bg-line sm:grid-cols-2 lg:grid-cols-3">{["contextkit_get_agent_instructions", "contextkit_summarize", "contextkit_compress_context", "contextkit_handoff", "contextkit_extract_profile", "contextkit_skill_compile", "contextkit_skill_validate_bundle", "contextkit_skill_push", "contextkit_skill_repository_publish", "contextkit_skill_search", "contextkit_skill_inspect", "contextkit_skill_clone", "contextkit_estimate_tokens", "contextkit_get_credits"].map((tool, index) => <div key={tool} className="flex items-center gap-3 bg-carbon/90 p-4"><span className="font-mono text-[10px] text-white/35">{String(index + 1).padStart(2, "0")}</span><code className="break-all text-sm text-mint">{tool}</code></div>)}</div>
         </section>
 
         <section className="mt-16">
-          <SectionHeading number="05" eyebrow="Guaranteed auto-capture" title="Use each agent&apos;s real completion signal, not file-save guesses." text="Plain remote MCP cannot force every host to call a tool. ContextKit adds native lifecycle adapters plus a controlled runner for VS Code-compatible IDEs." />
+          <SectionHeading number="05" eyebrow="Repository lifecycle" title="MCP can move a tested skill from transcript to full source clone." text="The agent reads files from its current workspace, but ContextKit enforces the repository contract server-side. No tool can skip validation or publish without approval." />
+          <div className="mt-8 grid gap-px overflow-hidden rounded-[1.3rem] border border-line bg-line md:grid-cols-2 xl:grid-cols-3">
+            <McpRepositoryStep index="01" tool="contextkit_skill_compile" title="Prove the method" text="Create a private evidence-backed draft from completed work." />
+            <McpRepositoryStep index="02" tool="contextkit_skill_validate_bundle" title="Validate files" text="Dry-run safe paths, secrets, identity, file contract, and 320KB decoded limit." />
+            <McpRepositoryStep index="03" tool="contextkit_skill_push" title="Store one version" text="Persist the SHA-256-addressed bundle. Published semver cannot be overwritten." />
+            <McpRepositoryStep index="04" tool="contextkit_skill_repository_publish" title="Approve listing" text="Require executable files, public evidence policy, and explicit userApproved=true." />
+            <McpRepositoryStep index="05" tool="contextkit_skill_search / inspect" title="Discover safely" text="Return previews, digest, manifest, and validation without paid file contents." />
+            <McpRepositoryStep index="06" tool="contextkit_skill_clone" title="Pay and clone" text="Return all files plus checksums and no-overwrite materialization instructions." />
+          </div>
+          <div className="mt-5 grid gap-4 md:grid-cols-3">
+            <SafetyCard icon={<ShieldCheck className="h-4 w-4" />} title="Required root files" text="SKILL.md, skill.json, and LICENSE for every repository version." />
+            <SafetyCard icon={<Workflow className="h-4 w-4" />} title="Executable public files" text="package.json, package-lock.json, config.schema.json, src/, tests/, and examples/." />
+            <SafetyCard icon={<LockKeyhole className="h-4 w-4" />} title="Compatibility" text="Legacy SKILL.md purchases still work; repository V1 adds a complete immutable file tree." />
+          </div>
+        </section>
+
+        <section className="mt-16">
+          <SectionHeading number="06" eyebrow="Guaranteed auto-capture" title="Use each agent&apos;s real completion signal, not file-save guesses." text="Plain remote MCP cannot force every host to call a tool. ContextKit adds native lifecycle adapters plus a controlled runner for VS Code-compatible IDEs." />
           <div className="mt-8 grid gap-5 lg:grid-cols-2 xl:grid-cols-3">
             <ConfigCard title="Claude Code Stop hook" label="AUTOMATIC AFTER EVERY TURN" code={claudeAutoCapture} tone="mint" />
             <ConfigCard title="Codex + Hermes hooks" label="NATIVE COMPLETION EVENTS" code={codexHermesAutoCapture} tone="aqua" />
@@ -363,7 +380,7 @@ export default function McpGuidePage() {
         </section>
 
         <section id="host-runbooks" className="mt-20 scroll-mt-24">
-          <SectionHeading number="06" eyebrow="Host runbooks" title="One exact setup path for every supported agent." text="Choose the host you actually use. Each runbook separates connection, capture trigger, verification, and the boundary of what ContextKit can observe." />
+          <SectionHeading number="07" eyebrow="Host runbooks" title="One exact setup path for every supported agent." text="Choose the host you actually use. Each runbook separates connection, capture trigger, verification, and the boundary of what ContextKit can observe." />
 
           <div className="mt-8 grid overflow-hidden rounded-[1.35rem] border border-mint/20 bg-mint/[0.045] lg:grid-cols-[0.78fr_1.22fr]">
             <div className="border-b border-mint/15 p-6 lg:border-b-0 lg:border-r sm:p-7">
@@ -388,7 +405,7 @@ export default function McpGuidePage() {
           </div>
         </section>
 
-        <section className="mt-16 flex flex-col gap-5 rounded-[1.35rem] border border-mint/20 bg-mint/[0.06] p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8"><div className="flex gap-4"><span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-mint/25 bg-mint/[0.1]"><ShieldCheck className="h-5 w-5 text-mint" /></span><div><h2 className="text-xl font-semibold text-white">Need credits before the agent runs paid tools?</h2><p className="mt-2 max-w-2xl leading-7 text-white/58">OAuth, bearer MCP tools, and auto-capture consideration spend the same ContextKit account credits as direct API requests.</p></div></div><Link href="/dashboard/credits" className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-lg bg-mint px-4 text-sm font-semibold text-ink transition hover:bg-white">Open Credits <ArrowRight className="h-4 w-4" /></Link></section>
+        <section className="mt-16 flex flex-col gap-5 rounded-[1.35rem] border border-mint/20 bg-mint/[0.06] p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8"><div className="flex gap-4"><span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-mint/25 bg-mint/[0.1]"><ShieldCheck className="h-5 w-5 text-mint" /></span><div><h2 className="text-xl font-semibold text-white">Need credits before the agent runs paid tools?</h2><p className="mt-2 max-w-2xl leading-7 text-white/58">OAuth, bearer MCP tools, and evidence-gated skill compilation spend the same ContextKit account credits as direct API requests. Compile costs $0.01; no adapter can publish without approval.</p></div></div><Link href="/dashboard/credits" className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-lg bg-mint px-4 text-sm font-semibold text-ink transition hover:bg-white">Open Credits <ArrowRight className="h-4 w-4" /></Link></section>
       </div>
     </main>
   );
@@ -400,6 +417,10 @@ function SectionHeading({ number, eyebrow, title, text }: { number: string; eyeb
 
 function FlowStep({ index, icon, title, text }: { index: string; icon: ReactNode; title: string; text: string }) {
   return <div className="grid grid-cols-[36px_1fr] gap-3 bg-carbon/90 p-4"><span className="grid h-9 w-9 place-items-center rounded-lg border border-mint/20 bg-mint/[0.06] text-mint">{icon}</span><div><p className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/35">{index}</p><h2 className="mt-1 text-sm font-semibold text-white">{title}</h2><p className="mt-1 text-sm leading-6 text-white/52">{text}</p></div></div>;
+}
+
+function McpRepositoryStep({ index, tool, title, text }: { index: string; tool: string; title: string; text: string }) {
+  return <article className="min-w-0 bg-carbon/92 p-5"><div className="flex items-center justify-between gap-3"><span className="font-mono text-[10px] text-mint">{index}</span><span className="h-1.5 w-1.5 rounded-full bg-aqua" /></div><code className="mt-4 block break-all text-xs text-aqua">{tool}</code><h3 className="mt-3 text-lg font-semibold text-white">{title}</h3><p className="mt-2 text-sm leading-6 text-white/52">{text}</p></article>;
 }
 
 function Step({ number, text }: { number: string; text: string }) {

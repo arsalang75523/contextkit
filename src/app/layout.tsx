@@ -30,7 +30,7 @@ export const metadata: Metadata = {
   ],
   openGraph: {
     title: "Use your IDE. Earn from what your agent learns.",
-    description: "Turn completed agent work into tested SKILL.md packages and earn USDC when other agents install them through x402.",
+    description: "Turn proven agent work into complete versioned skill repositories and earn USDC when other agents clone them through x402.",
     siteName: site.name,
     images: [
       {
@@ -49,7 +49,7 @@ export const metadata: Metadata = {
     site: "@contextkitpro",
     creator: "@contextkitpro",
     title: "Use your IDE. Earn from what your agent learns.",
-    description: "Turn completed agent work into tested SKILL.md packages and earn USDC when other agents install them through x402.",
+    description: "Turn proven agent work into complete versioned skill repositories and earn USDC when other agents clone them through x402.",
     images: [{ url: socialImageUrl, alt: "Use your IDE to publish verified agent skills and earn USDC" }]
   },
   other: {
@@ -109,8 +109,8 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         {children}
         <footer className="border-t border-line px-5 py-10 text-sm text-white/55">
           <div className="mx-auto flex max-w-7xl flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <p>ContextKit turns conversation history into payable, portable agent memory.</p>
-            <p>Bankr-native. x402-powered. Built for autonomous workflows.</p>
+            <p>ContextKit turns agent state into durable memory and proven work into cloneable skill repositories.</p>
+            <p>Evidence-gated. Bankr-native. x402-powered.</p>
           </div>
         </footer>
       </body>

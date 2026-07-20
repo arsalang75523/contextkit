@@ -12,7 +12,7 @@ export default function IntegrationsPage() {
             <article key={guide} className="rounded-md border border-line bg-white/[0.035] p-6">
               <h2 className="text-2xl font-semibold text-white">{guide}</h2>
               <p className="mt-3 leading-7 text-white/62">
-                Add ContextKit as a context lifecycle tool: compress before long prompts, summarize after milestones, hand off between workers, and extract durable user memory.
+                Add ContextKit as a context lifecycle and verified-skill tool: preserve continuation state, then compile only completed Bankr-adjacent work with source-grounded execution proof. Publishing always remains approval-gated.
               </p>
               <div className="mt-5">
                 <CodeBlock

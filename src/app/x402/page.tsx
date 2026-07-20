@@ -7,7 +7,7 @@ const flow = `1. Agent calls a Bankr-hosted ContextKit endpoint on x402.bankr.bo
 2. Bankr presents the x402 payment requirement and settles USDC on Base.
 3. Bankr forwards the paid request to a private ContextKit internal endpoint.
 4. ContextKit calls the Bankr LLM Gateway, records analytics/payment metadata, and emits webhooks.
-5. The agent receives typed JSON context output.`;
+5. The agent receives typed context JSON or a complete validated skill repository with checksums.`;
 
 const command = bankrX402Command("handoff", {
   messages: [{ role: "user", content: "Continue this deployment handoff for another AI agent." }]
@@ -20,8 +20,9 @@ export default function X402Page() {
         <div className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr]">
           <div className="space-y-5 text-lg leading-8 text-white/65">
             <p>x402 lets AI agents pay for infrastructure at request time instead of relying on accounts, invoices, or monthly SaaS plans.</p>
-            <p>For context infrastructure, that means a Bankr agent can buy summarization, compression, handoff, or profile extraction exactly when a workflow needs it.</p>
+            <p>For ContextKit, that means an agent can buy memory operations, compile completed work with proof, push immutable source versions, inspect manifests, or clone a validated repository exactly when needed.</p>
             <p>ContextKit does not ask users to paste an x402 password. Bankr-hosted x402 handles payment, then forwards successful requests into ContextKit.</p>
+            <p>The write lane costs $0.01 and creates private drafts first. Public listing requires explicit approval; verified skill installation uses the $0.05 buyer lane.</p>
           </div>
           <CodeBlock code={flow} />
         </div>

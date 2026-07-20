@@ -59,7 +59,7 @@
       }
     },
     "contextkit-experience-write": {
-      "description": "Compile completed Bankr-adjacent work into tested SKILL.md drafts or publish verified installable skills.",
+      "description": "Compile verified skills, validate/push immutable source bundles, or publish executable skill repository versions.",
       "price": "0.01",
       "methods": ["POST"],
       "category": "ai-infrastructure",
@@ -70,8 +70,8 @@
           "properties": {
             "mode": {
               "type": "string",
-              "description": "Use skill-compile for completed work or skill-publish for an approved verified draft. Legacy experience modes remain accepted.",
-              "enum": ["skill-compile", "skill-publish", "experience-consider", "experience-save", "experience-publish", "consider", "save", "publish"]
+              "description": "Compile a draft, validate/push its versioned file bundle, or publish an approved executable repository version.",
+              "enum": ["skill-compile", "skill-validate", "skill-push", "skill-publish", "skill-repository-publish", "experience-consider", "experience-save", "experience-publish", "consider", "save", "publish"]
             },
             "experience": {
               "type": "object",
@@ -119,6 +119,28 @@
               "type": "string",
               "description": "Private verified skill ID for skill-publish mode. Explicit user approval is required before calling publish."
             },
+            "repository": {
+              "type": "string",
+              "description": "Lowercase kebab-case repository name. Must match the compiled skill name."
+            },
+            "version": {
+              "type": "string",
+              "description": "Immutable semantic version matching the compiled skill and skill.json."
+            },
+            "files": {
+              "type": "array",
+              "description": "Complete repository files for skill-validate or skill-push. Unsafe paths, secrets, install hooks, and incomplete executable bundles are rejected.",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "path": { "type": "string", "description": "POSIX path relative to repository root." },
+                  "content": { "type": "string", "description": "UTF-8 text or base64 file content." },
+                  "encoding": { "type": "string", "enum": ["utf8", "base64"] },
+                  "mode": { "type": "integer", "enum": [420, 493], "description": "Normalized Git-style file mode: 0644 or executable 0755." }
+                },
+                "required": ["path", "content"]
+              }
+            },
             "publishToken": {
               "type": "string",
               "description": "Capability returned with a Bankr-hosted private draft. Required with skillId when publishing through the shared hosted endpoint."
@@ -143,6 +165,8 @@
             "publishToken": { "type": "string", "description": "Returned only for a new Bankr-hosted private draft; required to publish that draft." },
             "skill": { "type": "object", "description": "Compiled portable skill preview." },
             "validation": { "type": "object", "description": "Quality score, contract-test results, findings, and publish eligibility." },
+            "repository": { "type": "object", "description": "Content-addressed immutable bundle manifest with SHA-256 checksums." },
+            "stored": { "type": "boolean", "description": "False for validation-only; true after an accepted immutable push." },
             "shouldSave": { "type": "boolean" },
             "marketplace": { "type": "object", "description": "Present after successful public listing." }
           }
@@ -150,7 +174,7 @@
       }
     },
     "contextkit-experience-search": {
-      "description": "Search ContextKit Verified Skills by problem, ecosystem, tags, or compatible agent host.",
+      "description": "Search or inspect verified ContextKit skill repositories without exposing paid source files.",
       "price": "0.01",
       "methods": ["POST"],
       "category": "ai-infrastructure",
@@ -159,6 +183,8 @@
         "input": {
           "type": "object",
           "properties": {
+            "mode": { "type": "string", "enum": ["skill-search", "skill-inspect"], "description": "Search the marketplace or inspect one skill manifest." },
+            "skillId": { "type": "string", "description": "Required for skill-inspect." },
             "query": { "type": "string", "description": "Search query or current agent problem." },
             "tags": { "type": "array", "items": { "type": "string" }, "description": "Optional tags to filter by." },
             "ecosystems": { "type": "array", "items": { "type": "string" }, "description": "Filter by Bankr, x402, Base, MCP, wallet, DeFi, automation, LLM gateway, or agent infrastructure." },
@@ -167,7 +193,7 @@
             "visibility": { "type": "string", "description": "private, public, or all.", "enum": ["private", "public", "all"] },
             "contextId": { "type": "string", "description": "Optional uploaded ContextKit context ID to search from." }
           },
-          "required": ["query"]
+          "required": []
         },
         "output": {
           "type": "object",
@@ -193,7 +219,7 @@
       }
     },
     "contextkit-experience-buy": {
-      "description": "Buy a verified installable SKILL.md bundle through Bankr x402.",
+      "description": "Buy or clone a verified skill repository through Bankr x402, including all files and SHA-256 checksums.",
       "price": "0.05",
       "methods": ["POST"],
       "category": "ai-infrastructure",
@@ -202,6 +228,7 @@
         "input": {
           "type": "object",
           "properties": {
+            "mode": { "type": "string", "enum": ["skill-buy", "skill-clone"], "description": "Both modes settle access and return the full installable bundle when available." },
             "listingId": { "type": "string", "description": "Marketplace listing ID." },
             "skillId": { "type": "string", "description": "Verified skill ID. Either skillId or listingId is accepted." },
             "buyerContext": { "type": "string", "description": "Optional current task context for matching." },
@@ -214,7 +241,7 @@
           "properties": {
             "experienceId": { "type": "string" },
             "skill": { "type": "object", "description": "Full verified skill record." },
-            "installBundle": { "type": "object", "description": "SKILL.md plus versioned manifest and validation report." },
+            "installBundle": { "type": "object", "description": "Legacy SKILL.md or a complete versioned repository containing every file, manifest, checksums, and safe materialization instructions." },
             "license": { "type": "object" }
           }
         }

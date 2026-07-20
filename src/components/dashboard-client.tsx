@@ -177,8 +177,8 @@ export function DashboardClient({ view = "overview" }: { view?: View }) {
           <div className="flex flex-col gap-6 px-5 py-7 sm:px-7 md:flex-row md:items-end md:justify-between md:py-9">
             <div>
               <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-mint">Developer dashboard</p>
-              <h1 className="mt-3 text-balance text-3xl font-semibold tracking-[-0.045em] text-white sm:text-4xl">Operate agent memory in production.</h1>
-              <p className="mt-3 max-w-2xl leading-7 text-white/58">Create scoped keys, monitor usage, settle credits, and keep every agent integration observable.</p>
+              <h1 className="mt-3 text-balance text-3xl font-semibold tracking-[-0.045em] text-white sm:text-4xl">Operate agent memory and verified skills.</h1>
+              <p className="mt-3 max-w-2xl leading-7 text-white/58">Create scoped keys, monitor usage, fund proof-gated skill compilation, and keep every agent integration observable.</p>
             </div>
             <div className="flex flex-wrap gap-2">
               <Link href="/dashboard/login" className="inline-flex h-10 items-center gap-2 rounded-lg border border-line bg-ink/40 px-3.5 text-sm text-white/75 transition hover:border-mint/45 hover:text-white"><ShieldCheck className="h-4 w-4 text-mint" /> Login / sign up</Link>
@@ -441,7 +441,7 @@ function CreditsData({
         <Metric label="SDK mode" value="API key credits" />
       </div>
       <div className="mt-5 rounded-md border border-aqua/25 bg-aqua/10 p-4 text-sm leading-6 text-white/65">
-        SDK users can call summarize, compress, handoff, profile, and memory enrichment without Bankr when this balance covers the endpoint price. If credits are insufficient, direct routes fall back to the normal x402 payment challenge.
+        SDK and MCP users can run core memory tools plus the $0.01 evidence-gated skill compiler when this balance covers the endpoint price. Public skill listing still requires explicit approval; buyers use the $0.05 install lane. Insufficient balance returns the normal x402 payment challenge.
       </div>
       <div className="mt-5 rounded-md border border-mint/25 bg-mint/10 p-4">
         <h2 className="font-semibold text-white">Buy credits with crypto</h2>

@@ -40,23 +40,42 @@ npm run extension:package
 code --install-extension extensions/contextkit-autocapture/contextkit-autocapture-0.1.0.vsix
 ```
 
-ContextKit is a memory layer and Verified Skill Registry for autonomous AI agents.
+ContextKit is a memory layer and versioned Verified Skill Repository for autonomous AI agents.
 
 Website: https://contextkit.pro
 
 It turns long conversations, project notes, and operational history into compact continuation state that another agent can safely pick up later. The focus is not pretty summaries. The focus is preserving goals, blockers, constraints, decisions, next actions, durable preferences, and handoff state with fewer tokens.
 
-## Verified Skill Registry
+## Versioned Skill Repository
 
 ContextKit does not sell raw chat history or project-specific notes. MCP V2 compiles completed agent work into portable skills with declared inputs, executable steps, verification, failure handling, rollback, compatibility metadata, source evidence, and evidence-backed tests.
 
-The lifecycle is strict:
+The V1 lifecycle is strict:
 
 1. `contextkit_skill_compile` creates a private draft from completed work.
-2. Evidence-backed validation binds verbatim test proof to source messages and rejects secrets, private paths/identifiers, unsafe commands, weak evidence, unsupported ecosystems, and incomplete tests.
-3. `contextkit_skill_publish` lists only eligible skills after explicit user approval.
-4. `contextkit_skill_search` returns verified previews without exposing paid `SKILL.md` content.
-5. `contextkit_skill_buy` returns a versioned install bundle and non-resale license.
+2. `contextkit_skill_validate_bundle` dry-runs the repository contract without storing files.
+3. `contextkit_skill_push` stores one immutable semantic version with per-file SHA-256 checksums and a deterministic digest.
+4. `contextkit_skill_repository_publish` lists only eligible executable repositories after explicit user approval.
+5. `contextkit_skill_search` and `contextkit_skill_inspect` expose verified previews and manifests without paid file contents.
+6. `contextkit_skill_clone` settles access and returns the complete immutable file tree plus validation and license.
+
+Every repository version requires `SKILL.md`, `skill.json`, and `LICENSE`. Public executable bundles also require `package.json`, `package-lock.json`, `config.schema.json`, meaningful `src/`, `tests/`, and `examples/`. V1 rejects unsafe paths, credentials, private key material, install lifecycle hooks, identity mismatches, and decoded bundles above 320KB. Published versions cannot be overwritten. Legacy `SKILL.md` purchases remain compatible.
+
+Install the repository CLI for a safe Git-like creator and buyer workflow:
+
+```bash
+npm install --global @basedchef/contextkit-cli
+export CONTEXTKIT_API_KEY="ck_live_replace_me"
+
+contextkit skill init ./my-skill --name my-skill --version 1.0.0
+contextkit skill validate ./my-skill --skill-id exp_REPLACE_ME
+contextkit skill push ./my-skill --skill-id exp_REPLACE_ME
+contextkit skill publish ./my-skill
+contextkit skill search "x402 timeout"
+contextkit skill clone exp_REPLACE_ME ./installed-skill
+```
+
+The CLI rejects symlinks, path traversal, local secrets, and accidental overwrite. Clone verifies the immutable repository digest, every file checksum, and normalized `0644/0755` mode before materialization. CLI calls use account credits; the Bankr commands below expose the same lifecycle as public x402-paid operations.
 
 Public skill ecosystems are `bankr`, `x402`, `base`, `mcp`, `wallet`, `defi`, `automation`, `llm-gateway`, and `agent-infrastructure`.
 
@@ -74,6 +93,7 @@ Use ContextKit when you need:
 - API-key credits for app integrations,
 - Bankr-hosted x402 payment for public pay-per-call usage,
 - signed webhook delivery for downstream automation.
+- immutable skill repository push, discovery, paid clone, and creator earnings.
 
 ## Usage Paths
 
@@ -100,9 +120,9 @@ Agent hosts can connect to the stateless Streamable HTTP MCP endpoint at `https:
 | Direct API operations | Bankr service | Purpose | Price |
 | --- | --- | --- | ---: |
 | summarize, compress, handoff, profile | `contextkit-core` | All context operations selected by `endpoint`/`mode` | `$0.03` |
-| `POST /api/skills/compile`, `/publish` | `contextkit-experience-write` | Compile a private skill or publish an approved verified skill | `$0.01` |
-| `POST /api/skills/search` | `contextkit-experience-search` | Search verified skills by problem and compatibility | `$0.01` |
-| `POST /api/skills/buy` | `contextkit-experience-buy` | Buy a versioned `SKILL.md` install bundle | `$0.05` |
+| `POST /api/skills/compile`, `/validate`, `/push`, `/publish` | `contextkit-experience-write` | Compile proof, validate files, push immutable semver, explicitly publish | `$0.01` |
+| `POST /api/skills/search`, `/inspect` | `contextkit-experience-search` | Search previews or inspect digest, manifest, and validation | `$0.01` |
+| `POST /api/skills/buy`, `/clone` | `contextkit-experience-buy` | Buy or clone a complete repository bundle | `$0.05` |
 
 Utility endpoints such as token estimates, credits, analytics, keys, and webhooks use dashboard API keys instead of Bankr-hosted pay-per-call.
 
@@ -163,24 +183,39 @@ bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd82
   -d '{"mode":"skill-compile","messages":[{"role":"user","content":"Fix the Bankr x402 timeout without changing the response contract."},{"role":"assistant","content":"Compared origin and gateway latency, precomputed the long request, and verified HTTP 200."}]}'
 ```
 
-After validation passes and the user approves, publish with the returned `skillId` and `publishToken`:
+Build a JSON payload containing the returned `skillId` and `publishToken`, matching `repository`/`version`, and the full `files` array. Validate without storage, then push the immutable version:
 
 ```bash
 bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-experience-write \
   -X POST \
-  -d '{"mode":"skill-publish","skillId":"exp_REPLACE_ME","publishToken":"pub_REPLACE_ME","userApproved":true,"priceUsd":0.05}'
+  -d @skill-validate.json
+
+# skill-validate.json uses mode=skill-validate.
+# After it passes, change only mode to skill-push and call the same endpoint again.
 ```
 
-Search and buy verified skills:
+The root files are `SKILL.md`, `skill.json`, and `LICENSE`. Executable public bundles also include `package.json`, `package-lock.json`, `config.schema.json`, `src/`, `tests/`, and `examples/`. After push and explicit user approval, publish the repository:
+
+```bash
+bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-experience-write \
+  -X POST \
+  -d '{"mode":"skill-repository-publish","skillId":"exp_REPLACE_ME","publishToken":"pub_REPLACE_ME","userApproved":true,"priceUsd":0.05}'
+```
+
+Search, inspect, and paid-clone verified repositories:
 
 ```bash
 bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-experience-search \
   -X POST \
-  -d '{"query":"x402 timeout","ecosystems":["x402"],"compatibility":["codex"],"verifiedOnly":true}'
+  -d '{"mode":"skill-search","query":"x402 timeout","ecosystems":["x402"],"compatibility":["codex"],"verifiedOnly":true}'
+
+bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-experience-search \
+  -X POST \
+  -d '{"mode":"skill-inspect","skillId":"exp_REPLACE_ME"}'
 
 bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-experience-buy \
   -X POST \
-  -d '{"skillId":"exp_REPLACE_ME"}'
+  -d '{"mode":"skill-clone","skillId":"exp_REPLACE_ME"}'
 ```
 
 ## Long Context

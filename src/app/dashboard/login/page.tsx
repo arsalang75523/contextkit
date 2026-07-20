@@ -109,7 +109,7 @@ export default function DashboardLoginPage() {
     signup: {
       eyebrow: "Create workspace",
       title: "Start with a secure context workspace.",
-      description: "Verify your email, create scoped API keys, and give agents a controlled memory layer.",
+      description: "Verify your email, create scoped keys, and run memory plus evidence-gated skill tools.",
       action: "Create account"
     },
     login: {
@@ -146,13 +146,13 @@ export default function DashboardLoginPage() {
             <div className="mt-12 max-w-sm lg:mt-16">
               <div className="grid h-12 w-12 place-items-center rounded-2xl border border-mint/30 bg-mint/10"><Sparkles className="h-5 w-5 text-mint" /></div>
               <p className="mt-7 font-mono text-[11px] uppercase tracking-[0.18em] text-mint">Agent workspace</p>
-              <h2 className="mt-4 text-balance text-3xl font-semibold leading-[1.02] tracking-[-0.045em] text-white sm:text-4xl">The control plane for your agents&apos; memory.</h2>
-              <p className="mt-5 leading-7 text-white/58">Keys, credits, usage, and secure OAuth access in one operational surface.</p>
+              <h2 className="mt-4 text-balance text-3xl font-semibold leading-[1.02] tracking-[-0.045em] text-white sm:text-4xl">The control plane for agent memory and verified skills.</h2>
+              <p className="mt-5 leading-7 text-white/58">Keys, credits, usage, OAuth, and proof-gated skill compilation in one operational surface.</p>
             </div>
             <div className="mt-8 space-y-3">
               <TrustItem text="Scoped keys for production agents" />
               <TrustItem text="Email verification before access" />
-              <TrustItem text="x402, SDK, and MCP workflows" />
+              <TrustItem text="Private drafts first; public only after approval" />
             </div>
           </div>
         </aside>

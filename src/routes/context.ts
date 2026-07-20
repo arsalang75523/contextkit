@@ -9,7 +9,8 @@ import {
   experienceConsiderSchema,
   experiencePublishSchema,
   experienceSaveSchema,
-  experienceSearchSchema
+  experienceSearchSchema,
+  skillBundlePushSchema
 } from "@/types/api";
 import { sanitizeMessages } from "@/utils/sanitize";
 import { estimateTokens } from "@/utils/tokens";
@@ -33,6 +34,7 @@ import type {
   ExperienceConsiderInput,
   ExperiencePublishInput,
   ExperienceSaveInput,
+  SkillBundlePushInput,
   ContextEndpoint,
   ConversationMessage,
   ConversationRequest,
@@ -298,6 +300,22 @@ contextRoutes.post(
   }
 );
 
+for (const [path, forcedMode] of [["/skills/validate", "skill-validate"], ["/skills/push", "skill-push"]] as const) {
+  contextRoutes.post(
+    path,
+    requireApiKey("context:write"),
+    apiKeyRateLimit(),
+    apiCreditOrX402PaymentRequired("experience-save"),
+    zValidator("json", skillBundlePushSchema),
+    async (c) => {
+      const body = { ...c.req.valid("json"), mode: forcedMode } as SkillBundlePushInput;
+      const result = await runExperienceWrite(() => new ExperienceService(c.env ?? {}).pushBundle(body, skillBundleContext(c, body)));
+      await completeOperation(c, path, body, JSON.stringify(result), c.get("payment")?.paymentId);
+      return c.json(result, forcedMode === "skill-push" ? 201 : 200);
+    }
+  );
+}
+
 contextRoutes.post(
   "/skills/search",
   requireApiKey("context:write"),
@@ -313,6 +331,20 @@ contextRoutes.post(
 );
 
 contextRoutes.post(
+  "/skills/inspect",
+  requireApiKey("context:write"),
+  apiKeyRateLimit(),
+  apiCreditOrX402PaymentRequired("experience-search"),
+  zValidator("json", experienceSearchSchema),
+  async (c) => {
+    const body = { ...c.req.valid("json"), mode: "skill-inspect" as const };
+    const result = await new ExperienceService(c.env ?? {}).search({ ...body, verifiedOnly: true }, accountOwnerId(c));
+    await completeOperation(c, "/skills/inspect", body, JSON.stringify(result), c.get("payment")?.paymentId);
+    return c.json(result);
+  }
+);
+
+contextRoutes.post(
   "/skills/buy",
   requireApiKey("context:write"),
   apiKeyRateLimit(),
@@ -322,6 +354,20 @@ contextRoutes.post(
     const body = c.req.valid("json");
     const result = await runExperienceBuy(c, body);
     await completeOperation(c, "/skills/buy", body, JSON.stringify(result), c.get("payment")?.paymentId);
+    return c.json(result);
+  }
+);
+
+contextRoutes.post(
+  "/skills/clone",
+  requireApiKey("context:write"),
+  apiKeyRateLimit(),
+  apiCreditOrX402PaymentRequired("experience-buy"),
+  zValidator("json", experienceBuySchema),
+  async (c) => {
+    const body = { ...c.req.valid("json"), mode: "skill-clone" as const };
+    const result = await runExperienceBuy(c, body);
+    await completeOperation(c, "/skills/clone", body, JSON.stringify(result), c.get("payment")?.paymentId);
     return c.json(result);
   }
 );
@@ -472,6 +518,14 @@ contextRoutes.post("/internal/experience/buy", requireInternalToken(), zValidato
   return c.json(result);
 });
 
+contextRoutes.post("/internal/skills/push", requireInternalToken(), zValidator("json", skillBundlePushSchema), async (c) => {
+  const body = c.req.valid("json");
+  await markHostedPayment(c, "experience-save", "/internal/skills/push");
+  const result = await runExperienceWrite(() => new ExperienceService(c.env ?? {}).pushBundle(body, skillBundleContext(c, body)));
+  await completeOperation(c, "/internal/skills/push", body, JSON.stringify(result));
+  return c.json(result, body.mode === "skill-push" ? 201 : 200);
+});
+
 async function resolveExperienceContext(
   c: Context<AppBindings>,
   body: ExperienceSaveInput | ExperiencePublishInput
@@ -493,6 +547,12 @@ async function resolveExperienceContext(
     ownerId,
     messages: sanitizeMessages(body.messages ?? stored.messages),
     contextMetadata: stored.metadata
+  };
+}
+
+function skillBundleContext(c: Context<AppBindings>, body: SkillBundlePushInput) {
+  return {
+    ownerId: accountOwnerId(c) ?? (body.publishToken ? "bankr-hosted" : "api-key:unknown")
   };
 }
 
@@ -530,6 +590,9 @@ async function runExperienceBuy(c: Context<AppBindings>, body: ExperienceBuyInpu
     if (error instanceof Error && error.message === "experience_not_found") {
       throw new HTTPException(404, { message: "Experience record was not found or is not published." });
     }
+    if (error instanceof Error && error.message === "skill_bundle_not_found") {
+      throw new HTTPException(503, { message: "The published skill bundle is temporarily unavailable. No install response was issued." });
+    }
     throw error;
   }
 }
@@ -552,6 +615,18 @@ async function runExperienceWrite<T>(operation: () => Promise<T>) {
     }
     if (error instanceof Error && error.message === "skill_required_for_publish") {
       throw new HTTPException(422, { message: "Public listings must contain a compiled ContextKit Verified Skill. Run experience-consider or contextkit_skill_compile first." });
+    }
+    if (error instanceof Error && error.message === "skill_required_for_bundle") {
+      throw new HTTPException(422, { message: "Compile a verified private skill before validating or pushing repository files." });
+    }
+    if (error instanceof Error && error.message === "skill_bundle_required_for_publish") {
+      throw new HTTPException(422, { message: "Every new public skill requires a pushed executable bundle that passes the skill-repository-v1 policy. Legacy SKILL.md-only listings remain readable but cannot be newly published." });
+    }
+    if (error instanceof Error && error.message === "skill_version_immutable") {
+      throw new HTTPException(409, { message: "That repository version already exists with a different digest. Bump the semantic version instead of overwriting it." });
+    }
+    if (error instanceof Error && error.message.startsWith("skill_bundle_invalid:")) {
+      throw new HTTPException(422, { message: error.message.slice("skill_bundle_invalid:".length) });
     }
     if (error instanceof Error && error.message.startsWith("skill_not_writeable:")) {
       throw new HTTPException(422, { message: error.message.slice("skill_not_writeable:".length) });

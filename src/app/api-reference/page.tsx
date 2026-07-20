@@ -1,9 +1,30 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { ArrowRight, CircleDollarSign, KeyRound, Network, Sparkles, Terminal, Webhook } from "lucide-react";
+import { ArrowRight, CircleDollarSign, KeyRound, Network, ShieldCheck, Sparkles, Terminal, Webhook } from "lucide-react";
 import { CodeBlock } from "@/components/code-block";
 import { bankrEndpoints, endpoints } from "@/content/docs";
 import { bankrHostedUrl, bankrX402Command } from "@/lib/bankr-x402";
+
+const repositoryFiles = [
+  { path: "SKILL.md", content: "---\\nname: bankr-x402-timeout-recovery\\ndescription: Tested bounded forwarding for Bankr x402.\\nlicense: MIT\\n---\\n# Bankr x402 timeout recovery" },
+  { path: "skill.json", content: '{"schemaVersion":1,"name":"bankr-x402-timeout-recovery","version":"1.0.0","runtime":"node22","entrypoint":"src/index.js","testCommand":"npm test"}' },
+  { path: "LICENSE", content: "MIT License" },
+  { path: "package.json", content: '{"name":"bankr-x402-timeout-recovery","version":"1.0.0","type":"module","scripts":{"test":"node --test tests/*.test.js"}}' },
+  { path: "package-lock.json", content: '{"name":"bankr-x402-timeout-recovery","version":"1.0.0","lockfileVersion":3,"packages":{"":{"name":"bankr-x402-timeout-recovery","version":"1.0.0"}}}' },
+  { path: "config.schema.json", content: '{"type":"object","properties":{"backendUrl":{"type":"string"}},"required":["backendUrl"]}' },
+  { path: "src/index.js", content: "export const boundedTimeout = (originMs) => Math.min(originMs + 8000, 55000);" },
+  { path: "tests/timeout.test.js", content: "import test from 'node:test'; import assert from 'node:assert/strict'; import { boundedTimeout } from '../src/index.js'; test('bounded', () => assert.equal(boundedTimeout(42000), 50000));" },
+  { path: "examples/basic.js", content: "import { boundedTimeout } from '../src/index.js'; console.log(boundedTimeout(42000));" }
+];
+
+const repositoryLifecycle = [
+  { label: "01 / compile", route: "/api/skills/compile", command: bankrX402Command("skill-compile", { mode: "skill-compile", messages: [{ role: "user", content: "Repair and verify the Bankr x402 timeout path." }, { role: "assistant", content: "Implemented bounded forwarding and observed HTTP/2 200 in the paid-path test." }] }) },
+  { label: "02 / validate", route: "/api/skills/validate", command: bankrX402Command("skill-validate", { mode: "skill-validate", skillId: "exp_REPLACE_ME", publishToken: "pub_REPLACE_ME", repository: "bankr-x402-timeout-recovery", version: "1.0.0", files: repositoryFiles }) },
+  { label: "03 / push", route: "/api/skills/push", command: bankrX402Command("skill-push", { mode: "skill-push", skillId: "exp_REPLACE_ME", publishToken: "pub_REPLACE_ME", repository: "bankr-x402-timeout-recovery", version: "1.0.0", files: repositoryFiles }) },
+  { label: "04 / publish", route: "/api/skills/publish", command: bankrX402Command("skill-repository-publish", { mode: "skill-repository-publish", skillId: "exp_REPLACE_ME", publishToken: "pub_REPLACE_ME", userApproved: true, priceUsd: 0.05 }) },
+  { label: "05 / inspect", route: "/api/skills/inspect", command: bankrX402Command("skill-inspect", { mode: "skill-inspect", skillId: "exp_REPLACE_ME" }) },
+  { label: "06 / clone", route: "/api/skills/clone", command: bankrX402Command("skill-clone", { mode: "skill-clone", skillId: "exp_REPLACE_ME" }) }
+] as const;
 
 export default function ApiReferencePage() {
   return (
@@ -14,7 +35,7 @@ export default function ApiReferencePage() {
         <section className="overflow-hidden rounded-[1.55rem] border border-white/[0.13] bg-carbon/80 shadow-[0_24px_90px_rgba(0,0,0,0.3)] backdrop-blur-xl">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-3 font-mono text-[10px] uppercase tracking-[0.16em] text-white/42 sm:px-7"><span className="flex items-center gap-2"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-mint" /> ContextKit API / production</span><span className="hidden sm:inline">typed context compute for agents</span><span className="text-mint">x402 + SDK + MCP</span></div>
           <div className="grid gap-7 px-6 py-8 sm:px-9 lg:grid-cols-[1.08fr_0.92fr] lg:px-12 lg:py-10">
-            <div><div className="inline-flex items-center gap-2 rounded-full border border-mint/25 bg-mint/[0.07] px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.16em] text-mint"><Sparkles className="h-3.5 w-3.5" /> Agent access layer</div><h1 className="mt-5 text-balance text-4xl font-semibold leading-[0.98] tracking-[-0.05em] text-white sm:text-5xl">One context API. Three ways to connect.</h1><p className="mt-4 max-w-2xl leading-7 text-white/60">Use public Bankr x402 calls, direct SDK/API-key routes, or the remote MCP server. Every path returns typed, continuation-ready output.</p></div>
+            <div><div className="inline-flex items-center gap-2 rounded-full border border-mint/25 bg-mint/[0.07] px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.16em] text-mint"><Sparkles className="h-3.5 w-3.5" /> Agent access layer</div><h1 className="mt-5 text-balance text-4xl font-semibold leading-[0.98] tracking-[-0.05em] text-white sm:text-5xl">Memory and verified skills. Three ways to connect.</h1><p className="mt-4 max-w-2xl leading-7 text-white/60">Use public Bankr x402 calls, direct SDK/API-key routes, or remote MCP. Every path shares typed output, scoped payment, and the same evidence and publishing safeguards.</p></div>
             <div className="grid content-start gap-px overflow-hidden rounded-2xl border border-line bg-line"><AccessPath href="/x402" icon={<CircleDollarSign className="h-4 w-4" />} title="Bankr-hosted x402" text="Pay in USDC and call from any Bankr agent." tone="mint" /><AccessPath href="/dashboard/login" icon={<KeyRound className="h-4 w-4" />} title="SDK + API key" text="Use scoped keys, account credits, and direct routes." tone="aqua" /><AccessPath href="/mcp-guide" icon={<Network className="h-4 w-4" />} title="Remote MCP" text="Connect agent hosts over Streamable HTTP." tone="mint" /></div>
           </div>
         </section>
@@ -54,9 +75,32 @@ export default function ApiReferencePage() {
                   <span key={mode} className="rounded-full border border-line bg-ink/45 px-3 py-1 font-mono text-[10px] text-white/52">{mode}</span>
                 ))}
               </div>
+              {endpoint.slug === "contextkit-experience-write" ? <SkillWriteGate /> : null}
             </article>
           ))}
         </div>
+        <section className="mb-12 overflow-hidden rounded-[1.35rem] border border-aqua/20 bg-aqua/[0.025]">
+          <div className="border-b border-line p-5 sm:p-7">
+            <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-aqua">Versioned skill repository / V1</p>
+            <h2 className="mt-3 max-w-4xl text-3xl font-semibold tracking-[-0.04em] text-white">From proven transcript to a complete paid clone.</h2>
+            <p className="mt-3 max-w-4xl text-sm leading-7 text-white/60">The contract is ordered and explicit: compile, validate without storing, push one immutable semantic version, publish after user approval, search or inspect metadata, then pay to clone every file. Public repository contents are never exposed by search or inspect.</p>
+          </div>
+          <div className="grid gap-px bg-line md:grid-cols-2 xl:grid-cols-3">
+            {repositoryLifecycle.map((step) => (
+              <article key={step.label} className="min-w-0 bg-carbon/95 p-5">
+                <div className="flex items-center justify-between gap-3"><p className="font-mono text-[10px] uppercase tracking-[0.16em] text-mint">{step.label}</p><code className="text-[10px] text-white/38">{step.route}</code></div>
+                <div className="mt-4"><CodeBlock code={step.command} /></div>
+              </article>
+            ))}
+          </div>
+          <div className="grid gap-px border-t border-line bg-line sm:grid-cols-2 lg:grid-cols-4">
+            <RepositoryRule title="Required" text="SKILL.md, skill.json, LICENSE." />
+            <RepositoryRule title="Executable public" text="Also package.json, lockfile, config schema, src, tests, examples." />
+            <RepositoryRule title="Security" text="SHA-256, safe paths, secret scan, no install hooks, 320KB decoded max." />
+            <RepositoryRule title="Clone response" text="Full files, manifest, checksums, validation, license, no-overwrite target." />
+          </div>
+          <p className="border-t border-line px-5 py-4 text-sm leading-6 text-white/55 sm:px-7">Legacy <code>contextkit-verified-skill/v1</code> purchases still return their evidence-bearing <code>SKILL.md</code>. New repository versions use <code>contextkit-skill-repository/v1</code> and return the complete immutable tree.</p>
+        </section>
         <div className="mb-8 border-b border-line pb-7"><p className="font-mono text-[10px] uppercase tracking-[0.18em] text-aqua">Direct API routes</p><h2 className="mt-3 max-w-3xl text-3xl font-semibold tracking-[-0.04em] text-white md:text-4xl">Same compute, API-key access, account credits.</h2></div>
         <div className="space-y-8">
           {endpoints.map((endpoint) => {
@@ -131,6 +175,23 @@ function AccessPath({ href, icon, title, text, tone }: { href: string; icon: Rea
 function ApiQuickstart({ number, eyebrow, title, text, code, href, linkLabel, tone }: { number: string; eyebrow: string; title: string; text: string; code: string; href: string; linkLabel: string; tone: "mint" | "aqua" }) {
   const color = tone === "mint" ? "text-mint border-mint/25 bg-mint/[0.06]" : "text-aqua border-aqua/25 bg-aqua/[0.06]";
   return <article className="overflow-hidden rounded-[1.3rem] border border-line bg-carbon/70"><div className="border-b border-line px-5 py-5"><div className="flex items-center justify-between"><p className={`font-mono text-xs ${tone === "mint" ? "text-mint" : "text-aqua"}`}>{number}</p><span className={`rounded-full border px-2 py-1 font-mono text-[9px] uppercase tracking-[0.14em] ${color}`}>{eyebrow}</span></div><h3 className="mt-5 text-xl font-semibold text-white">{title}</h3><p className="mt-2 min-h-[4.5rem] text-sm leading-6 text-white/58">{text}</p></div><div className="p-4"><CodeBlock code={code} /><Link href={href} className={`mt-4 inline-flex items-center gap-2 text-sm ${tone === "mint" ? "text-mint" : "text-aqua"} transition hover:text-white`}>{linkLabel} <ArrowRight className="h-3.5 w-3.5" /></Link></div></article>;
+}
+
+function SkillWriteGate() {
+  return (
+    <div className="mt-5 overflow-hidden rounded-xl border border-aqua/20 bg-ink/55">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-4 py-3"><p className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.16em] text-aqua"><ShieldCheck className="h-3.5 w-3.5" /> Strict write policy</p><span className="font-mono text-[10px] text-white/40">write $0.01 / buyer install $0.05</span></div>
+      <div className="grid gap-px bg-line md:grid-cols-3">
+        <div className="bg-carbon/90 p-4"><p className="font-mono text-[10px] uppercase tracking-[0.14em] text-coral">Rejected</p><p className="mt-2 text-sm leading-6 text-white/55">Greetings, generic notes, plans, placeholders, project diaries, private paths, and unsupported claims.</p></div>
+        <div className="bg-carbon/90 p-4"><p className="font-mono text-[10px] uppercase tracking-[0.14em] text-mint">Private repository</p><p className="mt-2 text-sm leading-6 text-white/55">Compile one grounded PASS, validate the complete file contract, then push a SHA-256-addressed immutable semantic version.</p></div>
+        <div className="bg-carbon/90 p-4"><p className="font-mono text-[10px] uppercase tracking-[0.14em] text-amber">Public listing</p><p className="mt-2 text-sm leading-6 text-white/55">Executable bundle, three independent PASS proofs, score 75+, license, safety validation, ownership, and explicit repository-publish approval.</p></div>
+      </div>
+    </div>
+  );
+}
+
+function RepositoryRule({ title, text }: { title: string; text: string }) {
+  return <div className="bg-carbon/90 p-5"><p className="font-mono text-[10px] uppercase tracking-[0.16em] text-aqua">{title}</p><p className="mt-2 text-sm leading-6 text-white/55">{text}</p></div>;
 }
 
 function directApiCurl(path: string, payload: unknown) {

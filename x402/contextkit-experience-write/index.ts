@@ -12,8 +12,9 @@ function resolveExperienceWritePath(body: string) {
   }
 
   const operation = String(payload.mode ?? payload.operation ?? payload.action ?? "").toLowerCase();
+  if (["skill-validate", "skill-push"].includes(operation)) return "/api/internal/skills/push";
   if (["consider", "experience-consider", "skill-compile", "compile"].includes(operation)) return "/api/internal/experience/consider";
-  if (["publish", "experience-publish", "skill-publish"].includes(operation)) return "/api/internal/experience/publish";
+  if (["publish", "experience-publish", "skill-publish", "skill-repository-publish"].includes(operation)) return "/api/internal/experience/publish";
   if (typeof payload.priceUsd === "number" || typeof payload.experience?.priceUsd === "number") return "/api/internal/experience/publish";
   return "/api/internal/experience/save";
 }

@@ -2,6 +2,7 @@ FROM node:22-alpine AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
 COPY packages/sdk/package.json ./packages/sdk/package.json
+COPY packages/cli/package.json ./packages/cli/package.json
 # Cloudflare's optional Pages adapter has an older Next peer range. Production
 # runs on Docker, so install the lockfile without letting that dev-only peer
 # range block the image build.

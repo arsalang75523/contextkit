@@ -9,9 +9,23 @@ import type {
   ProfileResponse,
   SkillCompileRequest,
   SkillCompileResponse,
+  SkillBundlePushRequest,
+  SkillBundlePushResponse,
+  SkillBundleValidateRequest,
+  SkillBundleValidateResponse,
   SkillPurchaseResponse,
   SkillRecord,
+  SkillRepositoryInspectRequest,
+  SkillRepositoryInspectResponse,
+  SkillRepositorySearchRequest,
+  SkillRepositorySearchResponse,
   SkillSearchRequest,
+  SkillVersionBuyRequest,
+  SkillVersionBuyResponse,
+  SkillVersionCloneRequest,
+  SkillVersionCloneResponse,
+  SkillVersionPublishRequest,
+  SkillVersionPublishResponse,
   SummarizeResponse,
   X402PaymentHandler
 } from "./types";
@@ -75,6 +89,34 @@ export class ContextKit {
 
   buySkill(skillId: string) {
     return this.post<SkillPurchaseResponse>("/api/skills/buy", { skillId });
+  }
+
+  validateSkillBundle(request: SkillBundleValidateRequest) {
+    return this.post<SkillBundleValidateResponse>("/api/skills/validate", { ...request, mode: "skill-validate" });
+  }
+
+  pushSkillBundle(request: SkillBundlePushRequest) {
+    return this.post<SkillBundlePushResponse>("/api/skills/push", { ...request, mode: "skill-push" });
+  }
+
+  publishSkillVersion(request: SkillVersionPublishRequest) {
+    return this.post<SkillVersionPublishResponse>("/api/skills/publish", { ...request, mode: "skill-repository-publish", userApproved: true, priceUsd: 0.05 });
+  }
+
+  inspectSkillRepository(request: SkillRepositoryInspectRequest) {
+    return this.post<SkillRepositoryInspectResponse>("/api/skills/inspect", { ...request, mode: "skill-inspect" });
+  }
+
+  searchSkillRepositories(request: SkillRepositorySearchRequest = {}) {
+    return this.post<SkillRepositorySearchResponse>("/api/skills/search", { ...request, mode: "skill-search" });
+  }
+
+  buySkillVersion(request: SkillVersionBuyRequest) {
+    return this.post<SkillVersionBuyResponse>("/api/skills/buy", { ...request, mode: "skill-buy" });
+  }
+
+  cloneSkillVersion(request: SkillVersionCloneRequest) {
+    return this.post<SkillVersionCloneResponse>("/api/skills/clone", { ...request, mode: "skill-clone" });
   }
 
   async estimateTokens(input: unknown) {

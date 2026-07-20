@@ -37,16 +37,19 @@ Tools: `contextkit_summarize`, `contextkit_compress_context`, `contextkit_handof
 
 The MCP server intentionally has no tool for admin actions, credits grants, API-key creation or revocation, webhook writes, or internal service access.
 
-## Verified Skill Registry
+## Versioned Skill Repository
 
 Direct API routes:
 
 - `POST /api/skills/compile`: compile completed Bankr-adjacent work into a private SKILL.md draft.
-- `POST /api/skills/publish`: publish an eligible skill after explicit user approval; requires `userApproved: true`. V1 listing price is fixed at `$0.05`.
+- `POST /api/skills/validate`: validate paths, secrets, source, tests, examples, package lock, config schema, identity, and checksums without storing files.
+- `POST /api/skills/push`: store an immutable content-addressed repository version.
+- `POST /api/skills/publish`: use `mode: skill-repository-publish` after a valid push and explicit `userApproved: true`.
 - `POST /api/skills/search`: search verified metadata previews by query, tags, ecosystem, and compatibility.
-- `POST /api/skills/buy`: buy the full SKILL.md install bundle and non-resale license.
+- `POST /api/skills/inspect`: inspect the public manifest without paid source content.
+- `POST /api/skills/buy` and `/api/skills/clone`: buy the full versioned file tree, checksums, validation, and non-resale license.
 
-Publishing rejects raw experience notes, missing skills, validation score below 75, fewer than three valid contract scenarios, secrets, private paths/identifiers, unsafe commands, weak evidence, and unsupported ecosystems.
+Repository publishing rejects raw notes, incomplete code/test trees, missing lockfiles, empty tests/examples, install hooks, secrets, path traversal, version replacement, weak evidence, and unsupported ecosystems.
 
 ```bash
 curl -X POST https://contextkit.pro/api/skills/search \

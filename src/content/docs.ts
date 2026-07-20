@@ -152,21 +152,21 @@ export const bankrEndpoints = [
     slug: "contextkit-experience-write",
     path: "contextkit-experience-write",
     price: "$0.01",
-    modes: ["skill-compile", "skill-publish", "experience-consider", "experience-save", "experience-publish"],
-    description: "Compile only complete reusable workflows with hard source-grounded execution evidence. Generic notes and assertions are rejected; public skills need three independent PASS proofs, score 75+, safety checks, and approval."
+    modes: ["skill-compile", "skill-validate", "skill-push", "skill-repository-publish"],
+    description: "Compile proven work, validate a complete repository bundle, push one immutable semantic version, then publish only after explicit approval. SHA-256 identity, path and secret scans, executable-contract checks, and the 320KB decoded limit apply."
   },
   {
     slug: "contextkit-experience-search",
     path: "contextkit-experience-search",
     price: "$0.01",
-    modes: ["experience-search"],
-    description: "Search verified skills by problem, ecosystem, tags, compatibility, and quality score."
+    modes: ["skill-search", "skill-inspect"],
+    description: "Search verified skills or inspect public repository metadata, immutable version, digest, file manifest, and validation without exposing paid file contents."
   },
   {
     slug: "contextkit-experience-buy",
     path: "contextkit-experience-buy",
     price: "$0.05",
-    modes: ["experience-buy"],
-    description: "Buy a verified skill through Bankr x402 and receive SKILL.md, manifest, validation report, and installation license."
+    modes: ["skill-buy", "skill-clone"],
+    description: "Buy or clone a verified skill through Bankr x402. Repository-backed purchases return every source, test, example, config, lockfile, checksum, manifest, and license file; legacy SKILL.md listings remain compatible."
   }
 ];

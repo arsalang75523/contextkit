@@ -44,10 +44,11 @@ export default function PricingPage() {
           })}
         </div>
 
-        <div className="mt-8 grid gap-3 rounded-xl border border-line bg-carbon/65 p-5 md:grid-cols-3">
+        <div className="mt-8 grid gap-3 rounded-xl border border-line bg-carbon/65 p-5 md:grid-cols-4">
           <PricingNote title="No subscription" text="Only pay when an agent calls a paid context endpoint." />
           <PricingNote title="Two payment paths" text="Use hosted Bankr x402 or pre-funded SDK account credits." />
           <PricingNote title="Compute protected" text="Payment validation happens before model execution starts." />
+          <PricingNote title="Quality-gated writes" text="The $0.01 write lane creates a private evidence-backed draft. Public listing needs approval; the buyer/install lane costs $0.05." />
         </div>
       </section>
     </main>

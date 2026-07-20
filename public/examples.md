@@ -12,7 +12,7 @@ bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd82
 
 Change `endpoint` to `compress-context`, `handoff`, `extract-profile`, or `memory-enrichment`. Use the corresponding mode for profile operations.
 
-## Verified Skill Registry
+## Versioned Skill Repository
 
 Compile a private skill draft:
 
@@ -30,12 +30,12 @@ bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd82
   -d '{"query":"x402 timeout","ecosystems":["x402"],"verifiedOnly":true}'
 ```
 
-Buy the install bundle:
+Buy and clone the complete immutable repository:
 
 ```bash
 bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-experience-buy \
   -X POST \
-  -d '{"skillId":"exp_REPLACE_ME"}'
+  -d '{"mode":"skill-clone","skillId":"exp_REPLACE_ME"}'
 ```
 
 ## Direct API With Credits
@@ -47,7 +47,7 @@ curl -X POST https://contextkit.pro/api/summarize \
   -d '{"mode":"compact","messages":[{"role":"user","content":"Summarize this context."}]}'
 ```
 
-Verified skill routes are `/api/skills/compile`, `/api/skills/publish`, `/api/skills/search`, and `/api/skills/buy`.
+The repository flow is `/api/skills/compile` -> `/validate` -> `/push` -> explicit `/publish`; buyers use `/search`, `/inspect`, and `/clone`.
 
 ## TypeScript SDK
 
