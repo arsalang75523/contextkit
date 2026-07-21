@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Activity, ArrowUpRight, BarChart3, CreditCard, KeyRound, LogOut, RefreshCw, ShieldCheck, Wallet, Webhook, Zap } from "lucide-react";
 import { CodeBlock } from "@/components/code-block";
+import { WalletCreditCheckout, type CreditInvoicePayload } from "@/components/wallet-credit-checkout";
 
 type View = "overview" | "keys" | "usage" | "webhooks" | "payments" | "credits";
 type ApiData = Record<string, unknown>;
@@ -33,8 +34,6 @@ export function DashboardClient({ view = "overview" }: { view?: View }) {
   const [webhookEvents, setWebhookEvents] = useState("payment.received,request.completed,handoff.generated");
   const [replayEventId, setReplayEventId] = useState("");
   const [topUpAmount, setTopUpAmount] = useState("10");
-  const [topUpInvoice, setTopUpInvoice] = useState<ApiData | null>(null);
-  const [topUpTxHash, setTopUpTxHash] = useState("");
   const route = routes.find(([key]) => key === view) ?? routes[0];
 
   useEffect(() => {
@@ -136,21 +135,35 @@ export function DashboardClient({ view = "overview" }: { view?: View }) {
       body: JSON.stringify({ amountUsd: Number(topUpAmount) })
     });
     const payload = await response.json() as ApiData;
-    setMessage(response.ok ? "Credit invoice created. Send USDC on Base, then submit the transaction hash." : "Credit invoice request failed.");
+    if (!response.ok) {
+      const error = apiErrorMessage(payload, "Credit invoice request failed.");
+      setMessage(error);
+      setActionResult(payload);
+      throw new Error(error);
+    }
+    const invoice = payload.invoice && typeof payload.invoice === "object" ? payload.invoice as Record<string, unknown> : null;
+    if (!invoice?.id || !invoice.payTo || !invoice.tokenContract || !invoice.amountUnits) {
+      throw new Error("Credit invoice returned incomplete payment details.");
+    }
+    setMessage("Secure USDC invoice created. Confirm the exact transfer in your wallet.");
     setActionResult(payload);
-    setTopUpInvoice(payload);
+    return payload as CreditInvoicePayload;
   }
 
-  async function verifyTopUpInvoice() {
-    const invoice = topUpInvoice?.invoice && typeof topUpInvoice.invoice === "object" ? topUpInvoice.invoice as Record<string, unknown> : {};
+  async function verifyTopUpInvoice(invoiceId: string, txHash: string) {
     const response = await fetch("/api/dashboard/credits/verify", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ invoiceId: invoice.id, txHash: topUpTxHash })
+      body: JSON.stringify({ invoiceId, txHash })
     });
     const payload = await response.json() as ApiData;
-    setMessage(response.ok ? "Credit top-up verified and balance updated." : "Credit top-up verification failed.");
     setActionResult(payload);
+    if (!response.ok) {
+      const error = apiErrorMessage(payload, "Credit top-up verification failed.");
+      setMessage(error);
+      throw new Error(error);
+    }
+    setMessage("USDC payment verified. Credit balance updated automatically.");
     await load();
   }
 
@@ -214,9 +227,6 @@ export function DashboardClient({ view = "overview" }: { view?: View }) {
           data={data}
           topUpAmount={topUpAmount}
           setTopUpAmount={setTopUpAmount}
-          topUpInvoice={topUpInvoice}
-          topUpTxHash={topUpTxHash}
-          setTopUpTxHash={setTopUpTxHash}
           onCreateTopUpInvoice={createTopUpInvoice}
           onVerifyTopUpInvoice={verifyTopUpInvoice}
         />
@@ -298,9 +308,6 @@ function DashboardView({
   data,
   topUpAmount,
   setTopUpAmount,
-  topUpInvoice,
-  topUpTxHash,
-  setTopUpTxHash,
   onCreateTopUpInvoice,
   onVerifyTopUpInvoice
 }: {
@@ -308,11 +315,8 @@ function DashboardView({
   data: ApiData | null;
   topUpAmount: string;
   setTopUpAmount: (value: string) => void;
-  topUpInvoice: ApiData | null;
-  topUpTxHash: string;
-  setTopUpTxHash: (value: string) => void;
-  onCreateTopUpInvoice: () => void;
-  onVerifyTopUpInvoice: () => void;
+  onCreateTopUpInvoice: () => Promise<CreditInvoicePayload>;
+  onVerifyTopUpInvoice: (invoiceId: string, txHash: string) => Promise<void>;
 }) {
   if (!data) {
     return (
@@ -330,9 +334,6 @@ function DashboardView({
         data={data}
         topUpAmount={topUpAmount}
         setTopUpAmount={setTopUpAmount}
-        topUpInvoice={topUpInvoice}
-        topUpTxHash={topUpTxHash}
-        setTopUpTxHash={setTopUpTxHash}
         onCreateTopUpInvoice={onCreateTopUpInvoice}
         onVerifyTopUpInvoice={onVerifyTopUpInvoice}
       />
@@ -415,24 +416,16 @@ function CreditsData({
   data,
   topUpAmount,
   setTopUpAmount,
-  topUpInvoice,
-  topUpTxHash,
-  setTopUpTxHash,
   onCreateTopUpInvoice,
   onVerifyTopUpInvoice
 }: {
   data: ApiData;
   topUpAmount: string;
   setTopUpAmount: (value: string) => void;
-  topUpInvoice: ApiData | null;
-  topUpTxHash: string;
-  setTopUpTxHash: (value: string) => void;
-  onCreateTopUpInvoice: () => void;
-  onVerifyTopUpInvoice: () => void;
+  onCreateTopUpInvoice: () => Promise<CreditInvoicePayload>;
+  onVerifyTopUpInvoice: (invoiceId: string, txHash: string) => Promise<void>;
 }) {
   const events = Array.isArray(data.events) ? data.events as Array<Record<string, unknown>> : [];
-  const invoice = topUpInvoice?.invoice && typeof topUpInvoice.invoice === "object" ? topUpInvoice.invoice as Record<string, unknown> : {};
-  const instructions = topUpInvoice?.instructions && typeof topUpInvoice.instructions === "object" ? topUpInvoice.instructions as Record<string, unknown> : {};
   return (
     <section className="mt-6 rounded-md border border-line bg-white/[0.035] p-5">
       <div className="grid gap-4 md:grid-cols-3">
@@ -443,26 +436,8 @@ function CreditsData({
       <div className="mt-5 rounded-md border border-aqua/25 bg-aqua/10 p-4 text-sm leading-6 text-white/65">
         SDK and MCP users can run core memory tools plus the $0.01 evidence-gated skill compiler when this balance covers the endpoint price. Public skill listing still requires explicit approval; buyers use the $0.05 install lane. Insufficient balance returns the normal x402 payment challenge.
       </div>
-      <div className="mt-5 rounded-md border border-mint/25 bg-mint/10 p-4">
-        <h2 className="font-semibold text-white">Buy credits with crypto</h2>
-        <p className="mt-2 text-sm leading-6 text-white/60">
-          Create an invoice, send USDC on Base to the ContextKit wallet, then paste the transaction hash. Verified payments activate API credits for this dashboard account.
-        </p>
-        <div className="mt-4 flex flex-col gap-3 sm:flex-row">
-          <input value={topUpAmount} onChange={(event) => setTopUpAmount(event.target.value)} className="h-11 rounded-md border border-line bg-ink/80 px-3 text-sm text-white outline-none focus:border-mint" />
-          <button type="button" onClick={onCreateTopUpInvoice} className="h-11 rounded-md bg-mint px-5 text-sm font-medium text-ink">Create USDC invoice</button>
-        </div>
-        {invoice.id ? (
-          <div className="mt-4 grid gap-3 rounded border border-line bg-ink/70 p-4 text-sm">
-            <p className="text-white/70">Send <span className="font-semibold text-mint">{String(instructions.send ?? invoice.amountUsdc)} USDC</span> on Base.</p>
-            <p className="break-all font-mono text-aqua">To: {String(instructions.to ?? invoice.payTo)}</p>
-            <p className="break-all font-mono text-white/45">USDC contract: {String(instructions.tokenContract ?? invoice.tokenContract)}</p>
-            <div className="grid gap-3 md:grid-cols-[1fr_auto]">
-              <input value={topUpTxHash} onChange={(event) => setTopUpTxHash(event.target.value)} placeholder="0x transaction hash" className="h-11 rounded-md border border-line bg-ink/80 px-3 font-mono text-sm text-white outline-none focus:border-mint" />
-              <button type="button" onClick={onVerifyTopUpInvoice} className="h-11 rounded-md border border-mint/40 px-5 text-sm text-mint">Verify payment</button>
-            </div>
-          </div>
-        ) : null}
+      <div className="mt-5">
+        <WalletCreditCheckout amount={topUpAmount} onAmountChange={setTopUpAmount} onCreateInvoice={onCreateTopUpInvoice} onVerifyPayment={onVerifyTopUpInvoice} />
       </div>
       <div className="mt-5 grid gap-3">
         {events.slice(0, 10).map((event) => (
@@ -476,7 +451,7 @@ function CreditsData({
             </p>
           </div>
         ))}
-        {!events.length ? <p className="text-sm text-white/45">No credit events yet. Add credits with the admin grant endpoint before using SDK paid routes without Bankr.</p> : null}
+        {!events.length ? <p className="text-sm text-white/45">No credit events yet. Connect a wallet above to fund SDK and MCP calls with Base USDC.</p> : null}
       </div>
     </section>
   );
@@ -510,6 +485,11 @@ function Metric({ label, value }: { label: string; value: string }) {
       <p className="mt-2 break-all text-lg font-semibold tracking-[-0.025em] text-white">{value}</p>
     </div>
   );
+}
+
+function apiErrorMessage(payload: ApiData, fallback: string) {
+  const error = payload.error && typeof payload.error === "object" ? payload.error as Record<string, unknown> : {};
+  return typeof error.message === "string" && error.message ? error.message : fallback;
 }
 
 function KeyList({ data, onRevoke }: { data: ApiData | null; onRevoke: (keyId: string) => void }) {

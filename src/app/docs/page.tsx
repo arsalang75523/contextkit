@@ -482,10 +482,10 @@ export default function DocsPage() {
               </p>
               <CodeBlock code={creditsCurl} />
               <p className="mt-3">
-                Users can buy credits from <code>/dashboard/credits</code>. The dashboard creates a USDC invoice, the user sends USDC on Base, pastes the transaction hash, and ContextKit verifies the transfer before granting credits.
+                Users can buy credits from <code>/dashboard/credits</code>. Connect a browser wallet, choose an amount, and approve the exact USDC transfer on Base. The dashboard waits for confirmation and verifies the transaction automatically; no transaction-hash copy/paste is required.
               </p>
               <div className="mt-4 grid gap-3 md:grid-cols-2">
-                {["Verifies transaction receipt on Base", "Checks Base USDC Transfer event", "Requires recipient to match ContextKit wallet", "Blocks reused transaction hashes"].map((item) => (
+                {["Connects through Wagmi without custody", "Verifies the Base USDC Transfer event", "Requires recipient and amount to match the invoice", "Blocks reused transaction hashes"].map((item) => (
                   <div key={item} className="rounded-md border border-line bg-white/[0.035] p-3 text-sm text-white/65">
                     {item}
                   </div>

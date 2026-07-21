@@ -351,10 +351,11 @@ curl https://contextkit.pro/api/auth/credits \
 Self-serve crypto top-up:
 
 1. Open `/dashboard/credits`.
-2. Create a USDC invoice.
-3. Send USDC on Base to the shown wallet.
-4. Paste the transaction hash.
-5. ContextKit verifies the transfer and grants credits automatically.
+2. Connect an injected wallet such as Coinbase Wallet, MetaMask, or Rabby.
+3. Choose a credit amount and approve the exact USDC transfer on Base.
+4. ContextKit waits for confirmation, verifies the transfer, and grants credits automatically.
+
+The dashboard never receives a private key and no transaction-hash copy/paste is required. The verification API remains available for server integrations and recovery flows.
 
 If credits are insufficient, direct paid routes return HTTP `402 Payment Required`.
 

@@ -340,7 +340,7 @@ dashboardSessionRoutes.post("/dashboard/credits/top-up", async (c) => {
       send: invoice.amountUsdc,
       to: invoice.payTo,
       tokenContract: invoice.tokenContract,
-      nextStep: "Send the USDC transaction, then paste the transaction hash to activate credits."
+      nextStep: "Confirm the exact USDC transfer in the connected wallet. The dashboard verifies the transaction and activates credits automatically."
     }
   });
 });
