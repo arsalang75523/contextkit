@@ -47,6 +47,7 @@ export function WalletCreditCheckout({
   const numericAmount = Number(amount);
   const busy = ["preparing", "signing", "confirming", "verifying"].includes(payment.phase);
   const onBase = chainId === base.id;
+  const walletConnector = connectors.find((connector) => connector.type === "injected") ?? connectors[0];
 
   async function verify(invoiceId: string, hash: Hash) {
     setPayment({ phase: "verifying", invoiceId, hash });
@@ -109,19 +110,16 @@ export function WalletCreditCheckout({
               <p className="mt-2 max-w-2xl text-sm leading-6 text-white/55">Your wallet signs one exact USDC transfer on Base. ContextKit verifies the confirmed receipt before updating your account balance.</p>
             </div>
           </div>
-          <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
-            {connectors.map((connector) => (
-              <button
-                key={connector.uid}
-                type="button"
-                disabled={isConnecting}
-                onClick={() => void connectAsync({ connector }).catch(() => undefined)}
-                className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-mint px-5 text-sm font-semibold text-ink transition hover:bg-white disabled:cursor-wait disabled:opacity-60"
-              >
-                {isConnecting ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Wallet className="h-4 w-4" />}
-                Connect wallet
-              </button>
-            ))}
+          <div className="flex shrink-0">
+            <button
+              type="button"
+              disabled={isConnecting || !walletConnector}
+              onClick={() => walletConnector && void connectAsync({ connector: walletConnector }).catch(() => undefined)}
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-mint px-5 text-sm font-semibold text-ink transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isConnecting ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Wallet className="h-4 w-4" />}
+              Connect wallet
+            </button>
           </div>
         </div>
         {connectError ? <p className="relative mt-4 text-sm text-coral">{errorMessage(connectError)}</p> : null}
