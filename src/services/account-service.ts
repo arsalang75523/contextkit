@@ -143,43 +143,84 @@ export class AccountService {
     const accountId = await this.kv.get<string>(`account-email:${email}`);
     const genericResponse = {
       ok: true,
-      message: "If this email belongs to a ContextKit account, a password reset email will be sent."
+      message: "If this email belongs to a ContextKit account, a 6-digit password reset code will be sent."
     };
 
     if (!accountId) {
       return genericResponse;
     }
 
-    const token = `ck_reset_${randomSecret(32)}`;
-    const tokenHash = await sha256(token);
+    const code = await verificationCode();
+    const codeHash = await passwordResetCodeHash(email, code);
     const resetId = createId("rst");
-    const baseUrl = readBinding(this.env, "CONTEXTKIT_BASE_URL") || readBinding(this.env, "CONTEXTKIT_BACKEND_URL") || "http://localhost:3000";
-    const resetUrl = `${baseUrl.replace(/\/$/, "")}/dashboard/reset-password?token=${encodeURIComponent(token)}`;
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
 
-    await this.kv.set(`password-reset:${tokenHash}`, {
+    await this.kv.set(`password-reset-code:${email}`, {
       resetId,
       accountId,
-      createdAt: new Date().toISOString()
+      codeHash,
+      attempts: 0,
+      createdAt: new Date().toISOString(),
+      expiresAt
     }, 15 * 60);
 
-    await sendPasswordResetEmail(this.env, email, resetUrl);
+    await sendPasswordResetEmail(this.env, email, code);
     return genericResponse;
+  }
+
+  async verifyPasswordResetCode(emailInput: string, code: string) {
+    const email = normalizeEmail(emailInput);
+    const resetKey = `password-reset-code:${email}`;
+    const reset = await this.kv.get<{
+      resetId: string;
+      accountId: string;
+      codeHash: string;
+      attempts?: number;
+      expiresAt: string;
+      usedAt?: string;
+    }>(resetKey);
+
+    if (!reset?.accountId || reset.usedAt || Date.parse(reset.expiresAt) <= Date.now() || (reset.attempts ?? 0) >= 5) {
+      return null;
+    }
+
+    const validCode = reset.codeHash === await passwordResetCodeHash(email, code);
+    if (!validCode) {
+      const attempts = (reset.attempts ?? 0) + 1;
+      const ttlSeconds = Math.max(1, Math.ceil((Date.parse(reset.expiresAt) - Date.now()) / 1000));
+      await this.kv.set(resetKey, { ...reset, attempts }, ttlSeconds);
+      return null;
+    }
+
+    const token = `ck_reset_${randomSecret(32)}`;
+    const tokenHash = await sha256(token);
+    await Promise.all([
+      this.kv.set(`password-reset:${tokenHash}`, {
+        resetId: reset.resetId,
+        accountId: reset.accountId,
+        createdAt: new Date().toISOString()
+      }, 10 * 60),
+      this.kv.set(resetKey, { ...reset, usedAt: new Date().toISOString() }, 1)
+    ]);
+    return token;
   }
 
   async resetPassword(token: string, password: string) {
     const tokenHash = await sha256(token);
-    const reset = await this.kv.get<{ accountId: string }>(`password-reset:${tokenHash}`);
-    if (!reset?.accountId) return false;
+    const resetKey = `password-reset:${tokenHash}`;
+    const reset = await this.kv.get<{ accountId: string; usedAt?: string }>(resetKey);
+    if (!reset?.accountId || reset.usedAt) return false;
 
     const account = await this.kv.get<AccountRecord>(`account:${reset.accountId}`);
     if (!account) return false;
 
+    const passwordHash = await hashPassword(password);
+    await this.kv.set(resetKey, { ...reset, usedAt: new Date().toISOString() }, 1);
     await this.kv.set(`account:${account.id}`, {
       ...account,
-      passwordHash: await hashPassword(password),
+      passwordHash,
       sessionVersion: (account.sessionVersion ?? 1) + 1
     });
-    await this.kv.set(`password-reset:${tokenHash}`, { ...reset, usedAt: new Date().toISOString() }, 1);
     return true;
   }
 
@@ -297,15 +338,17 @@ async function verificationCode() {
   return String(randomInt(0, 1_000_000)).padStart(6, "0");
 }
 
-async function sendPasswordResetEmail(env: AppBindings["Bindings"], to: string, resetUrl: string) {
+async function passwordResetCodeHash(email: string, code: string) {
+  return sha256(`contextkit-password-reset-code-v1:${email}:${code}`);
+}
+
+async function sendPasswordResetEmail(env: AppBindings["Bindings"], to: string, code: string) {
   await sendTransactionalEmail({
     env,
     to,
     subject: "Reset your ContextKit password",
-    actionUrl: resetUrl,
-    actionText: "Reset password",
     title: "Reset your ContextKit password",
-    body: "This link expires in 15 minutes. If you did not request this, you can ignore this email."
+    body: `Your ContextKit password reset code is ${code}. It expires in 15 minutes. If you did not request this, you can ignore this email.`
   });
 }
 

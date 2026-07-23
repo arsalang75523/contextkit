@@ -220,9 +220,18 @@ export const forgotPasswordSchema = z.object({
   email: z.string().email()
 });
 
+export const verifyPasswordResetCodeSchema = z.object({
+  email: z.string().email(),
+  code: z.string().regex(/^\d{6}$/)
+});
+
 export const resetPasswordSchema = z.object({
   token: z.string().min(24),
-  password: z.string().min(12).max(128)
+  password: z.string().min(12).max(128),
+  passwordConfirmation: z.string().min(12).max(128)
+}).refine((value) => value.password === value.passwordConfirmation, {
+  message: "Password confirmation does not match.",
+  path: ["passwordConfirmation"]
 });
 
 export const verifyEmailSchema = z.object({
@@ -265,6 +274,7 @@ export type ContextUploadInput = z.infer<typeof contextUploadSchema>;
 export type CreateApiKeyInput = z.infer<typeof createApiKeySchema>;
 export type SignupInput = z.infer<typeof signupSchema>;
 export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
+export type VerifyPasswordResetCodeInput = z.infer<typeof verifyPasswordResetCodeSchema>;
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 export type VerifyEmailInput = z.infer<typeof verifyEmailSchema>;
 export type PlaygroundRunInput = z.infer<typeof playgroundRunSchema>;

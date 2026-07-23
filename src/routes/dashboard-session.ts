@@ -11,7 +11,7 @@ import { createId } from "@/utils/id";
 import { sanitizeMessages } from "@/utils/sanitize";
 import { estimateReduction, estimateTokens } from "@/utils/tokens";
 import { endpointPricing } from "@/lib/pricing";
-import { createApiKeySchema, demoRunSchema, forgotPasswordSchema, loginSchema, playgroundRunSchema, resetPasswordSchema, signupSchema, verifyEmailSchema } from "@/types/api";
+import { createApiKeySchema, demoRunSchema, forgotPasswordSchema, loginSchema, playgroundRunSchema, resetPasswordSchema, signupSchema, verifyEmailSchema, verifyPasswordResetCodeSchema } from "@/types/api";
 import type { AppBindings } from "@/types/bindings";
 import type { ConversationMessage, ConversationRequest } from "@/types/api";
 
@@ -92,6 +92,19 @@ dashboardSessionRoutes.post("/dashboard/forgot-password", zValidator("json", for
 
   const result = await new AccountService(c.env ?? {}).createPasswordReset(c.req.valid("json").email);
   return c.json(result);
+});
+
+dashboardSessionRoutes.post("/dashboard/verify-password-reset-code", zValidator("json", verifyPasswordResetCodeSchema), async (c) => {
+  const body = c.req.valid("json");
+  const email = body.email.toLowerCase();
+  const limited = await authActionRateLimit(c, `verify-password-reset:${email}`, 10, 15 * 60);
+  if (limited) return limited;
+
+  const resetToken = await new AccountService(c.env ?? {}).verifyPasswordResetCode(email, body.code);
+  if (!resetToken) {
+    return c.json({ error: { code: "invalid_reset_code", message: "Reset code is invalid or expired.", requestId: c.get("requestId") } }, 401);
+  }
+  return c.json({ ok: true, resetToken });
 });
 
 dashboardSessionRoutes.post("/dashboard/reset-password", zValidator("json", resetPasswordSchema), async (c) => {

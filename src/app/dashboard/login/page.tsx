@@ -4,8 +4,10 @@ import { type ReactNode, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, Check, Eye, EyeOff, KeyRound, LockKeyhole, Mail, ShieldCheck, Sparkles } from "lucide-react";
 import { CodeBlock } from "@/components/code-block";
+import { PasswordRecoveryDialog } from "@/components/password-recovery-dialog";
 
-type Mode = "login" | "signup" | "api-key" | "forgot";
+type Mode = "login" | "signup" | "api-key";
+type ResultMode = Mode | "verification";
 
 export default function DashboardLoginPage() {
   const [mode, setMode] = useState<Mode>("signup");
@@ -16,10 +18,11 @@ export default function DashboardLoginPage() {
   const [apiKey, setApiKey] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [result, setResult] = useState<object | null>(null);
-  const [resultMode, setResultMode] = useState<Mode | null>(null);
+  const [resultMode, setResultMode] = useState<ResultMode | null>(null);
   const [error, setError] = useState("");
   const [unverifiedEmail, setUnverifiedEmail] = useState("");
   const [verificationCode, setVerificationCode] = useState("");
+  const [recoveryOpen, setRecoveryOpen] = useState(false);
 
   function switchMode(nextMode: Mode) {
     setMode(nextMode);
@@ -36,8 +39,8 @@ export default function DashboardLoginPage() {
     setError("");
     setResult(null);
     setResultMode(null);
-    const endpoint = mode === "signup" ? "/api/dashboard/signup" : mode === "login" ? "/api/dashboard/login" : mode === "forgot" ? "/api/dashboard/forgot-password" : "/api/dashboard/session";
-    const body = mode === "signup" ? { email, password, name, company } : mode === "login" ? { email, password } : mode === "forgot" ? { email } : { apiKey };
+    const endpoint = mode === "signup" ? "/api/dashboard/signup" : mode === "login" ? "/api/dashboard/login" : "/api/dashboard/session";
+    const body = mode === "signup" ? { email, password, name, company } : mode === "login" ? { email, password } : { apiKey };
     const response = await fetch(endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -49,11 +52,6 @@ export default function DashboardLoginPage() {
         setUnverifiedEmail(email);
       }
       setError(JSON.stringify(payload, null, 2));
-      return;
-    }
-    if (mode === "forgot") {
-      setResult(payload);
-      setResultMode(mode);
       return;
     }
     if (mode === "api-key") {
@@ -82,7 +80,7 @@ export default function DashboardLoginPage() {
       return;
     }
     setResult(payload);
-    setResultMode("forgot");
+    setResultMode("verification");
   }
 
   async function verifyCode() {
@@ -124,12 +122,6 @@ export default function DashboardLoginPage() {
       description: "Enter a ContextKit API key to open a local dashboard session on this device.",
       action: "Continue with key"
     },
-    forgot: {
-      eyebrow: "Password recovery",
-      title: "Reset dashboard access.",
-      description: "We will send a time-limited reset link if this email belongs to an account.",
-      action: "Send reset email"
-    }
   } as const;
   const activeCopy = modeCopy[mode];
 
@@ -175,28 +167,26 @@ export default function DashboardLoginPage() {
             </div>
 
             <form className="mt-7 grid gap-4" onSubmit={(event) => { event.preventDefault(); void submit(); }}>
-              {mode === "forgot" ? <Field label="Account email" icon={<Mail className="h-4 w-4" />}><input value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@company.com" autoComplete="email" type="email" className="auth-input" /></Field> : null}
-              {mode !== "forgot" && mode !== "api-key" ? (
+              {mode !== "api-key" ? (
                 <>
                   {mode === "signup" ? <div className="grid gap-4 sm:grid-cols-2"><Field label="Your name"><input value={name} onChange={(event) => setName(event.target.value)} placeholder="Avery Chen" autoComplete="name" className="auth-input" /></Field><Field label="Company or project"><input value={company} onChange={(event) => setCompany(event.target.value)} placeholder="Agent Lab" autoComplete="organization" className="auth-input" /></Field></div> : null}
                   <Field label="Work email" icon={<Mail className="h-4 w-4" />}><input value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@company.com" autoComplete="email" type="email" className="auth-input" /></Field>
                   <Field label="Password" icon={<LockKeyhole className="h-4 w-4" />}><div className="flex items-center"><input value={password} onChange={(event) => setPassword(event.target.value)} placeholder={mode === "signup" ? "12+ characters" : "Your password"} autoComplete={mode === "signup" ? "new-password" : "current-password"} type={showPassword ? "text" : "password"} className="auth-input border-0 bg-transparent pr-0 focus:border-0" /><button type="button" onClick={() => setShowPassword((value) => !value)} className="mr-2 grid h-8 w-8 place-items-center rounded-md text-white/45 transition hover:bg-white/[0.07] hover:text-mint" aria-label={showPassword ? "Hide password" : "Show password"}>{showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button></div></Field>
-                  {mode === "login" ? <button type="button" onClick={() => switchMode("forgot")} className="-mt-1 w-fit text-sm text-aqua transition hover:text-mint">Forgot password?</button> : null}
+                  {mode === "login" ? <button type="button" onClick={() => setRecoveryOpen(true)} className="-mt-1 w-fit text-sm text-aqua transition hover:text-mint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mint">Forgot password?</button> : null}
                 </>
               ) : null}
               {mode === "api-key" ? <Field label="ContextKit API key" icon={<KeyRound className="h-4 w-4" />}><input value={apiKey} onChange={(event) => setApiKey(event.target.value)} placeholder="ck_live_..." autoComplete="off" className="auth-input font-mono" /></Field> : null}
-              {mode === "forgot" ? <p className="-mt-1 text-sm leading-6 text-white/48">Reset links are time-limited and never expose a reset token in your browser.</p> : null}
               <button type="submit" className="mt-2 inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-mint px-5 text-sm font-semibold text-ink transition hover:bg-white focus:outline-none focus:ring-2 focus:ring-mint focus:ring-offset-2 focus:ring-offset-carbon">{activeCopy.action}<ArrowRight className="h-4 w-4" /></button>
             </form>
 
-            {mode === "forgot" ? <button type="button" onClick={() => switchMode("login")} className="mt-5 inline-flex items-center gap-2 text-sm text-aqua transition hover:text-mint"><ArrowLeft className="h-3.5 w-3.5" /> Back to sign in</button> : null}
             {mode === "signup" ? <p className="mt-5 text-sm leading-6 text-white/48">Email verification is required before dashboard access or API-key creation.</p> : null}
             {unverifiedEmail ? <div className="mt-6 rounded-xl border border-aqua/25 bg-aqua/[0.07] p-4"><div className="flex gap-3"><Mail className="mt-0.5 h-4 w-4 shrink-0 text-aqua" /><div><p className="text-sm font-medium text-white">Verify your email</p><p className="mt-1 text-sm leading-6 text-white/58">Enter the 6-digit code sent to {unverifiedEmail}.</p></div></div><div className="mt-4 flex flex-col gap-2 sm:flex-row"><input value={verificationCode} onChange={(event) => setVerificationCode(event.target.value.replace(/\D/g, "").slice(0, 6))} placeholder="000000" inputMode="numeric" className="h-10 flex-1 rounded-lg border border-aqua/25 bg-ink/80 px-3 font-mono text-sm tracking-[0.28em] text-white outline-none focus:border-aqua" /><button type="button" onClick={verifyCode} className="h-10 rounded-lg bg-aqua px-4 text-sm font-medium text-ink">Verify</button><button type="button" onClick={resendVerification} className="h-10 rounded-lg border border-aqua/35 px-4 text-sm text-aqua transition hover:bg-aqua/10">Resend</button></div></div> : null}
-            {result ? <div className="mt-6 rounded-xl border border-mint/25 bg-mint/[0.06] p-4"><div className="flex gap-3"><Check className="mt-0.5 h-4 w-4 text-mint" /><p className="text-sm leading-6 text-mint">{resultMode === "signup" ? "Account created. Check your email for the verification code." : resultMode === "login" ? "Email verified. You can sign in now." : "Check your email for the next step."}</p></div><details className="mt-3"><summary className="cursor-pointer text-xs text-white/45 hover:text-white/70">View response details</summary><div className="mt-3"><CodeBlock code={JSON.stringify(result, null, 2)} /></div></details></div> : null}
+            {result ? <div className="mt-6 rounded-xl border border-mint/25 bg-mint/[0.06] p-4"><div className="flex gap-3"><Check className="mt-0.5 h-4 w-4 text-mint" /><p className="text-sm leading-6 text-mint">{resultMode === "signup" ? "Account created. Check your email for the verification code." : resultMode === "login" ? "Email verified. You can sign in now." : "A fresh verification code was requested."}</p></div><details className="mt-3"><summary className="cursor-pointer text-xs text-white/45 hover:text-white/70">View response details</summary><div className="mt-3"><CodeBlock code={JSON.stringify(result, null, 2)} /></div></details></div> : null}
             {error ? <div className="mt-5 rounded-xl border border-coral/35 bg-coral/[0.08] p-4"><p className="text-sm font-medium text-coral">The request could not be completed.</p><pre className="mt-2 whitespace-pre-wrap font-mono text-xs leading-5 text-coral/80">{error}</pre></div> : null}
           </div>
         </div>
       </section>
+      <PasswordRecoveryDialog open={recoveryOpen} initialEmail={email} onClose={() => setRecoveryOpen(false)} />
     </main>
   );
 }
