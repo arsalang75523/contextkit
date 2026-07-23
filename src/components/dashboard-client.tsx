@@ -2,15 +2,16 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Activity, ArrowUpRight, BarChart3, CreditCard, KeyRound, LogOut, RefreshCw, ShieldCheck, Wallet, Webhook, Zap } from "lucide-react";
+import { Activity, ArrowRight, ArrowUpRight, Banknote, BarChart3, CreditCard, KeyRound, LogOut, PackageCheck, RefreshCw, ShieldCheck, Star, Store, Wallet, Webhook, Zap } from "lucide-react";
 import { CodeBlock } from "@/components/code-block";
 import { WalletCreditCheckout, type CreditInvoicePayload } from "@/components/wallet-credit-checkout";
 
-type View = "overview" | "keys" | "usage" | "webhooks" | "payments" | "credits";
+type View = "overview" | "skills" | "keys" | "usage" | "webhooks" | "payments" | "credits";
 type ApiData = Record<string, unknown>;
 
 const routes: Array<[View, string, string]> = [
   ["overview", "Overview", "/api/analytics/overview"],
+  ["skills", "Seller", "/api/dashboard/skills"],
   ["keys", "API Keys", "/api/auth/my-keys"],
   ["usage", "Usage", "/api/analytics/usage"],
   ["webhooks", "Webhooks", "/api/webhooks/deliveries"],
@@ -198,7 +199,7 @@ export function DashboardClient({ view = "overview" }: { view?: View }) {
               <button type="button" onClick={logout} className="inline-flex h-10 items-center gap-2 rounded-lg border border-coral/20 px-3.5 text-sm text-white/55 transition hover:border-coral/50 hover:bg-coral/[0.06] hover:text-coral"><LogOut className="h-4 w-4" /> Logout</button>
             </div>
           </div>
-          <nav className="grid gap-px border-t border-line bg-line sm:grid-cols-3 lg:grid-cols-6">
+          <nav className="grid gap-px border-t border-line bg-line sm:grid-cols-3 lg:grid-cols-7">
             {routes.map(([key, label]) => (
               <Link key={key} href={key === "overview" ? "/dashboard" : `/dashboard/${key}`} className={`group flex items-center gap-3 bg-carbon px-4 py-4 text-sm transition ${view === key ? "bg-mint/[0.09] text-mint" : "text-white/55 hover:bg-white/[0.045] hover:text-white"}`}>
                 <span className={`grid h-8 w-8 place-items-center rounded-lg border ${view === key ? "border-mint/30 bg-mint/10 text-mint" : "border-line bg-ink/40 text-white/42 group-hover:text-white"}`}><DashboardIcon view={key} /></span>
@@ -291,6 +292,7 @@ export function DashboardClient({ view = "overview" }: { view?: View }) {
 
 function DashboardIcon({ view }: { view: View }) {
   const props = { className: "h-4 w-4" };
+  if (view === "skills") return <Store {...props} />;
   if (view === "keys") return <KeyRound {...props} />;
   if (view === "usage") return <Activity {...props} />;
   if (view === "webhooks") return <Webhook {...props} />;
@@ -326,6 +328,7 @@ function DashboardView({
     );
   }
   if (view === "overview") return <OverviewData data={data} />;
+  if (view === "skills") return <SkillsData data={data} />;
   if (view === "usage") return <UsageData data={data} />;
   if (view === "payments") return <PaymentsData data={data} />;
   if (view === "credits") {
@@ -341,6 +344,109 @@ function DashboardView({
   }
   if (view === "webhooks") return <WebhookData data={data} />;
   return null;
+}
+
+function SkillsData({ data }: { data: ApiData }) {
+  const totals = data.totals && typeof data.totals === "object" ? data.totals as Record<string, unknown> : {};
+  const payout = data.payout && typeof data.payout === "object" ? data.payout as Record<string, unknown> : {};
+  const listings = Array.isArray(data.listings) ? data.listings as Array<Record<string, unknown>> : [];
+  const recentSales = Array.isArray(data.recentSales) ? data.recentSales as Array<Record<string, unknown>> : [];
+  const authError = data.error && typeof data.error === "object" ? data.error as Record<string, unknown> : null;
+
+  if (authError) {
+    return (
+      <section className="mt-6 rounded-[1.25rem] border border-amber/25 bg-amber/[0.06] p-6">
+        <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-amber">Seller access</p>
+        <h2 className="mt-2 text-2xl font-semibold text-white">Log in to see your skill economy.</h2>
+        <p className="mt-3 max-w-xl text-sm leading-6 text-white/52">Published skills, paid installs, reviews, revenue, and the next payout window are account-scoped.</p>
+        <Link href="/dashboard/login" className="mt-5 inline-flex h-10 items-center gap-2 rounded-lg bg-mint px-4 text-sm font-semibold text-ink">Login / sign up <ArrowRight className="h-4 w-4" /></Link>
+      </section>
+    );
+  }
+
+  return (
+    <section className="mt-6 space-y-5">
+      <div className="overflow-hidden rounded-[1.25rem] border border-mint/20 bg-mint/[0.045] p-5 sm:p-6">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <p className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.16em] text-mint"><Store className="h-3.5 w-3.5" /> Seller control plane</p>
+            <h2 className="mt-3 text-3xl font-semibold tracking-[-0.04em] text-white">Turn verified work into a revenue stream.</h2>
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-white/52">Public reputation is earned from real installs, reproducible evidence, and buyer feedback. This is a ledger view, not a simulated payout.</p>
+          </div>
+          <Link href="/marketplace" className="inline-flex h-10 shrink-0 items-center gap-2 rounded-lg border border-mint/30 px-4 text-sm text-mint transition hover:bg-mint/10 hover:text-white">Open marketplace <ArrowRight className="h-4 w-4" /></Link>
+        </div>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        <Metric label="Published skills" value={`${String(totals.published ?? 0)} / ${String(totals.skills ?? 0)}`} />
+        <Metric label="Paid installs" value={String(totals.installs ?? 0)} />
+        <Metric label="Sales" value={String(totals.sales ?? 0)} />
+        <Metric label="Revenue" value={`$${Number(totals.revenueUsd ?? 0).toFixed(3)}`} />
+        <Metric label="Avg rating" value={Number(totals.averageRating ?? 0) ? `${totals.averageRating}/5` : "No reviews"} />
+      </div>
+
+      <div className="grid gap-5 lg:grid-cols-[1fr_0.78fr]">
+        <div className="overflow-hidden rounded-[1.25rem] border border-line bg-white/[0.035]">
+          <div className="flex items-center justify-between border-b border-line px-5 py-4">
+            <div><p className="font-mono text-[9px] uppercase tracking-[0.16em] text-white/38">Per-skill performance</p><h3 className="mt-1 text-xl font-semibold text-white">Listings</h3></div>
+            <PackageCheck className="h-4 w-4 text-mint" />
+          </div>
+          <div className="divide-y divide-line">
+            {listings.length ? listings.map((listing) => (
+              <Link key={String(listing.id)} href={`/marketplace/${String(listing.id)}`} className="group flex flex-col gap-3 px-5 py-4 transition hover:bg-white/[0.035] sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="truncate font-medium text-white group-hover:text-mint">{String(listing.name)}</p>
+                    <span className={`rounded-full border px-2 py-0.5 font-mono text-[8px] uppercase tracking-[0.12em] ${listing.visibility === "public" ? "border-mint/20 bg-mint/[0.06] text-mint" : "border-line text-white/35"}`}>{String(listing.visibility)}</span>
+                  </div>
+                  <p className="mt-1 text-xs text-white/35">v{String(listing.version)} · {String(listing.reviewCount ?? 0)} reviews · validation {String(listing.validationScore ?? 0)}/100</p>
+                </div>
+                <div className="flex shrink-0 items-center gap-5 text-sm">
+                  <span className="text-white/48"><span className="text-white">{String(listing.sales ?? 0)}</span> installs</span>
+                  <span className="flex items-center gap-1 text-amber"><Star className="h-3.5 w-3.5 fill-amber" /> {Number(listing.rating ?? 0) ? String(listing.rating) : "new"}</span>
+                  <span className="font-mono text-mint">${Number(listing.earnedUsd ?? 0).toFixed(3)}</span>
+                </div>
+              </Link>
+            )) : <p className="p-6 text-sm text-white/45">No compiled skill records yet. Run the skill compiler after a completed, tested agent workflow.</p>}
+          </div>
+        </div>
+
+        <div className="overflow-hidden rounded-[1.25rem] border border-amber/20 bg-amber/[0.035]">
+          <div className="border-b border-amber/15 px-5 py-4"><p className="font-mono text-[9px] uppercase tracking-[0.16em] text-amber">Settlement ledger</p><h3 className="mt-1 text-xl font-semibold text-white">Next payout</h3></div>
+          <div className="p-5">
+            <div className="flex items-end justify-between gap-4">
+              <div><p className="text-sm text-white/45">Pending USDC</p><p className="mt-2 text-4xl font-semibold tracking-[-0.05em] text-white">${Number(payout.pendingUsd ?? 0).toFixed(3)}</p></div>
+              <Banknote className="h-7 w-7 text-amber" />
+            </div>
+            <div className="mt-6 grid gap-3 text-sm">
+              <PayoutLine label="Window" value={payout.nextPayoutAt ? new Date(String(payout.nextPayoutAt)).toLocaleDateString() : "Not scheduled"} />
+              <PayoutLine label="Paid out" value={`$${Number(payout.paidOutUsd ?? 0).toFixed(3)}`} />
+              <PayoutLine label="Settlement" value={String(payout.settlement ?? "USDC on Base")} />
+              <PayoutLine label="Status" value={String(payout.status ?? "unknown")} accent />
+            </div>
+            <p className="mt-5 border-t border-amber/15 pt-4 text-xs leading-5 text-white/38">{String(payout.note ?? "Payouts are calculated from verified sales.")}</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded-[1.25rem] border border-line bg-white/[0.025] p-5">
+        <div className="flex items-center justify-between"><div><p className="font-mono text-[9px] uppercase tracking-[0.16em] text-white/35">Recent sales</p><h3 className="mt-1 text-lg font-semibold text-white">Latest install ledger entries</h3></div><Banknote className="h-4 w-4 text-mint" /></div>
+        <div className="mt-4 grid gap-2 md:grid-cols-2">
+          {recentSales.length ? recentSales.slice(0, 8).map((sale) => (
+            <div key={String(sale.id)} className="flex items-center justify-between rounded-lg border border-line bg-ink/60 px-3 py-3 text-xs">
+              <span className="font-mono text-white/45">{String(sale.skillId)}</span>
+              <span className="text-white/35">{new Date(String(sale.createdAt)).toLocaleDateString()}</span>
+              <span className="font-mono text-mint">${Number(sale.amountUsd ?? 0).toFixed(3)}</span>
+            </div>
+          )) : <p className="text-sm text-white/42">No sale event recorded yet.</p>}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function PayoutLine({ label, value, accent = false }: { label: string; value: string; accent?: boolean }) {
+  return <div className="flex items-center justify-between gap-4 border-b border-amber/10 pb-3 last:border-0 last:pb-0"><span className="text-white/40">{label}</span><span className={accent ? "font-mono uppercase text-amber" : "text-white/72"}>{value}</span></div>;
 }
 
 function OverviewData({ data }: { data: ApiData }) {

@@ -155,6 +155,12 @@ export const experienceBuySchema = z.object({
   message: "Provide experienceId, skillId, or listingId."
 });
 
+export const skillReviewSchema = z.object({
+  rating: z.number().int().min(1).max(5),
+  title: z.string().trim().min(2).max(100).optional(),
+  body: z.string().trim().min(8).max(1_200)
+});
+
 export const skillBundleFileSchema = z.object({
   path: z.string().min(1).max(240),
   content: z.string().max(450_000),

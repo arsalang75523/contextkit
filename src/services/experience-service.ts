@@ -29,6 +29,7 @@ import {
   type SkillBundleManifest,
   type SkillBundleValidation
 } from "@/services/skill-bundle-service";
+import { AccountService } from "@/services/account-service";
 
 export type ExperienceRecord = {
   id: string;
@@ -70,6 +71,30 @@ export type ExperienceInputContext = {
   messages?: ConversationMessage[];
   contextMetadata?: Record<string, unknown>;
 };
+
+export type SkillReviewRecord = {
+  id: string;
+  skillId: string;
+  reviewerId: string;
+  reviewerName: string;
+  rating: number;
+  title?: string;
+  body: string;
+  verifiedPurchase: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+type SkillSaleRecord = {
+  id: string;
+  buyerId: string;
+  sellerId: string;
+  experienceId: string;
+  amountUsd: number;
+  createdAt: string;
+};
+
+export type MarketplaceSort = "trending" | "latest" | "rating" | "installs";
 
 export class ExperienceService {
   private readonly kv: AppKV;
@@ -203,6 +228,190 @@ export class ExperienceService {
       results,
       count: results.length,
       query: input.query ?? null
+    };
+  }
+
+  async marketplace(input: {
+    query?: string;
+    category?: string;
+    sort?: MarketplaceSort;
+    featured?: boolean;
+    limit?: number;
+  } = {}) {
+    const records = (await this.recordsFromIndex("experience-public:"))
+      .filter((record) => record.visibility === "public" && Boolean(record.skill && validateSkill(record.skill).eligible));
+    const query = normalizeQuery(input.query);
+    const category = normalizeTag(input.category ?? "");
+    const sort = input.sort ?? "trending";
+    const enriched = await Promise.all(records.map(async (record) => {
+      const [reviews, seller] = await Promise.all([
+        this.reviewSummary(record.id),
+        this.publicSeller(record.ownerId)
+      ]);
+      return {
+        ...marketplaceListing(record, reviews, seller),
+        trendingScore: marketplaceTrendingScore(record, reviews)
+      };
+    }));
+    const categories = Array.from(new Set(enriched.map((item) => item.category)))
+      .filter(Boolean)
+      .map((name) => ({
+        name,
+        count: enriched.filter((item) => item.category === name).length
+      }))
+      .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+    const matching = enriched
+      .filter((item) => !category || item.category === category)
+      .filter((item) => !query || marketplaceHaystack(item).includes(query))
+      .sort((a, b) => marketplaceSortValue(b, sort) - marketplaceSortValue(a, sort) || b.publishedAt.localeCompare(a.publishedAt));
+    const featuredIds = new Set(
+      [...enriched]
+        .sort((a, b) => marketplaceFeaturedScore(b) - marketplaceFeaturedScore(a))
+        .slice(0, Math.min(3, enriched.length))
+        .map((item) => item.id)
+    );
+    const ranked = matching
+      .map((item, index) => ({ ...item, rank: index + 1, featured: featuredIds.has(item.id) }))
+      .filter((item) => !input.featured || item.featured)
+      .slice(0, Math.min(Math.max(input.limit ?? 24, 1), 100));
+
+    return {
+      results: ranked,
+      count: ranked.length,
+      totalListings: enriched.length,
+      totalInstalls: enriched.reduce((total, item) => total + item.installCount, 0),
+      categories,
+      filters: {
+        query: input.query ?? "",
+        category: category || null,
+        sort
+      }
+    };
+  }
+
+  async publicListing(skillId: string) {
+    const record = await this.kv.get<ExperienceRecord>(recordKey(skillId));
+    if (!record || record.visibility !== "public" || !record.skill || !validateSkill(record.skill).eligible) {
+      return null;
+    }
+    const [reviews, seller, reviewItems] = await Promise.all([
+      this.reviewSummary(skillId),
+      this.publicSeller(record.ownerId),
+      this.reviews(skillId, 20)
+    ]);
+    return {
+      ...marketplaceListing(record, reviews, seller),
+      skill: publicSkill(record.skill, false),
+      validation: record.validation,
+      repository: record.repository ? {
+        name: record.repository.name,
+        version: record.repository.version,
+        digest: record.repository.digest,
+        manifest: record.repository.manifest,
+        validation: record.repository.validation
+      } : undefined,
+      reviews: reviewItems
+    };
+  }
+
+  async reviews(skillId: string, limit = 20) {
+    const reviews = await this.kv.getMany<SkillReviewRecord>(reviewIndexPrefix(skillId));
+    return reviews
+      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+      .slice(0, Math.min(Math.max(limit, 1), 100))
+      .map(publicReview);
+  }
+
+  async review(
+    skillId: string,
+    input: { rating: number; title?: string; body: string },
+    reviewer: { ownerId: string; name: string }
+  ) {
+    const record = await this.kv.get<ExperienceRecord>(recordKey(skillId));
+    if (!record || record.visibility !== "public" || !record.skill) throw new Error("experience_not_found");
+    if (record.ownerId === reviewer.ownerId) throw new Error("review_own_skill");
+
+    const now = new Date().toISOString();
+    const existing = await this.kv.get<SkillReviewRecord>(reviewKey(skillId, reviewer.ownerId));
+    const verifiedPurchase = await this.hasPurchased(skillId, reviewer.ownerId);
+    const review: SkillReviewRecord = {
+      id: existing?.id ?? createId("rev"),
+      skillId,
+      reviewerId: reviewer.ownerId,
+      reviewerName: cleanText(reviewer.name).slice(0, 80) || "ContextKit user",
+      rating: Math.min(Math.max(Math.round(input.rating), 1), 5),
+      title: optionalText(input.title ? cleanText(input.title).slice(0, 100) : ""),
+      body: cleanText(input.body).slice(0, 1_200),
+      verifiedPurchase,
+      createdAt: existing?.createdAt ?? now,
+      updatedAt: now
+    };
+    if (meaningfulWordCount(review.body) < 3) throw new Error("review_too_short");
+
+    await Promise.all([
+      this.kv.set(reviewKey(skillId, reviewer.ownerId), review),
+      this.kv.set(reviewIndexKey(skillId, reviewer.ownerId), review)
+    ]);
+
+    return {
+      review: publicReview(review),
+      summary: await this.reviewSummary(skillId)
+    };
+  }
+
+  async sellerDashboard(ownerId: string) {
+    const records = dedupeRecords(await this.recordsFromIndex(`experience-owner:${ownerId}:`))
+      .filter((record) => record.kind === "verified-skill" || Boolean(record.skill));
+    const sales = await this.kv.getMany<SkillSaleRecord>(sellerSalePrefix(ownerId));
+    const listings = await Promise.all(records.map(async (record) => {
+      const reviews = await this.reviewSummary(record.id);
+      return {
+        id: record.id,
+        name: record.skill?.name ?? record.title,
+        title: record.title,
+        visibility: record.visibility,
+        version: record.skill?.version ?? record.repository?.version ?? "draft",
+        sales: record.sales,
+        installCount: record.sales,
+        earnedUsd: record.earnedUsd,
+        priceUsd: record.priceUsd,
+        rating: reviews.average,
+        reviewCount: reviews.count,
+        validationScore: record.validation?.score ?? 0,
+        updatedAt: record.updatedAt
+      };
+    }));
+    const grossRevenueUsd = Number(records.reduce((total, record) => total + record.earnedUsd, 0).toFixed(6));
+    const paidOutUsd = (await this.kv.get<number>(sellerPaidTotalKey(ownerId))) ?? 0;
+    const pendingUsd = Number(Math.max(grossRevenueUsd - paidOutUsd, 0).toFixed(6));
+
+    return {
+      totals: {
+        skills: records.length,
+        published: records.filter((record) => record.visibility === "public").length,
+        sales: records.reduce((total, record) => total + record.sales, 0),
+        installs: records.reduce((total, record) => total + record.sales, 0),
+        revenueUsd: grossRevenueUsd,
+        averageRating: weightedSellerRating(listings)
+      },
+      payout: {
+        pendingUsd,
+        paidOutUsd: Number(paidOutUsd.toFixed(6)),
+        nextPayoutAt: nextFridayIso(),
+        status: pendingUsd > 0 ? "pending" : "no-balance",
+        settlement: "USDC on Base",
+        note: "Payout ledger is weekly; settlement requires a verified seller wallet."
+      },
+      listings: listings.sort((a, b) => b.earnedUsd - a.earnedUsd || b.sales - a.sales || b.updatedAt.localeCompare(a.updatedAt)),
+      recentSales: sales
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+        .slice(0, 20)
+        .map((sale) => ({
+          id: sale.id,
+          skillId: sale.experienceId,
+          amountUsd: sale.amountUsd,
+          createdAt: sale.createdAt
+        }))
     };
   }
 
@@ -361,17 +570,20 @@ export class ExperienceService {
       updatedAt: now
     };
     const purchaseId = createId("buy");
+    const sale: SkillSaleRecord = {
+      id: purchaseId,
+      buyerId,
+      sellerId: record.ownerId,
+      experienceId: record.id,
+      amountUsd,
+      createdAt: now
+    };
 
     await Promise.all([
       this.writeRecord(updated),
-      this.kv.set(`experience-purchase:${buyerId}:${purchaseId}`, {
-        id: purchaseId,
-        buyerId,
-        experienceId: record.id,
-        sellerId: record.ownerId,
-        amountUsd,
-        createdAt: now
-      })
+      this.kv.set(purchaseKey(buyerId, purchaseId), sale),
+      this.kv.set(skillSaleKey(record.id, purchaseId), sale),
+      this.kv.set(sellerSaleKey(record.ownerId, purchaseId), sale)
     ]);
 
     return {
@@ -510,6 +722,43 @@ export class ExperienceService {
     const index = await this.kv.getMany<{ id: string }>(prefix);
     const records = await Promise.all(index.map((item) => this.kv.get<ExperienceRecord>(recordKey(item.id))));
     return records.filter((record): record is ExperienceRecord => Boolean(record));
+  }
+
+  private async reviewSummary(skillId: string) {
+    const reviews = await this.kv.getMany<SkillReviewRecord>(reviewIndexPrefix(skillId));
+    const count = reviews.length;
+    const average = count
+      ? Number((reviews.reduce((total, review) => total + review.rating, 0) / count).toFixed(1))
+      : 0;
+    return {
+      average,
+      count,
+      verifiedCount: reviews.filter((review) => review.verifiedPurchase).length
+    };
+  }
+
+  private async publicSeller(ownerId: string) {
+    if (ownerId.startsWith("acct_")) {
+      const account = await new AccountService(this.env).get(ownerId);
+      if (account) {
+        return {
+          id: account.id,
+          name: account.name,
+          company: account.company,
+          handle: sellerHandle(account.name, account.id)
+        };
+      }
+    }
+    return {
+      id: ownerId,
+      name: ownerId === "bankr-hosted" ? "Bankr-hosted creator" : "ContextKit creator",
+      handle: sellerHandle(ownerId === "bankr-hosted" ? "bankr creator" : "contextkit creator", ownerId)
+    };
+  }
+
+  private async hasPurchased(skillId: string, buyerId: string) {
+    const purchases = await this.kv.getMany<SkillSaleRecord>(purchasePrefix(buyerId));
+    return purchases.some((purchase) => purchase.experienceId === skillId);
   }
 
   private async requireOwned(id: string, ownerId: string, publishToken?: string) {
@@ -865,6 +1114,121 @@ function scoreRecord(record: ExperienceRecord, query: string, tags: string[]) {
   return Number(score.toFixed(2));
 }
 
+function marketplaceListing(
+  record: ExperienceRecord,
+  reviews: { average: number; count: number; verifiedCount: number },
+  seller: { id: string; name: string; company?: string; handle: string }
+) {
+  const skill = record.skill;
+  if (!skill) throw new Error("marketplace_skill_required");
+  return {
+    id: record.id,
+    name: skill.name,
+    title: record.title,
+    description: skill.description,
+    summary: record.summary,
+    category: skill.ecosystem,
+    tags: skill.tags,
+    compatibility: skill.compatibility,
+    version: skill.version,
+    license: skill.license,
+    priceUsd: record.priceUsd,
+    installCount: record.sales,
+    sales: record.sales,
+    earnedUsd: record.earnedUsd,
+    rating: reviews.average,
+    reviewCount: reviews.count,
+    verifiedReviewCount: reviews.verifiedCount,
+    validationScore: record.validation?.score ?? 0,
+    testCount: skill.testCases.length,
+    repositoryFiles: record.repository?.manifest.files.length ?? 0,
+    repositoryDigest: record.repository?.digest,
+    publishedAt: record.publishedAt ?? record.updatedAt,
+    updatedAt: record.updatedAt,
+    seller
+  };
+}
+
+function marketplaceTrendingScore(
+  record: ExperienceRecord,
+  reviews: { average: number; count: number }
+) {
+  const publishedAt = new Date(record.publishedAt ?? record.updatedAt).getTime();
+  const ageDays = Number.isFinite(publishedAt) ? Math.max((Date.now() - publishedAt) / 86_400_000, 0) : 365;
+  const freshness = Math.max(30 - ageDays, 0) / 3;
+  return Number((
+    record.sales * 4 +
+    reviews.average * 2 +
+    Math.min(reviews.count, 20) +
+    (record.validation?.score ?? 0) / 10 +
+    freshness
+  ).toFixed(2));
+}
+
+function marketplaceFeaturedScore(item: ReturnType<typeof marketplaceListing> & { trendingScore: number }) {
+  return item.trendingScore + item.validationScore / 4 + item.repositoryFiles / 5;
+}
+
+function marketplaceSortValue(
+  item: ReturnType<typeof marketplaceListing> & { trendingScore: number },
+  sort: MarketplaceSort
+) {
+  if (sort === "latest") return new Date(item.publishedAt).getTime();
+  if (sort === "rating") return item.rating * 100 + item.reviewCount;
+  if (sort === "installs") return item.installCount;
+  return item.trendingScore;
+}
+
+function marketplaceHaystack(item: ReturnType<typeof marketplaceListing>) {
+  return [
+    item.name,
+    item.title,
+    item.description,
+    item.summary,
+    item.category,
+    item.seller.name,
+    item.seller.company ?? "",
+    ...item.tags,
+    ...item.compatibility
+  ].join(" ").toLowerCase();
+}
+
+function publicReview(review: SkillReviewRecord) {
+  return {
+    id: review.id,
+    skillId: review.skillId,
+    reviewerName: review.reviewerName,
+    rating: review.rating,
+    title: review.title,
+    body: review.body,
+    verifiedPurchase: review.verifiedPurchase,
+    createdAt: review.createdAt,
+    updatedAt: review.updatedAt
+  };
+}
+
+function sellerHandle(name: string, id: string) {
+  const slug = normalizeTag(name).slice(0, 32) || "creator";
+  return `${slug}-${id.slice(-6).toLowerCase()}`;
+}
+
+function weightedSellerRating(listings: Array<{ rating: number; reviewCount: number }>) {
+  const reviewCount = listings.reduce((total, listing) => total + listing.reviewCount, 0);
+  if (!reviewCount) return 0;
+  return Number((
+    listings.reduce((total, listing) => total + listing.rating * listing.reviewCount, 0) / reviewCount
+  ).toFixed(1));
+}
+
+function nextFridayIso() {
+  const next = new Date();
+  next.setUTCHours(17, 0, 0, 0);
+  const daysUntilFriday = (5 - next.getUTCDay() + 7) % 7;
+  next.setUTCDate(next.getUTCDate() + daysUntilFriday);
+  if (next.getTime() <= Date.now()) next.setUTCDate(next.getUTCDate() + 7);
+  return next.toISOString();
+}
+
 function dedupeRecords(records: ExperienceRecord[]) {
   const seen = new Map<string, ExperienceRecord>();
   for (const record of records) seen.set(record.id, record);
@@ -881,6 +1245,42 @@ function ownerIndexKey(ownerId: string, id: string) {
 
 function publicIndexKey(id: string) {
   return `experience-public:${id}`;
+}
+
+function purchaseKey(buyerId: string, purchaseId: string) {
+  return `${purchasePrefix(buyerId)}${purchaseId}`;
+}
+
+function purchasePrefix(buyerId: string) {
+  return `experience-purchase:${buyerId}:`;
+}
+
+function skillSaleKey(skillId: string, purchaseId: string) {
+  return `experience-sale:${skillId}:${purchaseId}`;
+}
+
+function sellerSaleKey(sellerId: string, purchaseId: string) {
+  return `${sellerSalePrefix(sellerId)}${purchaseId}`;
+}
+
+function sellerSalePrefix(sellerId: string) {
+  return `seller-sale:${sellerId}:`;
+}
+
+function reviewKey(skillId: string, reviewerId: string) {
+  return `skill-review:${skillId}:${reviewerId}`;
+}
+
+function reviewIndexKey(skillId: string, reviewerId: string) {
+  return `${reviewIndexPrefix(skillId)}${reviewerId}`;
+}
+
+function reviewIndexPrefix(skillId: string) {
+  return `skill-review-index:${skillId}:`;
+}
+
+function sellerPaidTotalKey(sellerId: string) {
+  return `seller-payout-paid:${sellerId}`;
 }
 
 function repositoryVersionKey(ownerId: string, repository: string, version: string) {

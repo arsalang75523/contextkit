@@ -13,6 +13,7 @@ import { analyticsRoutes } from "@/routes/analytics";
 import { tokenRoutes } from "@/routes/tokens";
 import { publicRoutes } from "@/routes/public";
 import { dashboardSessionRoutes } from "@/routes/dashboard-session";
+import { marketplaceRoutes } from "@/routes/marketplace";
 import type { AppBindings } from "@/types/bindings";
 
 export const app = new Hono<AppBindings>().basePath("/api");
@@ -27,6 +28,7 @@ app.use("*", rateLimit());
 app.route("/", healthRoutes);
 app.route("/", publicRoutes);
 app.route("/", dashboardSessionRoutes);
+app.route("/", marketplaceRoutes);
 app.route("/", authRoutes);
 app.route("/", analyticsRoutes);
 app.route("/", tokenRoutes);

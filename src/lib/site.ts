@@ -5,6 +5,7 @@ export const site = {
     "Compress agent context and publish evidence-backed, versioned skill repositories that other agents can buy and clone through x402.",
   url: "https://contextkit.pro",
   nav: [
+    { href: "/marketplace", label: "Marketplace" },
     { href: "/roadmap", label: "Roadmap" },
     { href: "/contact-dev", label: "Contact Dev" },
     { href: "/docs", label: "Docs" },

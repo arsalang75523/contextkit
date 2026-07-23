@@ -284,6 +284,32 @@ test("pushes, publishes, and clones a complete immutable skill repository", asyn
     assert.ok(installBundle.files.some((file) => file.path === "src/index.ts"));
     assert.ok(installBundle.files.some((file) => file.path === "checksums.json"));
     assert.equal(installBundle.materialize.overwrite, false);
+
+    const review = await service.review(skillId, {
+      rating: 5,
+      title: "Reproducible recovery path",
+      body: "The verified recovery sequence was clear and reusable."
+    }, {
+      ownerId: "repository-buyer",
+      name: "Repository Buyer"
+    });
+    assert.equal(review.review.verifiedPurchase, true);
+    assert.equal(review.summary.average, 5);
+    assert.equal(review.summary.count, 1);
+
+    const marketplace = await service.marketplace({ sort: "trending", limit: 10 });
+    assert.equal(marketplace.count, 1);
+    assert.equal(marketplace.results[0]?.id, skillId);
+    assert.equal(marketplace.results[0]?.installCount, 1);
+    assert.equal(marketplace.results[0]?.reviewCount, 1);
+    assert.equal(marketplace.results[0]?.category, "x402");
+
+    const seller = await service.sellerDashboard("bankr-hosted");
+    assert.equal(seller.totals.sales, 1);
+    assert.equal(seller.totals.installs, 1);
+    assert.equal(seller.totals.revenueUsd, 0.05);
+    assert.equal(seller.payout.pendingUsd, 0.05);
+    assert.equal(seller.recentSales.length, 1);
   } finally {
     globalThis.fetch = originalFetch;
   }
