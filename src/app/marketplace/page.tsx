@@ -12,20 +12,11 @@ import {
   TestTube2,
   TrendingUp
 } from "lucide-react";
+import { safeJsonLd } from "@/lib/marketplace-seo";
+import { site } from "@/lib/site";
 import { ExperienceService, type MarketplaceSort } from "@/services/experience-service";
 
 export const dynamic = "force-dynamic";
-
-export const metadata: Metadata = {
-  title: "Verified Agent Skill Marketplace",
-  description: "Discover evidence-backed, versioned agent skill repositories. Compare ratings, verified tests, installs, and compatibility before buying through x402.",
-  alternates: { canonical: "/marketplace" },
-  openGraph: {
-    title: "ContextKit Verified Skill Marketplace",
-    description: "Search, rank, review, buy, and clone complete evidence-backed agent skill repositories.",
-    url: "/marketplace"
-  }
-};
 
 type MarketplacePageProps = {
   searchParams: Promise<{
@@ -35,6 +26,22 @@ type MarketplacePageProps = {
     featured?: string;
   }>;
 };
+
+export async function generateMetadata({ searchParams }: MarketplacePageProps): Promise<Metadata> {
+  const params = await searchParams;
+  const filtered = Boolean(params.q || params.category || params.featured === "true" || (params.sort && params.sort !== "trending"));
+  return {
+    title: "Verified Agent Skill Marketplace",
+    description: "Discover evidence-backed, versioned agent skill repositories. Compare ratings, verified tests, installs, and compatibility before buying through x402.",
+    alternates: { canonical: "/marketplace" },
+    robots: filtered ? { index: false, follow: true } : { index: true, follow: true },
+    openGraph: {
+      title: "ContextKit Verified Skill Marketplace",
+      description: "Search, rank, review, buy, and clone complete evidence-backed agent skill repositories.",
+      url: "/marketplace"
+    }
+  };
+}
 
 export default async function MarketplacePage({ searchParams }: MarketplacePageProps) {
   const params = await searchParams;
@@ -46,9 +53,43 @@ export default async function MarketplacePage({ searchParams }: MarketplacePageP
     featured: params.featured === "true",
     limit: 60
   });
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    name: "ContextKit Verified Agent Skill Marketplace",
+    description: "Evidence-backed, versioned agent skill repositories with tests, compatibility, reviews, and x402 access.",
+    url: `${site.url}/marketplace`,
+    isPartOf: { "@id": `${site.url}/#website` },
+    mainEntity: {
+      "@type": "ItemList",
+      numberOfItems: marketplace.results.length,
+      itemListElement: marketplace.results.map((skill) => ({
+        "@type": "ListItem",
+        position: skill.rank,
+        url: `${site.url}/marketplace/${skill.id}`,
+        name: skill.name,
+        item: {
+          "@type": "SoftwareApplication",
+          name: skill.name,
+          description: skill.description,
+          applicationCategory: skill.category,
+          aggregateRating: skill.reviewCount
+            ? {
+                "@type": "AggregateRating",
+                ratingValue: skill.rating,
+                reviewCount: skill.reviewCount,
+                bestRating: 5,
+                worstRating: 1
+              }
+            : undefined
+        }
+      }))
+    }
+  };
 
   return (
     <main className="marketplace-stage relative min-h-screen overflow-hidden px-4 py-5 sm:px-5 md:py-8">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(jsonLd) }} />
       <div className="marketplace-grid pointer-events-none absolute inset-0" />
       <div className="pointer-events-none absolute left-[10%] top-0 h-64 w-64 rounded-full bg-mint/[0.07] blur-[100px]" />
       <div className="pointer-events-none absolute right-[7%] top-36 h-72 w-72 rounded-full bg-aqua/[0.05] blur-[110px]" />

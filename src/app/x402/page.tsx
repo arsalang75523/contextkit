@@ -1,7 +1,19 @@
+import type { Metadata } from "next";
 import { Architecture } from "@/components/architecture";
 import { CodeBlock } from "@/components/code-block";
 import { Section } from "@/components/section";
 import { bankrX402Command } from "@/lib/bankr-x402";
+
+export const metadata: Metadata = {
+  title: "Bankr x402 Endpoints",
+  description: "Call ContextKit through Bankr-hosted x402 endpoints with USDC settlement before context compute and verified skill marketplace actions.",
+  alternates: { canonical: "/x402" },
+  openGraph: {
+    title: "ContextKit x402",
+    description: "Paid agent context infrastructure for Bankr and autonomous workflows.",
+    url: "/x402"
+  }
+};
 
 const flow = `1. Agent calls a Bankr-hosted ContextKit endpoint on x402.bankr.bot.
 2. Bankr presents the x402 payment requirement and settles USDC on Base.

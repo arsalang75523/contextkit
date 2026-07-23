@@ -1,7 +1,19 @@
+import type { Metadata } from "next";
 import { CodeBlock } from "@/components/code-block";
 import { Section } from "@/components/section";
 import { integrationGuides } from "@/content/docs";
 import { bankrX402Command } from "@/lib/bankr-x402";
+
+export const metadata: Metadata = {
+  title: "Integrations: Bankr, MCP, SDK, and Agent Hosts",
+  description: "Connect ContextKit to Bankr agents, remote MCP hosts, TypeScript backends, and the agent tools your team already uses.",
+  alternates: { canonical: "/integrations" },
+  openGraph: {
+    title: "ContextKit Integrations",
+    description: "Add durable context and evidence-backed skills to the agent hosts you already run.",
+    url: "/integrations"
+  }
+};
 
 export default function IntegrationsPage() {
   return (

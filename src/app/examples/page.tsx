@@ -1,6 +1,18 @@
+import type { Metadata } from "next";
 import { CodeBlock } from "@/components/code-block";
 import { Section } from "@/components/section";
 import { bankrX402Command } from "@/lib/bankr-x402";
+
+export const metadata: Metadata = {
+  title: "Examples: ContextKit Agent Workflows",
+  description: "Copy practical ContextKit examples for summaries, handoffs, SDK calls, MCP, x402, and verified agent skill repositories.",
+  alternates: { canonical: "/examples" },
+  openGraph: {
+    title: "ContextKit Examples",
+    description: "Start with copyable agent memory, payment, and skill repository workflows.",
+    url: "/examples"
+  }
+};
 
 const repositoryFiles = [
   { path: "SKILL.md", content: "---\\nname: bankr-x402-timeout-recovery\\ndescription: Tested bounded forwarding for Bankr x402.\\nlicense: MIT\\n---\\n# Bankr x402 timeout recovery" },

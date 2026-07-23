@@ -23,10 +23,12 @@ export default function robots(): MetadataRoute.Robots {
     rules: [
       {
         userAgent: "*",
-        allow: "/"
+        allow: ["/", "/marketplace", "/marketplace/"],
+        disallow: ["/api/", "/dashboard/", "/oauth/", "/mcp"]
       },
       ...aiCrawlers.map((userAgent) => ({
         userAgent,
+        disallow: ["/api/", "/dashboard/", "/oauth/", "/mcp"],
         allow: [
           "/",
           "/ai-agents",
@@ -40,6 +42,8 @@ export default function robots(): MetadataRoute.Robots {
           "/api-reference",
           "/playground",
           "/pricing",
+          "/marketplace",
+          "/marketplace/",
           "/x402",
           "/social-card-v7.jpg",
           "/openapi.json",
@@ -51,6 +55,7 @@ export default function robots(): MetadataRoute.Robots {
         ]
       }))
     ],
-    sitemap: [`${site.url}/sitemap.xml`, `${site.url}/llms.txt`]
+    host: site.url,
+    sitemap: `${site.url}/sitemap.xml`
   };
 }

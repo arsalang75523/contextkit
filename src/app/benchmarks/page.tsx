@@ -1,4 +1,16 @@
+import type { Metadata } from "next";
 import { Section } from "@/components/section";
+
+export const metadata: Metadata = {
+  title: "Benchmarks: Context Compression and Handoffs",
+  description: "See ContextKit token reduction and continuation benchmarks for summaries, compressed context, handoffs, and agent memory.",
+  alternates: { canonical: "/benchmarks" },
+  openGraph: {
+    title: "ContextKit Benchmarks",
+    description: "Measure the context and token savings that keep long-running agents moving.",
+    url: "/benchmarks"
+  }
+};
 
 const benchmarks = [
   {

@@ -1,7 +1,19 @@
 import { ArrowRight, CheckCircle2, CircleDollarSign } from "lucide-react";
+import type { Metadata } from "next";
 import Link from "next/link";
 import { bankrEndpoints } from "@/content/docs";
 import { PricingEndpointStats } from "@/components/pricing-live";
+
+export const metadata: Metadata = {
+  title: "Pricing: Pay Per Agent Context Call",
+  description: "Compare ContextKit Bankr x402 endpoint prices for core context operations and evidence-gated skill marketplace actions.",
+  alternates: { canonical: "/pricing" },
+  openGraph: {
+    title: "ContextKit Pricing",
+    description: "Clear USDC prices for context compute and verified agent skill workflows.",
+    url: "/pricing"
+  }
+};
 
 const endpointAccent: Record<string, { line: string; text: string; glow: string }> = {
   "contextkit-core": { line: "border-mint/35", text: "text-mint", glow: "from-mint/20" },

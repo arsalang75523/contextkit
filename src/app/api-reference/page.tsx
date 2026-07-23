@@ -1,9 +1,21 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { ArrowRight, CircleDollarSign, KeyRound, Network, ShieldCheck, Sparkles, Terminal, Webhook } from "lucide-react";
 import { CodeBlock } from "@/components/code-block";
 import { bankrEndpoints, endpoints } from "@/content/docs";
 import { bankrHostedUrl, bankrX402Command } from "@/lib/bankr-x402";
+
+export const metadata: Metadata = {
+  title: "API Reference: ContextKit Endpoints",
+  description: "Explore the ContextKit API contract for summarize, compression, handoffs, profiles, MCP, and verified skill repository workflows.",
+  alternates: { canonical: "/api-reference" },
+  openGraph: {
+    title: "ContextKit API Reference",
+    description: "Typed endpoint contracts and copyable calls for ContextKit agents and developers.",
+    url: "/api-reference"
+  }
+};
 
 const repositoryFiles = [
   { path: "SKILL.md", content: "---\\nname: bankr-x402-timeout-recovery\\ndescription: Tested bounded forwarding for Bankr x402.\\nlicense: MIT\\n---\\n# Bankr x402 timeout recovery" },

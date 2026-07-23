@@ -1,6 +1,18 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { ArrowRight, BadgeCheck, Bot, BrainCircuit, Cable, FileJson, PackageCheck } from "lucide-react";
 import { Section } from "@/components/section";
+
+export const metadata: Metadata = {
+  title: "AI Agents: Durable Context and Verified Skills",
+  description: "Give autonomous agents durable continuation memory, remote MCP tools, x402 access, and portable skills with ContextKit.",
+  alternates: { canonical: "/ai-agents" },
+  openGraph: {
+    title: "ContextKit for AI Agents",
+    description: "Infrastructure for agents that need memory, paid tools, and reusable verified workflows.",
+    url: "/ai-agents"
+  }
+};
 
 const agentFlows = [
   {

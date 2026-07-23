@@ -1,4 +1,16 @@
+import type { Metadata } from "next";
 import { ArrowUpRight, BadgeCheck, Fingerprint, MessageCircle, Radio, Send } from "lucide-react";
+
+export const metadata: Metadata = {
+  title: "Contact the ContextKit Developer",
+  description: "Talk with the ContextKit builder about agent memory, x402 payments, MCP integrations, and evidence-backed skill marketplaces.",
+  alternates: { canonical: "/contact-dev" },
+  openGraph: {
+    title: "Contact ContextKit Dev",
+    description: "Bring a difficult agent workflow and build a sharper system with ContextKit.",
+    url: "/contact-dev"
+  }
+};
 
 const contacts = [
   { index: "01", label: "ContextKit dispatch", value: "@contextkitpro", href: "https://x.com/contextkitpro", description: "Product releases, demos, and public build signals.", icon: Radio, tone: "mint" },

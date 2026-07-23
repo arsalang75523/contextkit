@@ -1,9 +1,21 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { ArrowRight, BadgeCheck, BookOpen, KeyRound, Network, Sparkles, Terminal } from "lucide-react";
 import { CodeBlock } from "@/components/code-block";
 import { bankrEndpoints, endpoints } from "@/content/docs";
 import { bankrHostedUrl, bankrX402Command } from "@/lib/bankr-x402";
+
+export const metadata: Metadata = {
+  title: "Docs: Build With ContextKit",
+  description: "Learn how to call ContextKit through Bankr x402, the TypeScript SDK, API credits, MCP, and the evidence-gated skill marketplace.",
+  alternates: { canonical: "/docs" },
+  openGraph: {
+    title: "ContextKit Developer Docs",
+    description: "Integration guides for context memory, MCP, x402 endpoints, and verified agent skill repositories.",
+    url: "/docs"
+  }
+};
 
 const samplePayload = {
   messages: [

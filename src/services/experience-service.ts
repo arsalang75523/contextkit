@@ -289,6 +289,35 @@ export class ExperienceService {
     };
   }
 
+  async marketplaceSeoListings() {
+    const records = (await this.recordsFromIndex("experience-public:"))
+      .filter((record) => record.visibility === "public" && Boolean(record.skill && validateSkill(record.skill).eligible));
+
+    return records
+      .filter((record): record is ExperienceRecord & { skill: VerifiedSkillDraft } => Boolean(record.skill))
+      .map((record) => ({
+        id: record.id,
+        name: record.skill.name,
+        description: record.skill.description,
+        category: record.skill.ecosystem,
+        tags: record.skill.tags,
+        compatibility: record.skill.compatibility,
+        version: record.skill.version,
+        license: record.skill.license,
+        validationScore: record.validation?.score ?? 0,
+        testCount: record.skill.testCases.length,
+        installCount: record.sales,
+        publishedAt: record.publishedAt ?? record.updatedAt,
+        updatedAt: record.updatedAt,
+        skill: {
+          trigger: record.skill.trigger,
+          prerequisites: record.skill.prerequisites,
+          inputs: record.skill.inputs,
+          outputs: record.skill.outputs
+        }
+      }));
+  }
+
   async publicListing(skillId: string) {
     const record = await this.kv.get<ExperienceRecord>(recordKey(skillId));
     if (!record || record.visibility !== "public" || !record.skill || !validateSkill(record.skill).eligible) {

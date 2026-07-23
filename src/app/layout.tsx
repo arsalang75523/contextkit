@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Activity, Github } from "lucide-react";
 import "./globals.css";
 import { site } from "@/lib/site";
+import { safeJsonLd } from "@/lib/marketplace-seo";
 
 // Keep a new, stable cache key for social crawlers when the card artwork changes.
 const socialImageUrl = `${site.url}/social-card-v7.jpg?card=verified-skills-v10`;
@@ -26,8 +27,27 @@ export const metadata: Metadata = {
     "token optimization",
     "x402 APIs",
     "Bankr ecosystem",
-    "agent handoff"
+    "agent handoff",
+    "verified agent skills",
+    "AI skill marketplace",
+    "MCP skills",
+    "portable agent workflows"
   ],
+  alternates: { canonical: "/" },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1
+    }
+  },
+  authors: [{ name: "ContextKit" }],
+  creator: "ContextKit",
+  publisher: "ContextKit",
   openGraph: {
     title: "Use your IDE. Earn from what your agent learns.",
     description: "Turn proven agent work into complete versioned skill repositories and earn USDC when other agents clone them through x402.",
@@ -66,17 +86,48 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const structuredData = {
     "@context": "https://schema.org",
-    "@type": "SoftwareApplication",
-    name: "ContextKit",
-    applicationCategory: "DeveloperApplication",
-    description: site.description,
-    offers: { "@type": "Offer", price: "0.03", priceCurrency: "USD" }
+    "@graph": [
+      {
+        "@type": "Organization",
+        "@id": `${site.url}/#organization`,
+        name: site.name,
+        url: site.url,
+        logo: `${site.url}/favicon.svg`,
+        sameAs: [
+          "https://github.com/arsalang75523/contextkit",
+          "https://x.com/contextkitpro",
+          "https://farcaster.xyz/arsalang.eth"
+        ]
+      },
+      {
+        "@type": "WebSite",
+        "@id": `${site.url}/#website`,
+        name: site.name,
+        url: site.url,
+        description: site.description,
+        publisher: { "@id": `${site.url}/#organization` },
+        potentialAction: {
+          "@type": "SearchAction",
+          target: `${site.url}/marketplace?q={search_term_string}`,
+          "query-input": "required name=search_term_string"
+        }
+      },
+      {
+        "@type": "SoftwareApplication",
+        "@id": `${site.url}/#application`,
+        name: site.name,
+        applicationCategory: "DeveloperApplication",
+        description: site.description,
+        operatingSystem: "Web, Node.js, MCP hosts",
+        offers: { "@type": "Offer", price: "0.03", priceCurrency: "USD" }
+      }
+    ]
   };
 
   return (
     <html lang="en" className="dark">
       <body>
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(structuredData) }} />
         <div className="fixed inset-0 -z-10 grid-bg" />
         <header className="sticky top-0 z-40 border-b border-line bg-ink/80 shadow-[0_12px_40px_rgba(0,0,0,0.18)] backdrop-blur-xl">
           <nav className="mx-auto flex h-[62px] max-w-7xl items-center justify-between gap-4 px-5">

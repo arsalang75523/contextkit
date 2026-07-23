@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { CodeBlock } from "@/components/code-block";
 import { SkillReviewForm } from "@/components/skill-review-form";
+import { marketplaceSkillSeo, safeJsonLd } from "@/lib/marketplace-seo";
 import { site } from "@/lib/site";
 import { ExperienceService } from "@/services/experience-service";
 
@@ -30,70 +31,113 @@ type SkillPageProps = {
 export async function generateMetadata({ params }: SkillPageProps): Promise<Metadata> {
   const { skillId } = await params;
   const listing = await new ExperienceService().publicListing(skillId);
-  if (!listing) return { title: "Skill not found" };
-  const canonical = `/marketplace/${listing.id}`;
+  if (!listing) return { title: "Skill not found | ContextKit", robots: { index: false, follow: false } };
+  const seo = marketplaceSkillSeo(listing);
   return {
-    title: `${listing.name} Agent Skill`,
-    description: listing.description,
-    alternates: { canonical },
+    title: seo.title,
+    description: seo.description,
+    keywords: seo.keywords,
+    alternates: { canonical: seo.canonical },
+    robots: {
+      index: seo.indexable,
+      follow: true,
+      googleBot: { index: seo.indexable, follow: true, "max-image-preview": "large", "max-snippet": -1 }
+    },
     openGraph: {
-      title: `${listing.name} | ContextKit Verified Skill`,
-      description: listing.description,
-      url: canonical,
-      type: "website"
+      title: `${seo.name} | ContextKit Verified Skill`,
+      description: seo.description,
+      url: seo.canonical,
+      type: "article",
+      siteName: site.name,
+      images: [{ url: `${site.url}/social-card-v7.jpg?skill=${encodeURIComponent(listing.id)}`, width: 1200, height: 630, alt: `${seo.name} verified agent skill` }]
     },
     twitter: {
       card: "summary_large_image",
-      title: `${listing.name} | Verified Agent Skill`,
-      description: listing.description
+      title: `${seo.name} | Verified Agent Skill`,
+      description: seo.description,
+      images: [{ url: `${site.url}/social-card-v7.jpg?skill=${encodeURIComponent(listing.id)}`, alt: `${seo.name} verified agent skill` }]
     }
   };
 }
 
 export default async function SkillMarketplacePage({ params }: SkillPageProps) {
   const { skillId } = await params;
-  const listing = await new ExperienceService().publicListing(skillId);
+  const service = new ExperienceService();
+  const listing = await service.publicListing(skillId);
   if (!listing) notFound();
+  const seo = marketplaceSkillSeo(listing);
+  const related = (await service.marketplace({ category: listing.category, sort: "trending", limit: 5 })).results
+    .filter((item) => item.id !== listing.id)
+    .slice(0, 4);
 
   const jsonLd = {
     "@context": "https://schema.org",
-    "@type": "SoftwareApplication",
-    name: listing.name,
-    description: listing.description,
-    applicationCategory: "DeveloperApplication",
-    softwareVersion: listing.version,
-    operatingSystem: listing.compatibility.join(", "),
-    author: {
-      "@type": "Person",
-      name: listing.seller.name
-    },
-    offers: {
-      "@type": "Offer",
-      url: `${site.url}/marketplace/${listing.id}`,
-      price: listing.priceUsd.toFixed(2),
-      priceCurrency: "USD",
-      availability: "https://schema.org/InStock"
-    },
-    ...(listing.reviewCount ? {
-      aggregateRating: {
-        "@type": "AggregateRating",
-        ratingValue: listing.rating,
-        reviewCount: listing.reviewCount,
-        bestRating: 5,
-        worstRating: 1
+    "@graph": [
+      {
+        "@type": "WebPage",
+        "@id": `${seo.canonical}#webpage`,
+        name: seo.title,
+        description: seo.description,
+        url: seo.canonical,
+        datePublished: listing.publishedAt,
+        dateModified: listing.updatedAt,
+        breadcrumb: { "@id": `${seo.canonical}#breadcrumb` },
+        mainEntity: { "@id": `${seo.canonical}#skill` }
+      },
+      {
+        "@type": "BreadcrumbList",
+        "@id": `${seo.canonical}#breadcrumb`,
+        itemListElement: [
+          { "@type": "ListItem", position: 1, name: "ContextKit", item: site.url },
+          { "@type": "ListItem", position: 2, name: "Marketplace", item: `${site.url}/marketplace` },
+          { "@type": "ListItem", position: 3, name: seo.name, item: seo.canonical }
+        ]
+      },
+      {
+        "@type": "SoftwareApplication",
+        "@id": `${seo.canonical}#skill`,
+        name: seo.name,
+        description: listing.description,
+        applicationCategory: listing.category,
+        softwareVersion: listing.version,
+        operatingSystem: listing.compatibility.join(", "),
+        author: { "@type": "Person", name: listing.seller.name },
+        offers: {
+          "@type": "Offer",
+          url: seo.canonical,
+          price: listing.priceUsd.toFixed(2),
+          priceCurrency: "USD",
+          availability: "https://schema.org/InStock"
+        },
+        ...(listing.reviewCount ? {
+          aggregateRating: {
+            "@type": "AggregateRating",
+            ratingValue: listing.rating,
+            reviewCount: listing.reviewCount,
+            bestRating: 5,
+            worstRating: 1
+          }
+        } : {})
       }
-    } : {})
+    ]
   };
   const cloneCommand = `export CONTEXTKIT_API_KEY="ck_live_REPLACE_ME"\ncontextkit skill buy ${listing.id}\ncontextkit skill clone ${listing.id} ./${listing.name}`;
 
   return (
     <main className="marketplace-stage relative min-h-screen overflow-hidden px-5 py-8 md:py-12">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(jsonLd) }} />
       <div className="marketplace-grid pointer-events-none absolute inset-0" />
       <div className="pointer-events-none absolute left-1/2 top-0 h-[30rem] w-[52rem] -translate-x-1/2 rounded-full bg-mint/[0.06] blur-[130px]" />
 
       <div className="relative mx-auto max-w-6xl">
-        <Link href="/marketplace" className="inline-flex items-center gap-2 text-sm text-white/48 transition hover:text-mint">
+        <nav aria-label="Breadcrumb" className="flex flex-wrap items-center gap-2 text-sm text-white/42">
+          <Link href="/" className="transition hover:text-mint">ContextKit</Link>
+          <span aria-hidden="true">/</span>
+          <Link href="/marketplace" className="transition hover:text-mint">Marketplace</Link>
+          <span aria-hidden="true">/</span>
+          <span className="truncate text-white/65">{seo.name}</span>
+        </nav>
+        <Link href="/marketplace" className="mt-4 inline-flex items-center gap-2 text-sm text-white/48 transition hover:text-mint">
           <ArrowLeft className="h-4 w-4" /> Back to marketplace
         </Link>
 
@@ -226,6 +270,27 @@ export default async function SkillMarketplacePage({ params }: SkillPageProps) {
             </div>
           </aside>
         </section>
+
+        {related.length ? (
+          <section className="mt-8 border-t border-line pt-8">
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <p className="font-mono text-[9px] uppercase tracking-[0.16em] text-mint">Continue discovery</p>
+                <h2 className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-white">More {formatCategory(listing.category)} skills</h2>
+              </div>
+              <Link href={`/marketplace?category=${encodeURIComponent(listing.category)}`} className="text-sm text-white/45 transition hover:text-mint">View category</Link>
+            </div>
+            <div className="mt-5 grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+              {related.map((item) => (
+                <Link key={item.id} href={`/marketplace/${item.id}`} className="rounded-xl border border-line bg-white/[0.025] p-4 transition hover:border-mint/35 hover:bg-mint/[0.04]">
+                  <p className="font-mono text-[8px] uppercase tracking-[0.14em] text-mint">{item.testCount} tests · {item.validationScore}/100</p>
+                  <h3 className="mt-3 line-clamp-2 text-sm font-semibold text-white">{item.name}</h3>
+                  <p className="mt-2 line-clamp-3 text-xs leading-5 text-white/42">{item.description}</p>
+                </Link>
+              ))}
+            </div>
+          </section>
+        ) : null}
       </div>
     </main>
   );
