@@ -70,6 +70,7 @@ export class AppKV {
   async increment(key: string, ttlSeconds?: number) {
     if (!this.kv && hasDatabaseUrl()) {
       const expiresAt = ttlSeconds ? new Date(Date.now() + ttlSeconds * 1000) : null;
+      const expiresAtIso = expiresAt?.toISOString();
       const expired = sql`${kvStore.expiresAt} IS NOT NULL AND ${kvStore.expiresAt} <= NOW()`;
       const [row] = await db()
         .insert(kvStore)
@@ -81,8 +82,8 @@ export class AppKV {
               WHEN ${expired} THEN '1'::jsonb
               ELSE to_jsonb(COALESCE((${kvStore.value} #>> '{}')::bigint, 0) + 1)
             END`,
-            expiresAt: ttlSeconds
-              ? sql`CASE WHEN ${expired} THEN ${expiresAt} ELSE COALESCE(${kvStore.expiresAt}, ${expiresAt}) END`
+            expiresAt: ttlSeconds && expiresAtIso
+              ? sql`CASE WHEN ${expired} THEN ${expiresAtIso}::timestamptz ELSE COALESCE(${kvStore.expiresAt}, ${expiresAtIso}::timestamptz) END`
               : kvStore.expiresAt,
             updatedAt: sql`NOW()`
           }
