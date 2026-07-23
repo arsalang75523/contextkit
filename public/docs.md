@@ -1,6 +1,6 @@
 # ContextKit Docs
 
-ContextKit is a memory layer and versioned Verified Skill Repository for autonomous AI agents. It compresses continuation state and turns completed Bankr-adjacent work into portable, tested source bundles that agents can buy and clone.
+ContextKit is a memory layer and versioned Verified Skill Repository for autonomous AI agents. It compresses continuation state and turns completed, useful work from any domain into portable, tested source bundles that agents can buy and clone.
 
 Website: https://contextkit.pro
 GitHub: https://github.com/arsalang75523/contextkit

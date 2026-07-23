@@ -3,7 +3,7 @@ import { cors } from "hono/cors";
 import { secureHeaders } from "hono/secure-headers";
 import { requestContext } from "@/middleware/request-context";
 import { payloadLimit } from "@/middleware/payload-limit";
-import { rateLimit } from "@/middleware/rate-limit";
+import { concurrencyLimit, rateLimit } from "@/middleware/rate-limit";
 import { errorHandler } from "@/middleware/error-handler";
 import { healthRoutes } from "@/routes/health";
 import { contextRoutes } from "@/routes/context";
@@ -21,8 +21,13 @@ export const app = new Hono<AppBindings>().basePath("/api");
 app.onError(errorHandler);
 app.use("*", requestContext);
 app.use("*", secureHeaders());
-app.use("*", cors({ origin: "*", allowHeaders: ["Content-Type", "Authorization", "X-Payment", "X402-Payment", "X-Agent-Id"] }));
+app.use("*", cors({
+  origin: "*",
+  allowHeaders: ["Content-Type", "Authorization", "X-Payment", "X402-Payment", "X-Agent-Id"],
+  exposeHeaders: ["RateLimit-Limit", "RateLimit-Remaining", "RateLimit-Reset", "Retry-After", "X-Request-Id"]
+}));
 app.use("*", payloadLimit());
+app.use("*", concurrencyLimit());
 app.use("*", rateLimit());
 
 app.route("/", healthRoutes);

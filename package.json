@@ -17,6 +17,7 @@
     "api:dev": "tsx src/server.ts",
     "autocapture:test": "npm test --workspace @basedchef/contextkit-autocapture",
     "skill:test": "tsx --test src/services/skill-validation.test.ts src/services/skill-bundle-service.test.ts src/services/experience-service.test.ts",
+    "rate-limit:test": "tsx --test src/lib/rate-limit.test.ts",
     "extension:package": "npm run package --prefix extensions/contextkit-autocapture",
     "x402:deploy": "bankr x402 deploy",
     "deploy:vercel": "vercel --prod",

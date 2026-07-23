@@ -1,6 +1,6 @@
 # ContextKit Full AI Index
 
-ContextKit is a memory layer and versioned Verified Skill Repository for autonomous AI agents. It provides continuation memory, context compression, handoff, profile memory, and complete Bankr-adjacent source repositories sold through x402.
+ContextKit is a memory layer and versioned Verified Skill Repository for autonomous AI agents. It provides continuation memory, context compression, handoff, profile memory, and complete evidence-backed source repositories from any legitimate domain sold through x402.
 
 Website: https://contextkit.pro
 GitHub: https://github.com/arsalang75523/contextkit
@@ -164,7 +164,7 @@ Bankr routes:
 
 Skill policy:
 
-- Compile only completed, reusable Bankr-adjacent work.
+- Compile only completed, reusable work with concrete cross-project value; Bankr or crypto relevance is optional.
 - Drafts are private by default.
 - Reject secrets, private paths/identifiers, project diaries, dangerous commands, weak evidence, and incomplete workflows.
 - Public listing requires validation score >=75, three grounded tests, a validated executable repository bundle, explicit approval, and `userApproved: true`.
@@ -179,7 +179,7 @@ Skill policy:
 3. Use handoff when another agent or worker continues the task.
 4. Use extract-profile when user preferences should become durable memory.
 5. Use memory-enrichment when preferences change over time.
-6. Search verified skills before repeating solved Bankr-adjacent work.
+6. Search verified skills before repeating solved work in any supported domain.
 7. Compile useful completed work into a private skill, then ask before publishing.
 8. Use webhooks to route completed events into downstream systems.
 

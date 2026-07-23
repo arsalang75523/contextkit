@@ -31,7 +31,7 @@ contextkit-autocapture run claude -- "Implement webhook retries"
 contextkit-autocapture run codex -- "Verify the payment callback"
 ```
 
-The bridge locally redacts common secrets, submits only the latest completed task, and skips duplicate or failed runs. Greetings, placeholders, plans, generic notes, project diaries, incomplete workflows, and plain claims are rejected. A private `SKILL.md` write requires a complete reusable Bankr-adjacent workflow plus at least one executed PASS backed by verbatim command output, test log, HTTP response, or artifact evidence from the source conversation. Public publishing requires three independent grounded PASS results, an explicit reuse license, a validation score of at least 75, clean safety checks, and explicit user approval. Test method, observed outcome, evidence excerpt, and source message are embedded in the generated skill.
+The bridge locally redacts common secrets, submits only the latest completed task, and skips duplicate or failed runs. Greetings, placeholders, plans, generic notes, project diaries, incomplete workflows, and plain claims are rejected. A private `SKILL.md` write requires a complete reusable workflow in any legitimate domain plus at least one executed PASS backed by verbatim command output, test log, HTTP response, or artifact evidence from the source conversation. Public publishing requires three independent grounded PASS results, an explicit reuse license, a validation score of at least 75, clean safety checks, and explicit user approval. Test method, observed outcome, evidence excerpt, and source message are embedded in the generated skill.
 
 The VS Code-compatible extension for VS Code, Cursor, Windsurf, and VSCodium is in `extensions/contextkit-autocapture`:
 
@@ -77,7 +77,7 @@ contextkit skill clone exp_REPLACE_ME ./installed-skill
 
 The CLI rejects symlinks, path traversal, local secrets, and accidental overwrite. Clone verifies the immutable repository digest, every file checksum, and normalized `0644/0755` mode before materialization. CLI calls use account credits; the Bankr commands below expose the same lifecycle as public x402-paid operations.
 
-Public skill ecosystems are `bankr`, `x402`, `base`, `mcp`, `wallet`, `defi`, `automation`, `llm-gateway`, and `agent-infrastructure`.
+Skill discovery categories are open-ended lowercase slugs such as `web-development`, `testing`, `research`, `design`, `productivity`, `automation`, `mcp`, `finance`, or `crypto`. Bankr and crypto relevance are optional; evidence-backed usefulness, portability, reproducibility, and safety determine eligibility.
 
 ## Why It Exists
 

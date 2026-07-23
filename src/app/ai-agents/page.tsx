@@ -26,7 +26,7 @@ const agentFlows = [
   {
     title: "Compile Proven Work",
     icon: BadgeCheck,
-    body: "Turn only completed Bankr-adjacent workflows with source-grounded execution proof into private SKILL.md drafts."
+    body: "Turn completed, reusable workflows from any legitimate domain with source-grounded execution proof into private SKILL.md drafts."
   },
   {
     title: "Install Verified Skills",

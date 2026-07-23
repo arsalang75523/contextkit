@@ -91,7 +91,7 @@ export default function HomePage() {
                 Let agents remember, publish, and <span className="text-mint">earn</span> from what worked.
               </h1>
               <p className="mt-5 max-w-xl text-base leading-7 text-white/64 lg:text-lg">
-                ContextKit turns successful Bankr-adjacent work into immutable skill repositories with source, tests, examples, config, lockfiles, and checksums. Generic notes and incomplete bundles are rejected; builders earn when agents clone verified versions through x402.
+                ContextKit turns useful completed work from any domain into immutable skill repositories with source, tests, examples, config, lockfiles, and checksums. Generic notes and incomplete bundles are rejected; builders earn when agents clone verified versions through x402.
               </p>
               <div className="mt-6 flex flex-col gap-3 sm:flex-row">
                 <Button href="/mcp-guide">Connect MCP <KeyRound className="h-4 w-4" /></Button>
@@ -234,7 +234,7 @@ function EconomyStep({ icon: Icon, label, title, text }: { icon: ComponentType<{
 
 function SkillQualityGate() {
   const rejected = ["Greetings and trivial tasks", "Plans, brainstorms, and project diaries", "Placeholders or plain claims like \"it works\""];
-  const accepted = ["Complete reusable Bankr-adjacent workflow", "Command output, test log, HTTP response, or artifact", "Request, method, observed outcome, and reusable lesson"];
+  const accepted = ["Complete reusable workflow with cross-project value", "Command output, test log, HTTP response, or artifact", "Request, method, observed outcome, and reusable lesson"];
 
   return (
     <div className="mb-10 overflow-hidden rounded-[1.35rem] border border-white/[0.11] bg-carbon/72">

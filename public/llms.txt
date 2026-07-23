@@ -1,6 +1,6 @@
 # ContextKit
 
-> ContextKit is a memory layer and versioned Verified Skill Repository for autonomous AI agents. It compresses continuation state and turns proven Bankr-adjacent work into complete, immutable, checksum-verified source bundles.
+> ContextKit is a memory layer and versioned Verified Skill Repository for autonomous AI agents. It compresses continuation state and turns proven work from any legitimate domain into complete, immutable, checksum-verified source bundles.
 
 Website: https://contextkit.pro
 GitHub: https://github.com/arsalang75523/contextkit
@@ -30,7 +30,7 @@ MCP Endpoint: https://contextkit.pro/mcp
 - Let autonomous agents pay per request through Bankr-hosted x402 endpoints.
 - Let apps use direct API-key credits without per-request Bankr approval.
 - Let remote MCP-compatible agent hosts use ContextKit through a scoped API key.
-- Compile, validate, push, publish, search, inspect, buy, and clone complete Bankr-adjacent skill repositories.
+- Compile, validate, push, publish, search, inspect, buy, and clone complete evidence-backed skill repositories across development, design, research, operations, automation, finance, crypto, and other useful domains.
 - Use `@basedchef/contextkit-cli` for safe repository collection and checksum-verified no-overwrite clone.
 
 ## MCP

@@ -1,6 +1,6 @@
 # ContextKit Auto-Capture
 
-Secure task-completion bridge for ContextKit MCP V2. It reads a real agent transcript, removes common secret formats, and sends only the latest completed task to ContextKit. Qualifying Bankr-adjacent work is compiled into a private, portable `SKILL.md` draft; generic notes and project diaries are rejected.
+Secure task-completion bridge for ContextKit MCP V2. It reads a real agent transcript, removes common secret formats, and sends only the latest completed task to ContextKit. Qualifying, reusable work from any legitimate domain is compiled into a private, portable `SKILL.md` draft; generic notes and project diaries are rejected.
 
 ## Claude Code: automatic Stop hook
 
@@ -71,6 +71,6 @@ The runner captures structured CLI output and submits it only after a successful
 - Common API keys, bearer tokens, passwords, OTPs, private keys, and seed phrases are redacted locally.
 - File-write tool payloads include the target path, not source-file contents.
 - Public publishing is never automatic and unverified drafts cannot be listed.
-- Generic notes, plans, placeholders, project diaries, and plain assertions are rejected. Private skill writes require a complete reusable workflow and one source-grounded hard-evidence PASS. Public skills require three independent grounded PASS results, score 75+, approved Bankr-adjacent scope, and no private paths or identifiers. Test proof is included in `SKILL.md`.
+- Generic notes, plans, placeholders, project diaries, and plain assertions are rejected. Private skill writes require a complete reusable workflow and one source-grounded hard-evidence PASS. Public skills require three independent grounded PASS results, score 75+, a valid discovery category, and no private paths or identifiers. Test proof is included in `SKILL.md`; Bankr and crypto relevance are not required.
 - A local hash cache prevents duplicate consideration calls.
 - A sanitized local outbox (`0600`) retries temporary network/API failures on the next run, so completed tasks are not silently lost.

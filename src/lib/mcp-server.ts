@@ -42,7 +42,7 @@ const MCP_AGENT_INSTRUCTIONS_URI = "contextkit://instructions";
 
 const MCP_AGENT_INSTRUCTIONS = {
   policyVersion: "mcp-v2.5-versioned-skill-repositories",
-  purpose: "Convert completed Bankr-adjacent work into tested skills, attach complete immutable source bundles, and publish only executable verified repository versions with explicit user approval.",
+  purpose: "Convert completed, reusable work from any legitimate domain into tested skills, attach complete immutable source bundles, and publish only executable verified repository versions with explicit user approval.",
   startup: [
     `Read ${MCP_AGENT_INSTRUCTIONS_URI} or call contextkit_get_agent_instructions when connecting to ContextKit MCP.`,
     "Use ContextKit memory tools only when they help the user's active task."
@@ -58,9 +58,9 @@ const MCP_AGENT_INSTRUCTIONS = {
       "constraints, decisions, errors, and fixes",
       "reusable lesson for future agents"
     ],
-    savePolicy: "Write a private draft only for non-trivial reusable Bankr-adjacent work with a complete operational workflow and at least one executed test backed by verbatim hard evidence. Plain claims, placeholders, generic notes, plans, and project diaries are rejected.",
+    savePolicy: "Write a private draft only for non-trivial reusable work with cross-project value, a complete operational workflow, and at least one executed test backed by verbatim hard evidence. Bankr or crypto relevance is optional. Plain claims, placeholders, generic notes, plans, and project diaries are rejected.",
     rejectPolicy: "Reject project diaries, local paths, repo-specific instructions, generic chat, incomplete attempts, unsupported claims, secrets, OTPs, API keys, passwords, bearer tokens, private wallet data, or personal data.",
-    publicEligibility: "Public skills require an explicit reuse license, approved ecosystem namespace, quality score >= 75, three source-grounded passing tests, and a validated executable repository bundle. Bundles require SKILL.md, skill.json, LICENSE, package/lock, config schema, src, tests, and examples; assertions are not evidence."
+    publicEligibility: "Public skills require an explicit reuse license, valid lowercase discovery category, quality score >= 75, three source-grounded passing tests, and a validated executable repository bundle. Bundles require SKILL.md, skill.json, LICENSE, package/lock, config schema, src, tests, and examples; assertions are not evidence."
   },
   publish: {
     tool: "contextkit_skill_publish",
@@ -70,7 +70,7 @@ const MCP_AGENT_INSTRUCTIONS = {
   },
   recommendedAgentBehavior: [
     "Do not ask the user to paste this policy each time.",
-    "Call contextkit_skill_compile proactively after useful completed Bankr-adjacent work.",
+    "Call contextkit_skill_compile proactively after useful completed work in any domain.",
     "Keep drafts private by default.",
     "Ask before public publishing.",
     "Search verified skills before repeating similar work.",
@@ -134,7 +134,7 @@ export function createContextKitMcpServer(options: ContextKitMcpOptions) {
     "contextkit_skill_compile",
     {
       title: "Compile completed work into a verified skill draft",
-      description: "Paid ContextKit write call ($0.01). Creates a private draft only; it does not publish or spend the future $0.05 listing price. Compile only completed, non-trivial, reusable Bankr-adjacent work with a complete workflow and at least one executed test backed by verbatim command output, test log, HTTP response, or artifact evidence. Generic notes and plain assertions are rejected.",
+      description: "Paid ContextKit write call ($0.01). Creates a private draft only; it does not publish or spend the future $0.05 listing price. Compile completed, non-trivial, reusable work from any legitimate domain when it has cross-project value, a complete workflow, and at least one executed test backed by verbatim command output, test log, HTTP response, or artifact evidence. Bankr or crypto relevance is optional. Generic notes and plain assertions are rejected.",
       inputSchema: {
         ...conversationInput,
         minConfidence: z.number().min(0.5).max(0.95).default(0.72),
@@ -214,7 +214,7 @@ export function createContextKitMcpServer(options: ContextKitMcpOptions) {
       inputSchema: {
         query: z.string().max(800).optional(),
         tags: z.array(z.string().min(1).max(48)).max(16).optional(),
-        ecosystems: z.array(z.enum(["bankr", "x402", "base", "mcp", "wallet", "defi", "automation", "llm-gateway", "agent-infrastructure"])).max(9).optional(),
+        ecosystems: z.array(z.string().min(2).max(64).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)).max(16).optional(),
         compatibility: z.array(z.string().min(1).max(48)).max(16).optional(),
         includePrivate: z.boolean().default(true),
         limit: z.number().int().min(1).max(20).default(10)

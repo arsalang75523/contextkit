@@ -71,6 +71,77 @@ function validSkill(): VerifiedSkillDraft {
   return { ...draft, skillMarkdown: renderSkillMarkdown(draft) };
 }
 
+function validNonCryptoSkill(): VerifiedSkillDraft {
+  const skill = validSkill();
+  skill.name = "playwright-accessibility-regression";
+  skill.description = "Run repeatable Playwright accessibility regression checks across responsive web application routes.";
+  skill.ecosystem = "web-accessibility";
+  skill.compatibility = ["claude-code", "codex", "cursor"];
+  skill.trigger = "Use when a web interface change needs reproducible keyboard, landmark, and contrast validation before release.";
+  skill.prerequisites = ["Node.js project with Playwright tests configured"];
+  skill.inputs = ["Routes under test", "Desktop and mobile viewport definitions", "Accessibility acceptance criteria"];
+  skill.outputs = ["Accessibility regression report", "Reproducible failing selectors", "Verified release result"];
+  skill.steps = [
+    "Run Playwright checks against every configured responsive route.",
+    "Inspect keyboard navigation, landmark structure, and contrast failures.",
+    "Record reproducible evidence and verify corrected routes before release."
+  ];
+  skill.verification = ["Playwright reports three completed checks with passing results."];
+  skill.failureHandling = ["Capture the failing route and selector, then keep the release blocked until the check passes."];
+  skill.doNotUseWhen = ["The test environment cannot render the target routes consistently."];
+  skill.rollback = ["Restore the last passing interface version when a critical accessibility regression remains."];
+  skill.tags = ["accessibility", "playwright", "testing"];
+  skill.testCases = [
+    {
+      name: "keyboard navigation",
+      input: "A form route with interactive controls and visible focus requirements.",
+      expectedOutcome: "Every interactive control receives focus in logical order.",
+      successCriteria: ["Keyboard traversal passes", "Focus remains visible"],
+      testMethod: "Run the Playwright keyboard navigation test against the form route.",
+      observedOutcome: "The keyboard navigation test passed with every control reachable.",
+      evidenceType: "test-log",
+      evidenceExcerpt: "Keyboard navigation test passed.",
+      passed: true,
+      evidenceVerified: true,
+      sourceMessageIndex: 1
+    },
+    {
+      name: "landmark structure",
+      input: "A rendered dashboard route with header, navigation, main, and footer regions.",
+      expectedOutcome: "Required semantic landmarks are present exactly once.",
+      successCriteria: ["Landmarks detected", "Main region is unique"],
+      testMethod: "Inspect the rendered route with the Playwright landmark assertions.",
+      observedOutcome: "The landmark structure test passed with one main region.",
+      evidenceType: "test-log",
+      evidenceExcerpt: "Landmark structure test passed.",
+      passed: true,
+      evidenceVerified: true,
+      sourceMessageIndex: 2
+    },
+    {
+      name: "responsive contrast",
+      input: "Desktop and mobile screenshots rendered from the same interface theme.",
+      expectedOutcome: "Text and control contrast meet the configured acceptance criteria.",
+      successCriteria: ["Desktop contrast passes", "Mobile contrast passes"],
+      testMethod: "Run the automated contrast audit for both configured viewports.",
+      observedOutcome: "The responsive contrast audit passed on desktop and mobile.",
+      evidenceType: "artifact",
+      evidenceExcerpt: "Responsive contrast audit passed.",
+      passed: true,
+      evidenceVerified: true,
+      sourceMessageIndex: 3
+    }
+  ];
+  skill.evidence = {
+    userRequest: "Validate the redesigned interface for accessibility regressions before release.",
+    agentMethod: "Ran Playwright keyboard, landmark, and responsive contrast checks across target routes.",
+    outcome: "All accessibility checks passed on desktop and mobile routes.",
+    reusableLesson: "A release gate combining keyboard, landmark, and contrast checks catches reusable interface regressions."
+  };
+  rerender(skill);
+  return skill;
+}
+
 function rerender(skill: VerifiedSkillDraft) {
   const draft = { ...skill } as Partial<VerifiedSkillDraft>;
   delete draft.skillMarkdown;
@@ -161,11 +232,20 @@ test("rejects legacy contract-only tests without throwing", () => {
   assert.ok(report.tests.every((testCase) => testCase.passed === false));
 });
 
-test("rejects an unsupported public ecosystem instead of silently remapping it", () => {
-  const skill = validSkill();
-  skill.ecosystem = "private-project" as typeof skill.ecosystem;
+test("accepts a useful evidence-backed skill outside Bankr and crypto", () => {
+  const skill = validNonCryptoSkill();
+  const report = validateSkill(skill);
+  assert.equal(report.eligible, true);
+  assert.equal(report.status, "verified");
+  assert.ok(report.score >= 75);
+  assert.equal(report.findings.some((finding) => /Bankr|crypto/i.test(finding)), false);
+});
+
+test("rejects malformed discovery categories without restricting the domain", () => {
+  const skill = validNonCryptoSkill();
+  skill.ecosystem = "Private Project!" as typeof skill.ecosystem;
   rerender(skill);
   const report = validateSkill(skill);
   assert.equal(report.eligible, false);
-  assert.ok(report.findings.some((finding) => finding.includes("approved Bankr-adjacent ecosystem")));
+  assert.ok(report.findings.some((finding) => finding.includes("lowercase slug")));
 });

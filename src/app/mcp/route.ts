@@ -1,5 +1,13 @@
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import { createContextKitMcpServer } from "@/lib/mcp-server";
+import {
+  consumeRateLimit,
+  environmentValue,
+  positiveInteger,
+  rateLimitHeaders,
+  tryAcquireConcurrency,
+  type RateLimitDecision
+} from "@/lib/rate-limit";
 import { ApiKeyService } from "@/services/api-key-service";
 import { AppKV } from "@/storage/app-kv";
 import { createId } from "@/utils/id";
@@ -10,7 +18,7 @@ export const dynamic = "force-dynamic";
 
 const allowedOrigins = new Set(["https://contextkit.pro", "https://www.contextkit.pro", "http://localhost:3000"]);
 const allowedHostNames = new Set(["contextkit.pro", "www.contextkit.pro", "localhost", "127.0.0.1"]);
-const maxRequestsPerMinute = 60;
+const maxRequestsPerMinute = 30;
 
 export async function OPTIONS(request: Request) {
   const origin = request.headers.get("origin");
@@ -46,12 +54,30 @@ async function handleMcpRequest(request: Request) {
     return jsonError("insufficient_scope", "API key requires context:write.", 403, request);
   }
 
-  const count = await new AppKV().increment(
-    `rate:mcp:${record.id}:${Math.floor(Date.now() / 60_000)}`,
-    60
+  const rateDecision = await consumeRateLimit(new AppKV(), {
+    scope: "mcp",
+    identity: record.id,
+    identityLimit: positiveInteger(environmentValue("CONTEXTKIT_MCP_RATE_LIMIT_PER_MINUTE"), maxRequestsPerMinute),
+    globalLimit: positiveInteger(environmentValue("CONTEXTKIT_MCP_GLOBAL_RATE_LIMIT_PER_MINUTE"), 120),
+    windowSeconds: 60
+  });
+  if (!rateDecision.allowed) {
+    return withRateLimitHeaders(
+      jsonError("mcp_rate_limited", "MCP request limit exceeded. Retry after the current window.", 429, request),
+      rateDecision
+    );
+  }
+
+  const releaseConcurrency = tryAcquireConcurrency(
+    `mcp:${record.id}`,
+    positiveInteger(environmentValue("CONTEXTKIT_MAX_CONCURRENT_REQUESTS"), 12),
+    positiveInteger(environmentValue("CONTEXTKIT_MAX_CONCURRENT_REQUESTS_PER_CLIENT"), 3)
   );
-  if (count > maxRequestsPerMinute) {
-    return jsonError("mcp_rate_limited", "MCP request limit exceeded. Retry after one minute.", 429, request);
+  if (!releaseConcurrency) {
+    return withRateLimitHeaders(
+      jsonError("mcp_concurrency_limited", "Too many MCP requests are already running. Retry shortly.", 429, request),
+      rateDecision
+    );
   }
 
   try {
@@ -70,9 +96,14 @@ async function handleMcpRequest(request: Request) {
       clientIp: trustedClientIp(request)
     });
     await server.connect(transport);
-    return withSecurityHeaders(await transport.handleRequest(request), request);
+    return withRateLimitHeaders(withSecurityHeaders(await transport.handleRequest(request), request), rateDecision);
   } catch {
-    return jsonError("mcp_request_failed", "ContextKit MCP could not process this request.", 500, request);
+    return withRateLimitHeaders(
+      jsonError("mcp_request_failed", "ContextKit MCP could not process this request.", 500, request),
+      rateDecision
+    );
+  } finally {
+    releaseConcurrency();
   }
 }
 
@@ -136,12 +167,23 @@ function withSecurityHeaders(response: Response, request: Request, requestId?: s
     "Access-Control-Allow-Headers",
     "Authorization, Content-Type, MCP-Protocol-Version, MCP-Session-Id, Last-Event-ID"
   );
-  headers.set("Access-Control-Expose-Headers", "MCP-Protocol-Version, MCP-Session-Id, X-Request-Id");
+  headers.set(
+    "Access-Control-Expose-Headers",
+    "MCP-Protocol-Version, MCP-Session-Id, X-Request-Id, RateLimit-Limit, RateLimit-Remaining, RateLimit-Reset, Retry-After"
+  );
   headers.set("Access-Control-Max-Age", "600");
   headers.set("Cache-Control", "no-store");
   headers.set("Referrer-Policy", "no-referrer");
   headers.set("X-Content-Type-Options", "nosniff");
   headers.set("X-Request-Id", requestId ?? headers.get("X-Request-Id") ?? createId("req"));
 
+  return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
+}
+
+function withRateLimitHeaders(response: Response, decision: RateLimitDecision) {
+  const headers = new Headers(response.headers);
+  for (const [name, value] of Object.entries(rateLimitHeaders(decision))) {
+    headers.set(name, value);
+  }
   return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
 }

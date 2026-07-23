@@ -1,4 +1,4 @@
-import { and, eq, gt, isNull, like, or } from "drizzle-orm";
+import { and, eq, gt, isNull, like, or, sql } from "drizzle-orm";
 import { db, hasDatabaseUrl } from "@/db/client";
 import { kvStore } from "@/db/schema";
 
@@ -69,10 +69,26 @@ export class AppKV {
 
   async increment(key: string, ttlSeconds?: number) {
     if (!this.kv && hasDatabaseUrl()) {
-      const current = (await this.get<number>(key)) ?? 0;
-      const next = current + 1;
-      await this.set(key, next, ttlSeconds);
-      return next;
+      const expiresAt = ttlSeconds ? new Date(Date.now() + ttlSeconds * 1000) : null;
+      const expired = sql`${kvStore.expiresAt} IS NOT NULL AND ${kvStore.expiresAt} <= NOW()`;
+      const [row] = await db()
+        .insert(kvStore)
+        .values({ key, value: 1, expiresAt, updatedAt: new Date() })
+        .onConflictDoUpdate({
+          target: kvStore.key,
+          set: {
+            value: sql`CASE
+              WHEN ${expired} THEN '1'::jsonb
+              ELSE to_jsonb(COALESCE((${kvStore.value} #>> '{}')::bigint, 0) + 1)
+            END`,
+            expiresAt: ttlSeconds
+              ? sql`CASE WHEN ${expired} THEN ${expiresAt} ELSE COALESCE(${kvStore.expiresAt}, ${expiresAt}) END`
+              : kvStore.expiresAt,
+            updatedAt: sql`NOW()`
+          }
+        })
+        .returning({ value: kvStore.value });
+      return Number(row?.value ?? 1);
     }
 
     const current = (await this.get<number>(key)) ?? 0;

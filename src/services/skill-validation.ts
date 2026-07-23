@@ -1,16 +1,29 @@
 export const publicSkillEcosystems = [
-  "bankr",
-  "x402",
-  "base",
-  "mcp",
-  "wallet",
-  "defi",
+  "software-development",
+  "web-development",
+  "mobile-development",
+  "devops",
+  "testing",
+  "security",
+  "data",
+  "research",
+  "design",
+  "writing",
+  "productivity",
   "automation",
+  "ai",
+  "mcp",
+  "finance",
+  "crypto",
+  "x402",
+  "bankr",
   "llm-gateway",
-  "agent-infrastructure"
+  "agent-infrastructure",
+  "general"
 ] as const;
 
-export type PublicSkillEcosystem = typeof publicSkillEcosystems[number];
+// Discovery categories are open-ended. The list above is guidance, not an allowlist.
+export type PublicSkillEcosystem = string;
 
 export type SkillTestCase = {
   name: string;
@@ -89,7 +102,8 @@ const privateIdentityPattern = /(?:\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b|\b(
 const dangerousCommandPattern = /(?:rm\s+-rf\s+\/|git\s+reset\s+--hard|curl[^\n]+\|\s*(?:sh|bash)|disable[^\n]+security|seed\s+phrase|private\s+key)/i;
 const genericSkillNamePattern = /^(?:untitled-agent-experience|reusable-agent-workflow|test-skill|sample-skill|demo-skill|hello|foo|bar|asdf|qwerty)$/i;
 const placeholderTextPattern = /\b(?:lorem ipsum|todo|tbd|placeholder|dummy content|random text|asdfg+|qwerty+)\b/i;
-const operationalScopePattern = /\b(?:bankr|x402|base|mcp|wallet|defi|automation|llm|agent|gateway|onchain|transaction)\b/i;
+const categoryPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const executableActionPattern = /\b(?:analyze|audit|build|call|capture|check|compare|compile|configure|convert|create|debug|deploy|design|detect|document|execute|extract|generate|implement|inspect|install|integrate|measure|migrate|monitor|optimize|parse|publish|query|render|repair|research|review|run|scan|test|transform|troubleshoot|validate|verify|write)\b/i;
 const testMethodPattern = /\b(?:run|ran|call|called|execute|executed|compare|compared|inspect|inspected|validate|validated|verify|verified|build|built|deploy|deployed|request|requested|query|queried|measure|measured|render|rendered|test|tested|curl|npm)\b/i;
 const observableResultPattern = /\b(?:pass(?:ed)?|fail(?:ed)?|success(?:ful(?:ly)?)?|completed?|returned?|responded?|status|exit code|created?|generated?|matched?|verified?|built|compiled|deployed|unchanged|http\s*\/?\d*(?:\.\d+)?\s*[1-5]\d\d|[1-5]\d\d)\b/i;
 const speculativeResultPattern = /\b(?:should|would|will|expected to|planned to|not yet|pending)\b/i;
@@ -101,10 +115,12 @@ export function validateSkill(skill: VerifiedSkillDraft, threshold = 75): SkillV
   const hasPrivatePaths = privatePathPattern.test(serialized);
   const hasPrivateIdentity = privateIdentityPattern.test(serialized);
   const hasDangerousCommand = dangerousCommandPattern.test(serialized);
-  const ecosystemAllowed = publicSkillEcosystems.includes(skill.ecosystem);
+  const category = String(skill.ecosystem ?? "").trim();
+  const hasValidCategory = category.length >= 2 && category.length <= 64 && categoryPattern.test(category);
   const hasLicense = String(skill.license ?? "").trim().length >= 3;
   const operationalContent = [skill.name, skill.description, skill.trigger, ...skill.steps, ...skill.tags].join(" ");
-  const hasOperationalScope = operationalScopePattern.test(operationalContent);
+  const actionableSteps = skill.steps.filter((step) => executableActionPattern.test(step)).length;
+  const hasConcreteWorkflow = meaningfulWordCount(operationalContent) >= 18 && actionableSteps >= 2;
   const hasPlaceholders = placeholderTextPattern.test([
     skill.name,
     skill.description,
@@ -127,18 +143,19 @@ export function validateSkill(skill: VerifiedSkillDraft, threshold = 75): SkillV
     skill.failureHandling.length >= 1 &&
     skill.doNotUseWhen.length >= 1 &&
     skill.rollback.length >= 1 &&
-    skill.tags.length >= 2
+    skill.tags.length >= 2 &&
+    skill.compatibility.length >= 1
   );
 
   if (hasSecrets) findings.push("Embedded credential or secret-like value detected.");
   if (hasPrivatePaths) findings.push("User-specific filesystem path detected; replace it with a parameter or placeholder.");
   if (hasPrivateIdentity) findings.push("Private identity or request/account identifier detected.");
   if (hasDangerousCommand) findings.push("Unsafe or destructive command pattern detected.");
-  if (!ecosystemAllowed) findings.push("Public skills must target an approved Bankr-adjacent ecosystem namespace.");
+  if (!hasValidCategory) findings.push("Skill category must be a concise lowercase slug such as web-development, research, design, automation, or crypto.");
   if (!hasLicense) findings.push("Public skill publish requires an explicit reuse license.");
   if (hasGenericName) findings.push("Skill name is generic or placeholder content.");
   if (hasPlaceholders) findings.push("Placeholder or junk content detected in the skill.");
-  if (!hasOperationalScope) findings.push("Skill must describe a concrete Bankr-adjacent agent workflow.");
+  if (!hasConcreteWorkflow) findings.push("Skill must describe a concrete reusable workflow with explicit actions and observable outcomes.");
   if (!evidenceNarrativeComplete) findings.push("Request, method, outcome, and reusable lesson must each contain concrete evidence.");
   if (!reusableStructureComplete) {
     findings.push("Reusable skill structure is incomplete; require concrete prerequisites, inputs, outputs, three distinct steps, verification, failure handling, safety boundary, rollback, and tags.");
@@ -209,11 +226,11 @@ export function validateSkill(skill: VerifiedSkillDraft, threshold = 75): SkillV
   if (markdownChecks.some((passed) => !passed)) findings.push("SKILL.md is missing required frontmatter or operational sections.");
 
   const portability = clampScore(
-    (ecosystemAllowed ? 8 : 0) +
-    (!hasPrivatePaths ? 6 : 0) +
-    (!hasPrivateIdentity ? 5 : 0) +
-    (skill.inputs.length > 0 ? 3 : 0) +
-    (skill.compatibility.length > 1 ? 3 : 0),
+    (hasValidCategory ? 3 : 0) +
+    (!hasPrivatePaths ? 7 : 0) +
+    (!hasPrivateIdentity ? 6 : 0) +
+    (skill.inputs.length > 0 ? 4 : 0) +
+    (skill.compatibility.length > 0 ? 5 : 0),
     25
   );
   const reproducibility = clampScore(
@@ -231,10 +248,11 @@ export function validateSkill(skill: VerifiedSkillDraft, threshold = 75): SkillV
     skill.evidence.reusableLesson
   ].reduce((score, value) => score + (value.trim().length >= 12 ? 5 : 0), 0), 20);
   const ecosystemDemand = clampScore(
-    (ecosystemAllowed ? 6 : 0) +
-    (skill.tags.length >= 2 ? 3 : skill.tags.length) +
-    (skill.trigger.trim().length >= 16 ? 3 : 0) +
-    (/(bankr|x402|base|mcp|wallet|defi|agent|llm)/i.test(serialized) ? 3 : 0),
+    (meaningfulWordCount(skill.description) >= 8 ? 3 : 0) +
+    (meaningfulWordCount(skill.trigger) >= 8 ? 3 : 0) +
+    (actionableSteps >= 3 ? 4 : actionableSteps) +
+    (skill.tags.length >= 2 ? 2 : skill.tags.length) +
+    (skill.verification.some((item) => observableResultPattern.test(item)) ? 3 : 0),
     15
   );
   const safety = clampScore(
@@ -252,7 +270,7 @@ export function validateSkill(skill: VerifiedSkillDraft, threshold = 75): SkillV
   );
   const score = portability + reproducibility + evidence + ecosystemDemand + safety + novelty;
   if (score < threshold) findings.push(`Public skill quality score ${score} is below the required ${threshold}.`);
-  const criticalFailure = hasSecrets || hasPrivatePaths || hasPrivateIdentity || hasDangerousCommand || !ecosystemAllowed || hasGenericName || hasPlaceholders || !hasOperationalScope || !evidenceNarrativeComplete || !reusableStructureComplete || markdownChecks.some((passed) => !passed);
+  const criticalFailure = hasSecrets || hasPrivatePaths || hasPrivateIdentity || hasDangerousCommand || !hasValidCategory || hasGenericName || hasPlaceholders || !hasConcreteWorkflow || !evidenceNarrativeComplete || !reusableStructureComplete || markdownChecks.some((passed) => !passed);
   const writeEligible = !criticalFailure && passedEvidenceTests >= 1;
   const publishTestsMet = passedEvidenceTests >= 3 && independentEvidenceTests >= 3 && tests.every((test) => test.passed);
   const eligible = writeEligible && publishTestsMet && hasLicense && score >= threshold;

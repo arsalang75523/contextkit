@@ -641,8 +641,9 @@ export class ExperienceService {
         content: [
           "Return only compact JSON for ContextKit's verified-skill compiler, using exactly the short keys in the schema.",
           "Accept only real completed reusable work with: user request, agent method, verified outcome, reusable lesson, and no unresolved core blocker.",
-          "Convert it into a portable Bankr-adjacent skill, never a project diary or user-specific note.",
-          "Public skill ecosystems are: bankr, x402, base, mcp, wallet, defi, automation, llm-gateway, agent-infrastructure.",
+          "Convert it into a portable, useful skill for any legitimate domain; Bankr, crypto, or x402 relevance is never required.",
+          "Choose a concise lowercase category slug that reflects the actual domain, such as web-development, testing, design, research, productivity, automation, finance, crypto, or mcp.",
+          "Prioritize repeatable usefulness across users and projects: a concrete problem, executable method, observable result, and clear applicability boundary.",
           "Remove names, private paths/domains/IDs, credentials, secrets, and environment-specific values; parameterize necessary values.",
           "Require exactly 3 concise executable steps, 1 verification, 1 failure response, 1 safety boundary, and 1 rollback.",
           "Return 1-3 tests that were actually executed in the conversation; never invent hypothetical tests or results.",
@@ -672,7 +673,7 @@ export class ExperienceService {
               name: "lowercase-kebab-case",
               desc: "what the skill does and when to use it",
               license: "explicit reuse license",
-              eco: "bankr|x402|base|mcp|wallet|defi|automation|llm-gateway|agent-infrastructure",
+              eco: "lowercase domain category slug",
               trigger: "explicit condition for loading this skill",
               pre: ["string"],
               inputs: ["string"],
@@ -860,8 +861,8 @@ function normalizeCandidate(output: Record<string, unknown>, messages: Conversat
 
 function normalizeSkill(input: unknown, evidence: VerifiedSkillDraft["evidence"]): VerifiedSkillDraft {
   const value = objectValue(input);
-  const rawEcosystem = normalizeTag(String(value.ecosystem ?? value.eco ?? "agent-infrastructure"));
-  const ecosystem = (rawEcosystem || "agent-infrastructure") as PublicSkillEcosystem;
+  const rawEcosystem = normalizeTag(String(value.ecosystem ?? value.eco ?? "general"));
+  const ecosystem = (rawEcosystem || "general") as PublicSkillEcosystem;
   const name = normalizeTag(String(value.name ?? "reusable-agent-workflow")) || "reusable-agent-workflow";
   const description = redactSensitive(cleanText(String(value.description ?? value.desc ?? "Reusable agent workflow compiled from a completed and verified task outcome.")));
   const license = redactSensitive(cleanText(String(value.license ?? "ContextKit Marketplace License; non-resale installation use.")));
@@ -907,7 +908,7 @@ function normalizeSkill(input: unknown, evidence: VerifiedSkillDraft["evidence"]
     ecosystem,
     compatibility: cleanTags(arrayOfStrings(value.compatibility)).length
       ? cleanTags(arrayOfStrings(value.compatibility))
-      : ["bankr", "claude-code", "codex", "openclaw", "cursor"],
+      : ["claude-code", "codex", "openclaw", "cursor"],
     trigger: redactSensitive(cleanText(String(value.trigger ?? description))),
     prerequisites: cleanList(arrayOfStrings(value.prerequisites ?? value.pre).map(redactSensitive)),
     inputs: cleanList(arrayOfStrings(value.inputs).map(redactSensitive)),

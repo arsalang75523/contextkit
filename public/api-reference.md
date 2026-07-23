@@ -14,6 +14,12 @@ Authorization: Bearer <CONTEXTKIT_API_KEY>
 
 Bankr-hosted x402 routes do not require a ContextKit API key.
 
+## Inbound Request Protection
+
+All Hono API requests under `/api/*` are protected by a per-client fixed-window limit, a server-wide request budget, and an in-process concurrency guard. The default limits are `30 requests/minute/client`, `120 requests/minute/server`, `12 concurrent requests/server`, and `3 concurrent requests/client`. MCP has a separate default budget of `30 requests/minute/key` and `120 requests/minute/server`, plus the same concurrency guard keyed by API key.
+
+Limits can return HTTP `429` with `Retry-After`, `RateLimit-Limit`, `RateLimit-Remaining`, and `RateLimit-Reset` headers. Deployments can tune the defaults with `CONTEXTKIT_RATE_LIMIT_PER_MINUTE`, `CONTEXTKIT_GLOBAL_RATE_LIMIT_PER_MINUTE`, `CONTEXTKIT_MAX_CONCURRENT_REQUESTS`, `CONTEXTKIT_MAX_CONCURRENT_REQUESTS_PER_CLIENT`, `CONTEXTKIT_MCP_RATE_LIMIT_PER_MINUTE`, and `CONTEXTKIT_MCP_GLOBAL_RATE_LIMIT_PER_MINUTE`.
+
 ## MCP Server
 
 Remote MCP endpoint: `https://contextkit.pro/mcp`
@@ -41,7 +47,7 @@ The MCP server intentionally has no tool for admin actions, credits grants, API-
 
 Direct API routes:
 
-- `POST /api/skills/compile`: compile completed Bankr-adjacent work into a private SKILL.md draft.
+- `POST /api/skills/compile`: compile completed, reusable work from any legitimate domain into a private SKILL.md draft.
 - `POST /api/skills/validate`: validate paths, secrets, source, tests, examples, package lock, config schema, identity, and checksums without storing files.
 - `POST /api/skills/push`: store an immutable content-addressed repository version.
 - `POST /api/skills/publish`: use `mode: skill-repository-publish` after a valid push and explicit `userApproved: true`.
@@ -49,7 +55,7 @@ Direct API routes:
 - `POST /api/skills/inspect`: inspect the public manifest without paid source content.
 - `POST /api/skills/buy` and `/api/skills/clone`: buy the full versioned file tree, checksums, validation, and non-resale license.
 
-Repository publishing rejects raw notes, incomplete code/test trees, missing lockfiles, empty tests/examples, install hooks, secrets, path traversal, version replacement, weak evidence, and unsupported ecosystems.
+Repository publishing rejects raw notes, incomplete code/test trees, missing lockfiles, empty tests/examples, install hooks, secrets, path traversal, version replacement, weak evidence, and malformed category slugs. Bankr or crypto relevance is not required.
 
 ```bash
 curl -X POST https://contextkit.pro/api/skills/search \

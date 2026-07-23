@@ -62,7 +62,8 @@ export type VerifiedSkill = {
   description: string;
   license: string;
   version: string;
-  ecosystem: "bankr" | "x402" | "base" | "mcp" | "wallet" | "defi" | "automation" | "llm-gateway" | "agent-infrastructure";
+  /** Open discovery category such as web-development, research, design, automation, crypto, or mcp. */
+  ecosystem: string;
   compatibility: string[];
   trigger: string;
   prerequisites: string[];
