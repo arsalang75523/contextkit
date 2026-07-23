@@ -463,6 +463,51 @@ test("compiles the compact LLM wire format without losing validation", async () 
   }
 });
 
+test("supplies exact source evidence candidates to the skill compiler", async () => {
+  const originalFetch = globalThis.fetch;
+  let requestBody = "";
+  globalThis.fetch = async (_input, init) => {
+    requestBody = String(init?.body ?? "");
+    return Response.json({
+      choices: [{ message: { content: JSON.stringify(compactLlmCandidate()) } }]
+    });
+  };
+
+  try {
+    const service = new ExperienceService({
+      CONTEXTKIT_KV: memoryNamespace(),
+      BANKR_LLM_KEY: "bk_test_server_only",
+      BANKR_LLM_BASE_URL: "https://llm.test/v1"
+    });
+    const compiled = await service.consider({
+      messages: [
+        { role: "user", content: "Repair a Bankr x402 timeout without changing the response contract." },
+        {
+          role: "tool",
+          content: [
+            "Origin returned HTTP 200.",
+            "Paid endpoint returned HTTP 200.",
+            "Schema comparison test passed."
+          ].join("\n")
+        }
+      ],
+      minConfidence: 0.72,
+      autoSave: true,
+      priceUsd: 0.05
+    }, { ownerId: "bankr-hosted" });
+
+    assert.match(requestBody, /evidenceCandidates/);
+    assert.match(requestBody, /Origin returned HTTP 200/);
+    assert.match(requestBody, /Paid endpoint returned HTTP 200/);
+    assert.match(requestBody, /Schema comparison test passed/);
+    assert.equal(compiled.validation?.eligible, true);
+    assert.equal(compiled.publishRecommendation?.shouldAskUser, false);
+    assert.match(compiled.nextAgentAction ?? "", /contextkit_skill_validate_bundle/);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test("retries skill compilation with the primary model when the configured model returns non-JSON", async () => {
   const originalFetch = globalThis.fetch;
   let calls = 0;

@@ -49,6 +49,26 @@ test("parses Codex JSONL completed items without retaining raw write payloads", 
   assert.equal(messages.some((message) => message.content.includes("all tests")), true);
 });
 
+test("preserves the final PASS summary from long Claude and OpenCode tool output", () => {
+  const longPrefix = "setup output\n".repeat(500);
+  const finalSummary = "Tests: 24 passed, 0 failed. Build completed with exit code 0.";
+  const messages = parseTranscript(JSON.stringify([
+    { info: { role: "user" }, parts: [{ type: "text", text: "Verify the release" }] },
+    { info: { role: "assistant" }, parts: [{
+      type: "tool",
+      tool: "bash",
+      state: {
+        status: "completed",
+        input: { command: "npm test && npm run build" },
+        output: `${longPrefix}${finalSummary}`
+      }
+    }] }
+  ]));
+
+  assert.equal(messages.some((message) => message.content.includes(finalSummary)), true);
+  assert.equal(messages.some((message) => message.content.includes("[tool-result:middle-truncated]")), true);
+});
+
 test("queues a sanitized task and recovers it after a temporary failure", async () => {
   const directory = await mkdtemp(join(tmpdir(), "contextkit-autocapture-"));
   const cachePath = join(directory, "cache.json");

@@ -321,7 +321,7 @@ function skillDraftMessage(experience) {
   const validation = experience?.validation;
   if (validation?.eligible) {
     const passedEvidenceTests = validation.requirements?.publish?.passedEvidenceTests ?? validation.tests?.filter((test) => test.passed).length ?? 0;
-    return `ContextKit compiled verified private skill ${experience.id}: ${experience.title} (score ${validation.score}, ${passedEvidenceTests} source-grounded PASS results). Show the user the validation result and evidence summary, then ask whether to publish it for Bankr x402 installation. Never publish without explicit approval.`;
+    return `ContextKit compiled verified private skill ${experience.id}: ${experience.title} (score ${validation.score}, ${passedEvidenceTests} source-grounded PASS results). Keep it private. Build its complete repository bundle, call contextkit_skill_validate_bundle, then contextkit_skill_push. Only after both pass, show the proof and ask the user whether to publish with contextkit_skill_repository_publish.`;
   }
   return `ContextKit saved private skill draft ${experience.id}: ${experience.title}. It is not publishable yet. Report validation findings and keep it private until corrected.`;
 }

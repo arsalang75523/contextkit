@@ -63,10 +63,10 @@ const MCP_AGENT_INSTRUCTIONS = {
     publicEligibility: "Public skills require an explicit reuse license, valid lowercase discovery category, quality score >= 75, three source-grounded passing tests, and a validated executable repository bundle. Bundles require SKILL.md, skill.json, LICENSE, package/lock, config schema, src, tests, and examples; assertions are not evidence."
   },
   publish: {
-    tool: "contextkit_skill_publish",
+    tool: "contextkit_skill_repository_publish",
     requiresExplicitUserApproval: true,
     defaultVisibility: "private",
-    instruction: "After compile, validate and push the complete versioned file bundle. If both skill and bundle are publish eligible, show title, score, digest, tests, and findings; then ask whether the user wants to publish. Never publish an unverified or source-incomplete draft."
+    instruction: "After compile, create the complete versioned file bundle, call contextkit_skill_validate_bundle, then contextkit_skill_push. If both skill and bundle are publish eligible, show title, score, digest, tests, and findings; only then ask whether the user wants to publish with contextkit_skill_repository_publish."
   },
   recommendedAgentBehavior: [
     "Do not ask the user to paste this policy each time.",
@@ -134,7 +134,7 @@ export function createContextKitMcpServer(options: ContextKitMcpOptions) {
     "contextkit_skill_compile",
     {
       title: "Compile completed work into a verified skill draft",
-      description: "Paid ContextKit write call ($0.01). Creates a private draft only; it does not publish or spend the future $0.05 listing price. Compile completed, non-trivial, reusable work from any legitimate domain when it has cross-project value, a complete workflow, and at least one executed test backed by verbatim command output, test log, HTTP response, or artifact evidence. Bankr or crypto relevance is optional. Generic notes and plain assertions are rejected.",
+      description: "Paid ContextKit write call ($0.01). Creates a private draft only. Include raw successful terminal/test/tool-result excerpts in messages; summarized claims such as 'tests pass' are not evidence. Public eligibility needs three distinct grounded PASS excerpts. After compile, create the complete bundle and call contextkit_skill_validate_bundle then contextkit_skill_push before requesting approval for contextkit_skill_repository_publish.",
       inputSchema: {
         ...conversationInput,
         minConfidence: z.number().min(0.5).max(0.95).default(0.72),
@@ -152,7 +152,7 @@ export function createContextKitMcpServer(options: ContextKitMcpOptions) {
     "contextkit_skill_publish",
     {
       title: "Publish a verified paid skill",
-      description: "Compatibility publish tool. New public skills still require a pushed executable repository bundle, validation.eligible=true, three grounded PASS results, score 75+, safety checks, and explicit user approval.",
+      description: "Legacy compatibility publish tool. Do not call it immediately after compile. New public skills require a pushed executable repository bundle, validation.eligible=true, three grounded PASS results, score 75+, safety checks, and explicit user approval; use contextkit_skill_repository_publish after validate and push.",
       inputSchema: {
         skillId: z.string().regex(/^exp_[a-f0-9]{24}$/),
         priceUsd: z.literal(0.05).default(0.05),

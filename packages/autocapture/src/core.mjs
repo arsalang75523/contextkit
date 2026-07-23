@@ -6,6 +6,7 @@ import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 const MAX_TRANSCRIPT_BYTES = 8_000_000;
 const MAX_PAYLOAD_CHARS = 350_000;
 const MAX_MESSAGE_CHARS = 40_000;
+const MAX_TOOL_RESULT_CHARS = 4_000;
 const CACHE_LIMIT = 100;
 const OUTBOX_LIMIT = 25;
 
@@ -195,7 +196,13 @@ function summarizeToolCall(name, input) {
 function summarizeToolResult(content, isError) {
   const prefix = isError ? "[tool-result:error]" : "[tool-result:success]";
   const text = typeof content === "string" ? content : JSON.stringify(content ?? "");
-  return `${prefix} ${redactSensitive(text).slice(0, 1_000)}`.trim();
+  const safe = redactSensitive(text);
+  if (safe.length <= MAX_TOOL_RESULT_CHARS) return `${prefix} ${safe}`.trim();
+
+  // Test/build summaries usually appear at the end of long command output.
+  const head = safe.slice(0, 1_500);
+  const tail = safe.slice(-(MAX_TOOL_RESULT_CHARS - 1_500));
+  return `${prefix} ${head}\n[tool-result:middle-truncated]\n${tail}`.trim();
 }
 
 function compactMessages(messages) {

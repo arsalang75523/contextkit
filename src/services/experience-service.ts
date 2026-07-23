@@ -800,16 +800,16 @@ export class ExperienceService {
       publishToken: saved?.publishToken,
       validation: saved?.experience?.validation ?? candidate.validation,
       publishRecommendation: {
-        shouldAskUser: candidate.validation.eligible,
+        shouldAskUser: false,
         priceUsd: input.priceUsd,
         message: candidate.validation.eligible
-          ? "I converted this completed work into a tested, portable SKILL.md. Do you want me to publish the verified skill so other agents can buy and install it?"
+          ? "The private SKILL.md passed evidence validation. Build, validate, and push its complete repository bundle before asking for public publishing approval."
           : "I saved a private skill draft, but it is not publishable yet. Review the validation findings before requesting public approval."
       },
       nextAgentAction: candidate.validation.eligible
         ? saved
-          ? `Ask the user for approval to publish verified skill ${saved.experience.id}. If approved, call contextkit_skill_publish with that skillId.`
-          : "Ask the user whether to save and publish this verified skill draft."
+          ? `Create the complete repository bundle for ${saved.experience.id}, call contextkit_skill_validate_bundle, then contextkit_skill_push. Ask for public approval only after both validations pass; publish with contextkit_skill_repository_publish.`
+          : "Save the verified private draft, then attach and validate its complete repository bundle before asking for public approval."
         : "Keep the draft private and use the validation findings to improve portability, tests, evidence, or safety before requesting publication."
     };
   }
@@ -942,6 +942,7 @@ export class ExperienceService {
 
   private async generateCandidate(messages: ConversationMessage[], minConfidence: number) {
     const llm = new BankrLlmClient({ env: this.env });
+    const evidenceCandidates = sourceEvidenceCandidates(messages);
     const prompt = [
       {
         role: "system",
@@ -954,12 +955,13 @@ export class ExperienceService {
           "Remove names, private paths/domains/IDs, credentials, secrets, and environment-specific values; parameterize necessary values.",
           "Require exactly 3 concise executable steps, 1 verification, 1 failure response, 1 safety boundary, and 1 rollback.",
           "Return 1-3 tests that were actually executed in the conversation; never invent hypothetical tests or results.",
-          "Each test needs method, observed outcome, PASS=true, hard evidence type (command-output, test-log, http-response, or artifact), and an exact 12+ character evidence excerpt copied verbatim from the conversation.",
+          "Use only exact excerpts from evidenceCandidates for test evidence. Each test needs method, observed outcome, PASS=true, hard evidence type (command-output, test-log, http-response, or artifact), and an exact 12+ character excerpt.",
+          "When evidenceCandidates contains at least three independent passing results, return exactly three tests using three distinct excerpts. Otherwise return only the grounded tests available; the draft must remain private.",
           "Never treat a claim like 'it works', future plan, generic status sentence, or model-authored assertion as test evidence.",
           "Use distinct evidence excerpts for independent tests. If no executed passing test evidence exists, set save=false.",
           "Reject greetings, trivial requests, placeholders, plans, brainstorms, incomplete attempts, generic notes, pure summaries, one-off private project details, private data, or invented evidence.",
           "A reusable skill needs concrete prerequisites, inputs, outputs, exactly 3 distinct executable steps, verification, failure handling, a safety boundary, rollback, and at least 2 tags.",
-          "Keep the full JSON below 450 tokens; each string must be a complete thought and no longer than 160 characters.",
+          "Keep the full JSON below 700 tokens; each string must be a complete thought and no longer than 160 characters.",
           `Set save=true only when confidence >= ${minConfidence}; otherwise return the same schema with concise empty skill fields.`
         ].join(" ")
       },
@@ -996,6 +998,7 @@ export class ExperienceService {
               ]
             }
           },
+          evidenceCandidates,
           conversation: messages
         })
       }
@@ -1275,6 +1278,31 @@ function groundSkillTestEvidence(skill: VerifiedSkillDraft, messages: Conversati
   });
   const grounded = { ...skill, testCases };
   return { ...grounded, skillMarkdown: renderSkillMarkdown(grounded) };
+}
+
+function sourceEvidenceCandidates(messages: ConversationMessage[]) {
+  const candidates: Array<{ sourceMessageIndex: number; excerpt: string }> = [];
+  const seen = new Set<string>();
+  const observedResult = /(?:\b(?:pass(?:ed)?|fail(?:ed)?|success(?:ful(?:ly)?)?|completed?|returned?|responded?|status|exit code|created?|generated?|matched?|verified?|built|compiled|deployed|unchanged)\b|http\s*\/?\d*(?:\.\d+)?\s*[1-5]\d\d|\b[1-5]\d\d\b|^[✓✔])/i;
+  const speculative = /\b(?:should|would|will|expected to|planned to|not yet|pending)\b/i;
+
+  messages.forEach((message, sourceMessageIndex) => {
+    const content = redactSensitive(String(message.content ?? ""));
+    const segments = content
+      .split(/\r?\n/)
+      .flatMap((line) => line.split(/(?<=[.!?])\s+/))
+      .map((line) => cleanText(line))
+      .filter((line) => line.length >= 12 && line.length <= 360);
+
+    for (const excerpt of segments) {
+      const normalized = normalizeComparable(excerpt);
+      if (!normalized || seen.has(normalized) || !observedResult.test(excerpt) || speculative.test(excerpt)) continue;
+      seen.add(normalized);
+      candidates.push({ sourceMessageIndex, excerpt });
+    }
+  });
+
+  return candidates.slice(-24);
 }
 
 function assertMeaningfulExperience(record: Pick<ExperienceRecord, "content" | "lesson" | "summary" | "task" | "outcome" | "constraints" | "decisions" | "tags" | "skill">) {

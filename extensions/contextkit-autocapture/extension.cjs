@@ -100,7 +100,7 @@ async function runCapturedAgent(context, output, status) {
       workspace,
       cachePath: context.globalStorageUri.fsPath + "/capture-cache.json"
     });
-    await presentResult(result, apiKey, config, output);
+    await presentResult(result, config, output);
   } catch (error) {
     const message = safeError(error);
     output.appendLine(`\n[ContextKit] ${message}`);
@@ -134,7 +134,7 @@ async function captureTranscript(context, output, status) {
       workspace: vscode.workspace.workspaceFolders?.[0]?.uri.fsPath,
       cachePath: context.globalStorageUri.fsPath + "/capture-cache.json"
     });
-    await presentResult(result, apiKey, config, output);
+    await presentResult(result, config, output);
   } catch (error) {
     void vscode.window.showErrorMessage(`ContextKit transcript capture failed: ${safeError(error)}`);
   } finally {
@@ -142,7 +142,7 @@ async function captureTranscript(context, output, status) {
   }
 }
 
-async function presentResult(result, apiKey, config, output) {
+async function presentResult(result, config, output) {
   const experience = savedExperience(result);
   if (!experience?.id) {
     const reason = result?.reason || "No reusable completed experience detected.";
@@ -158,14 +158,13 @@ async function presentResult(result, apiKey, config, output) {
     return;
   }
   const action = await vscode.window.showInformationMessage(
-    `ContextKit compiled a verified private skill: ${experience.title} (score ${experience.validation.score}). Publish it for Bankr x402 installation?`,
-    "Publish for $0.05",
+    `ContextKit compiled a verified private skill: ${experience.title} (score ${experience.validation.score}). Add and validate its complete repository bundle before publishing.`,
+    "Open repository guide",
     "Keep private"
   );
-  if (!action?.startsWith("Publish")) return;
-  await publishExperience(experience.id, apiKey, config.get("baseUrl"));
-  output.appendLine(`[ContextKit] Published ${experience.id} after explicit IDE approval.`);
-  void vscode.window.showInformationMessage("ContextKit verified skill published successfully.");
+  if (action !== "Open repository guide") return;
+  await vscode.env.openExternal(vscode.Uri.parse(`${String(config.get("baseUrl")).replace(/\/$/, "")}/mcp-guide#verified-skill-repositories`));
+  output.appendLine(`[ContextKit] Opened the repository guide for private draft ${experience.id}.`);
 }
 
 function savedExperience(result) {
@@ -174,18 +173,6 @@ function savedExperience(result) {
     if (recovered?.result?.shouldSave && recovered.result.experience?.id) return recovered.result.experience;
   }
   return undefined;
-}
-
-async function publishExperience(skillId, apiKey, baseUrl) {
-  const response = await fetch(String(baseUrl).replace(/\/$/, "") + "/api/skills/publish", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ skillId, priceUsd: 0.05, userApproved: true })
-  });
-  if (!response.ok) {
-    const body = await response.text();
-    throw new Error(`Publish failed with HTTP ${response.status}: ${body.slice(0, 300)}`);
-  }
 }
 
 async function requireApiKey(context) {
