@@ -74,7 +74,8 @@ export default async function MarketplacePage({ searchParams }: MarketplacePageP
               </p>
             </div>
 
-            <div className="grid grid-cols-3 border-t border-line bg-line/60 lg:w-[28rem] lg:border-l lg:border-t-0">
+            <div className="relative grid grid-cols-3 overflow-hidden border-t border-line bg-[#080d0b]/90 lg:w-[28rem] lg:border-l lg:border-t-0">
+              <div className="pointer-events-none absolute inset-x-0 top-1/2 h-px bg-gradient-to-r from-transparent via-mint/15 to-transparent" />
               <RegistryStat label="Skills" value={marketplace.totalListings} icon={<BadgeCheck className="h-3.5 w-3.5" />} />
               <RegistryStat label="Installs" value={marketplace.totalInstalls} icon={<TrendingUp className="h-3.5 w-3.5" />} />
               <RegistryStat label="Categories" value={marketplace.categories.length} icon={<Boxes className="h-3.5 w-3.5" />} />
@@ -172,12 +173,17 @@ export default async function MarketplacePage({ searchParams }: MarketplacePageP
 
 function RegistryStat({ label, value, icon }: { label: string; value: string | number; icon: React.ReactNode }) {
   return (
-    <div className="flex min-h-24 flex-col justify-between bg-carbon/95 p-4 sm:min-h-28 sm:p-5 lg:min-h-0">
-      <div className="flex items-center gap-1.5 text-mint">
-        {icon}
-        <span className="font-mono text-[8px] uppercase tracking-[0.14em] text-white/34">{label}</span>
+    <div className="group relative flex min-h-28 flex-col justify-center gap-5 border-l border-white/[0.07] px-3.5 py-5 first:border-l-0 sm:min-h-32 sm:px-5 lg:min-h-0">
+      <div className="flex items-center gap-2">
+        <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-mint/20 bg-mint/[0.07] text-mint transition group-hover:border-mint/40 group-hover:bg-mint/[0.12]">
+          {icon}
+        </span>
+        <span className="font-mono text-[8px] uppercase tracking-[0.14em] text-white/38">{label}</span>
       </div>
-      <p className="mt-4 text-2xl font-semibold tracking-[-0.04em] text-white">{value}</p>
+      <div className="flex items-end justify-between gap-2">
+        <p className="text-3xl font-semibold tracking-[-0.06em] text-white">{value}</p>
+        <span className="mb-1 font-mono text-[7px] uppercase tracking-[0.15em] text-mint/55">indexed</span>
+      </div>
     </div>
   );
 }
