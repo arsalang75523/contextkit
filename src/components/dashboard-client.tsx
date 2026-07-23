@@ -2,16 +2,18 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Activity, ArrowRight, ArrowUpRight, Banknote, BarChart3, CreditCard, KeyRound, LogOut, PackageCheck, RefreshCw, ShieldCheck, Star, Store, Wallet, Webhook, Zap } from "lucide-react";
+import { Activity, Archive, ArrowRight, ArrowUpRight, Banknote, BarChart3, CheckCircle2, CircleGauge, CreditCard, Eye, EyeOff, KeyRound, LockKeyhole, LogOut, PackageCheck, RefreshCw, ShieldCheck, Star, Store, Wallet, Webhook, Zap } from "lucide-react";
 import { CodeBlock } from "@/components/code-block";
+import { SellerPayoutPanel } from "@/components/seller-payout-panel";
 import { WalletCreditCheckout, type CreditInvoicePayload } from "@/components/wallet-credit-checkout";
 
-type View = "overview" | "skills" | "keys" | "usage" | "webhooks" | "payments" | "credits";
+type View = "overview" | "skills" | "readiness" | "keys" | "usage" | "webhooks" | "payments" | "credits";
 type ApiData = Record<string, unknown>;
 
 const routes: Array<[View, string, string]> = [
   ["overview", "Overview", "/api/analytics/overview"],
   ["skills", "Seller", "/api/dashboard/skills"],
+  ["readiness", "Readiness", "/api/public/launch-readiness"],
   ["keys", "API Keys", "/api/auth/my-keys"],
   ["usage", "Usage", "/api/analytics/usage"],
   ["webhooks", "Webhooks", "/api/webhooks/deliveries"],
@@ -199,7 +201,7 @@ export function DashboardClient({ view = "overview" }: { view?: View }) {
               <button type="button" onClick={logout} className="inline-flex h-10 items-center gap-2 rounded-lg border border-coral/20 px-3.5 text-sm text-white/55 transition hover:border-coral/50 hover:bg-coral/[0.06] hover:text-coral"><LogOut className="h-4 w-4" /> Logout</button>
             </div>
           </div>
-          <nav className="grid gap-px border-t border-line bg-line sm:grid-cols-3 lg:grid-cols-7">
+          <nav className="grid gap-px border-t border-line bg-line sm:grid-cols-4 lg:grid-cols-8">
             {routes.map(([key, label]) => (
               <Link key={key} href={key === "overview" ? "/dashboard" : `/dashboard/${key}`} className={`group flex items-center gap-3 bg-carbon px-4 py-4 text-sm transition ${view === key ? "bg-mint/[0.09] text-mint" : "text-white/55 hover:bg-white/[0.045] hover:text-white"}`}>
                 <span className={`grid h-8 w-8 place-items-center rounded-lg border ${view === key ? "border-mint/30 bg-mint/10 text-mint" : "border-line bg-ink/40 text-white/42 group-hover:text-white"}`}><DashboardIcon view={key} /></span>
@@ -230,6 +232,7 @@ export function DashboardClient({ view = "overview" }: { view?: View }) {
           setTopUpAmount={setTopUpAmount}
           onCreateTopUpInvoice={createTopUpInvoice}
           onVerifyTopUpInvoice={verifyTopUpInvoice}
+          onRefresh={() => load()}
         />
 
         {view === "keys" ? (
@@ -282,7 +285,7 @@ export function DashboardClient({ view = "overview" }: { view?: View }) {
         ) : null}
 
         <section className="mt-6 overflow-hidden rounded-[1.25rem] border border-line bg-carbon/70">
-          <div className="flex items-center justify-between border-b border-line px-5 py-4"><div><h2 className="font-mono text-[10px] uppercase tracking-[0.18em] text-white/45">Live data stream</h2><p className="mt-1 text-sm text-white/56">Raw account-scoped API response.</p></div><Zap className="h-4 w-4 text-mint" /></div>
+          <div className="flex items-center justify-between border-b border-line px-5 py-4"><div><h2 className="font-mono text-[10px] uppercase tracking-[0.18em] text-white/45">Live data stream</h2><p className="mt-1 text-sm text-white/56">{view === "readiness" ? "Public launch-gate telemetry. No token launch is active." : "Raw account-scoped API response."}</p></div><Zap className="h-4 w-4 text-mint" /></div>
           <div className="p-4 sm:p-5"><CodeBlock code={JSON.stringify(actionResult ? { message, actionResult, data } : data ?? { status: "Loading live dashboard data..." }, null, 2)} /></div>
         </section>
       </div>
@@ -293,6 +296,7 @@ export function DashboardClient({ view = "overview" }: { view?: View }) {
 function DashboardIcon({ view }: { view: View }) {
   const props = { className: "h-4 w-4" };
   if (view === "skills") return <Store {...props} />;
+  if (view === "readiness") return <CircleGauge {...props} />;
   if (view === "keys") return <KeyRound {...props} />;
   if (view === "usage") return <Activity {...props} />;
   if (view === "webhooks") return <Webhook {...props} />;
@@ -311,7 +315,8 @@ function DashboardView({
   topUpAmount,
   setTopUpAmount,
   onCreateTopUpInvoice,
-  onVerifyTopUpInvoice
+  onVerifyTopUpInvoice,
+  onRefresh
 }: {
   view: View;
   data: ApiData | null;
@@ -319,6 +324,7 @@ function DashboardView({
   setTopUpAmount: (value: string) => void;
   onCreateTopUpInvoice: () => Promise<CreditInvoicePayload>;
   onVerifyTopUpInvoice: (invoiceId: string, txHash: string) => Promise<void>;
+  onRefresh: () => Promise<void>;
 }) {
   if (!data) {
     return (
@@ -328,7 +334,8 @@ function DashboardView({
     );
   }
   if (view === "overview") return <OverviewData data={data} />;
-  if (view === "skills") return <SkillsData data={data} />;
+  if (view === "skills") return <SkillsData data={data} onRefresh={onRefresh} />;
+  if (view === "readiness") return <ReadinessData data={data} />;
   if (view === "usage") return <UsageData data={data} />;
   if (view === "payments") return <PaymentsData data={data} />;
   if (view === "credits") {
@@ -346,9 +353,10 @@ function DashboardView({
   return null;
 }
 
-function SkillsData({ data }: { data: ApiData }) {
+function SkillsData({ data, onRefresh }: { data: ApiData; onRefresh: () => Promise<void> }) {
   const totals = data.totals && typeof data.totals === "object" ? data.totals as Record<string, unknown> : {};
   const payout = data.payout && typeof data.payout === "object" ? data.payout as Record<string, unknown> : {};
+  const beta = data.beta && typeof data.beta === "object" ? data.beta as Record<string, unknown> : {};
   const listings = Array.isArray(data.listings) ? data.listings as Array<Record<string, unknown>> : [];
   const recentSales = Array.isArray(data.recentSales) ? data.recentSales as Array<Record<string, unknown>> : [];
   const authError = data.error && typeof data.error === "object" ? data.error as Record<string, unknown> : null;
@@ -369,7 +377,14 @@ function SkillsData({ data }: { data: ApiData }) {
       <div className="overflow-hidden rounded-[1.25rem] border border-mint/20 bg-mint/[0.045] p-5 sm:p-6">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <p className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.16em] text-mint"><Store className="h-3.5 w-3.5" /> Seller control plane</p>
+            <div className="flex flex-wrap items-center gap-3">
+              <p className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.16em] text-mint"><Store className="h-3.5 w-3.5" /> Seller control plane</p>
+              {beta.enabled ? (
+                <span className={`rounded-full border px-2.5 py-1 font-mono text-[8px] uppercase tracking-[0.12em] ${beta.allowed ? "border-mint/25 bg-mint/[0.07] text-mint" : "border-amber/25 bg-amber/[0.07] text-amber"}`}>
+                  {beta.allowed ? "beta seller approved" : "beta invite required"}
+                </span>
+              ) : null}
+            </div>
             <h2 className="mt-3 text-3xl font-semibold tracking-[-0.04em] text-white">Turn verified work into a revenue stream.</h2>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-white/52">Public reputation is earned from real installs, reproducible evidence, and buyer feedback. This is a ledger view, not a simulated payout.</p>
           </div>
@@ -393,40 +408,12 @@ function SkillsData({ data }: { data: ApiData }) {
           </div>
           <div className="divide-y divide-line">
             {listings.length ? listings.map((listing) => (
-              <Link key={String(listing.id)} href={`/marketplace/${String(listing.id)}`} className="group flex flex-col gap-3 px-5 py-4 transition hover:bg-white/[0.035] sm:flex-row sm:items-center sm:justify-between">
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p className="truncate font-medium text-white group-hover:text-mint">{String(listing.name)}</p>
-                    <span className={`rounded-full border px-2 py-0.5 font-mono text-[8px] uppercase tracking-[0.12em] ${listing.visibility === "public" ? "border-mint/20 bg-mint/[0.06] text-mint" : "border-line text-white/35"}`}>{String(listing.visibility)}</span>
-                  </div>
-                  <p className="mt-1 text-xs text-white/35">v{String(listing.version)} · {String(listing.reviewCount ?? 0)} reviews · validation {String(listing.validationScore ?? 0)}/100</p>
-                </div>
-                <div className="flex shrink-0 items-center gap-5 text-sm">
-                  <span className="text-white/48"><span className="text-white">{String(listing.sales ?? 0)}</span> installs</span>
-                  <span className="flex items-center gap-1 text-amber"><Star className="h-3.5 w-3.5 fill-amber" /> {Number(listing.rating ?? 0) ? String(listing.rating) : "new"}</span>
-                  <span className="font-mono text-mint">${Number(listing.earnedUsd ?? 0).toFixed(3)}</span>
-                </div>
-              </Link>
+              <ListingControl key={String(listing.id)} listing={listing} onRefresh={onRefresh} />
             )) : <p className="p-6 text-sm text-white/45">No compiled skill records yet. Run the skill compiler after a completed, tested agent workflow.</p>}
           </div>
         </div>
 
-        <div className="overflow-hidden rounded-[1.25rem] border border-amber/20 bg-amber/[0.035]">
-          <div className="border-b border-amber/15 px-5 py-4"><p className="font-mono text-[9px] uppercase tracking-[0.16em] text-amber">Settlement ledger</p><h3 className="mt-1 text-xl font-semibold text-white">Next payout</h3></div>
-          <div className="p-5">
-            <div className="flex items-end justify-between gap-4">
-              <div><p className="text-sm text-white/45">Pending USDC</p><p className="mt-2 text-4xl font-semibold tracking-[-0.05em] text-white">${Number(payout.pendingUsd ?? 0).toFixed(3)}</p></div>
-              <Banknote className="h-7 w-7 text-amber" />
-            </div>
-            <div className="mt-6 grid gap-3 text-sm">
-              <PayoutLine label="Window" value={payout.nextPayoutAt ? new Date(String(payout.nextPayoutAt)).toLocaleDateString() : "Not scheduled"} />
-              <PayoutLine label="Paid out" value={`$${Number(payout.paidOutUsd ?? 0).toFixed(3)}`} />
-              <PayoutLine label="Settlement" value={String(payout.settlement ?? "USDC on Base")} />
-              <PayoutLine label="Status" value={String(payout.status ?? "unknown")} accent />
-            </div>
-            <p className="mt-5 border-t border-amber/15 pt-4 text-xs leading-5 text-white/38">{String(payout.note ?? "Payouts are calculated from verified sales.")}</p>
-          </div>
-        </div>
+        <SellerPayoutPanel payout={payout} onRefresh={onRefresh} />
       </div>
 
       <div className="rounded-[1.25rem] border border-line bg-white/[0.025] p-5">
@@ -445,8 +432,212 @@ function SkillsData({ data }: { data: ApiData }) {
   );
 }
 
-function PayoutLine({ label, value, accent = false }: { label: string; value: string; accent?: boolean }) {
-  return <div className="flex items-center justify-between gap-4 border-b border-amber/10 pb-3 last:border-0 last:pb-0"><span className="text-white/40">{label}</span><span className={accent ? "font-mono uppercase text-amber" : "text-white/72"}>{value}</span></div>;
+function ListingControl({
+  listing,
+  onRefresh
+}: {
+  listing: Record<string, unknown>;
+  onRefresh: () => Promise<void>;
+}) {
+  const [pendingAction, setPendingAction] = useState<"delist" | "relist" | "archive" | null>(null);
+  const [feedback, setFeedback] = useState("");
+  const id = String(listing.id);
+  const visibility = String(listing.visibility ?? "private");
+  const archived = visibility === "archived";
+  const publicListing = visibility === "public";
+
+  async function updateLifecycle(action: "delist" | "relist" | "archive") {
+    const confirmation = action === "archive"
+      ? "Archive this skill permanently? It cannot be restored; existing buyers keep access."
+      : action === "delist"
+        ? "Remove this skill from new marketplace sales? Existing buyers keep access."
+        : "Relist this validated skill for marketplace discovery and new sales?";
+    if (!window.confirm(confirmation)) return;
+
+    setPendingAction(action);
+    setFeedback("");
+    try {
+      const response = await fetch(`/api/dashboard/skills/${id}/lifecycle`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action })
+      });
+      const payload = await response.json() as ApiData;
+      if (!response.ok) throw new Error(apiErrorMessage(payload, `Could not ${action} this listing.`));
+      setFeedback(action === "delist"
+        ? "Delisted. Existing buyer access is preserved."
+        : action === "archive"
+          ? "Archived permanently. Existing buyer access is preserved."
+          : "Relisted after validation checks.");
+      await onRefresh();
+    } catch (error) {
+      setFeedback(error instanceof Error ? error.message : "Listing action failed.");
+    } finally {
+      setPendingAction(null);
+    }
+  }
+
+  return (
+    <div className="px-5 py-4 transition hover:bg-white/[0.025]">
+      <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <Link href={`/marketplace/${id}`} className="truncate font-medium text-white transition hover:text-mint">
+              {String(listing.name)}
+            </Link>
+            <span className={`rounded-full border px-2 py-0.5 font-mono text-[8px] uppercase tracking-[0.12em] ${publicListing ? "border-mint/20 bg-mint/[0.06] text-mint" : archived ? "border-coral/20 bg-coral/[0.05] text-coral" : "border-line text-white/35"}`}>
+              {visibility}
+            </span>
+          </div>
+          <p className="mt-1 text-xs text-white/35">v{String(listing.version)} · {String(listing.reviewCount ?? 0)} reviews · validation {String(listing.validationScore ?? 0)}/100</p>
+        </div>
+
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="flex shrink-0 items-center gap-4 text-xs sm:text-sm">
+            <span className="text-white/48"><span className="text-white">{String(listing.sales ?? 0)}</span> installs</span>
+            <span className="flex items-center gap-1 text-amber"><Star className="h-3.5 w-3.5 fill-amber" /> {Number(listing.rating ?? 0) ? String(listing.rating) : "new"}</span>
+            <span className="font-mono text-mint">${Number(listing.earnedUsd ?? 0).toFixed(3)}</span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {!archived ? (
+              <button
+                type="button"
+                disabled={pendingAction !== null}
+                onClick={() => void updateLifecycle(publicListing ? "delist" : "relist")}
+                className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-line px-2.5 text-[11px] text-white/55 transition hover:border-mint/35 hover:text-mint disabled:opacity-45"
+              >
+                {publicListing ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                {pendingAction === (publicListing ? "delist" : "relist") ? "Working..." : publicListing ? "Delist" : "Relist"}
+              </button>
+            ) : null}
+            {!archived ? (
+              <button
+                type="button"
+                disabled={pendingAction !== null}
+                onClick={() => void updateLifecycle("archive")}
+                className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-coral/20 px-2.5 text-[11px] text-white/40 transition hover:border-coral/45 hover:text-coral disabled:opacity-45"
+              >
+                <Archive className="h-3.5 w-3.5" />
+                {pendingAction === "archive" ? "Archiving..." : "Archive"}
+              </button>
+            ) : null}
+            <Link href={`/marketplace/${id}`} className="inline-flex h-8 items-center gap-1 rounded-lg border border-line px-2.5 text-[11px] text-white/45 transition hover:text-white">
+              View <ArrowUpRight className="h-3 w-3" />
+            </Link>
+          </div>
+        </div>
+      </div>
+      {feedback ? <p className={`mt-3 text-xs ${feedback.includes("preserved") || feedback.includes("Relisted") ? "text-mint" : "text-coral"}`}>{feedback}</p> : null}
+    </div>
+  );
+}
+
+function ReadinessData({ data }: { data: ApiData }) {
+  const summary = data.summary && typeof data.summary === "object" ? data.summary as Record<string, unknown> : {};
+  const policy = data.policy && typeof data.policy === "object" ? data.policy as Record<string, unknown> : {};
+  const gates = Array.isArray(data.gates) ? data.gates as Array<Record<string, unknown>> : [];
+  const utilities = Array.isArray(data.utilityDesign) ? data.utilityDesign as Array<Record<string, unknown>> : [];
+  const progress = Math.max(0, Math.min(Number(summary.progressPercent ?? 0), 100));
+
+  return (
+    <section className="mt-6 space-y-5">
+      <div className="relative overflow-hidden rounded-[1.25rem] border border-aqua/20 bg-aqua/[0.04] p-5 sm:p-6">
+        <div className="pointer-events-none absolute -right-16 -top-24 h-64 w-64 rounded-full bg-aqua/10 blur-3xl" />
+        <div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <p className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.17em] text-aqua">
+              <CircleGauge className="h-3.5 w-3.5" /> Closed-beta launch gates
+            </p>
+            <h2 className="mt-3 text-3xl font-semibold tracking-[-0.04em] text-white">Usage first. Utility later.</h2>
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-white/52">This board measures marketplace demand, quality, retention, and real USDC settlement. No token contract, sale, airdrop, or launch is active.</p>
+          </div>
+          <div className="min-w-[220px] rounded-xl border border-aqua/20 bg-ink/65 p-4">
+            <div className="flex items-end justify-between">
+              <span className="font-mono text-[9px] uppercase tracking-[0.14em] text-white/38">Gate completion</span>
+              <span className="font-mono text-2xl text-aqua">{progress}%</span>
+            </div>
+            <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/[0.08]">
+              <div className="h-full rounded-full bg-aqua transition-[width]" style={{ width: `${progress}%` }} />
+            </div>
+            <p className="mt-3 text-xs text-white/40">{String(summary.passed ?? 0)} of {String(summary.total ?? gates.length)} gates passed · token launch {String(data.tokenLaunch ?? "not-started")}</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        {gates.map((gate) => {
+          const passed = Boolean(gate.passed);
+          const gateProgress = Math.max(0, Math.min(Number(gate.progressPercent ?? 0), 100));
+          return (
+            <div key={String(gate.key)} className={`rounded-xl border p-4 ${passed ? "border-mint/20 bg-mint/[0.045]" : "border-line bg-white/[0.025]"}`}>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="font-mono text-[9px] uppercase tracking-[0.13em] text-white/35">{formatGateLabel(String(gate.key))}</p>
+                  <p className="mt-2 text-xl font-semibold text-white">{String(gate.value ?? 0)} <span className="text-sm font-normal text-white/30">/ {String(gate.target ?? 0)}</span></p>
+                </div>
+                {passed ? <CheckCircle2 className="h-4 w-4 text-mint" /> : <LockKeyhole className="h-4 w-4 text-white/25" />}
+              </div>
+              <div className="mt-4 h-1 overflow-hidden rounded-full bg-white/[0.07]">
+                <div className={`h-full rounded-full ${passed ? "bg-mint" : "bg-aqua/55"}`} style={{ width: `${gateProgress}%` }} />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="grid gap-5 lg:grid-cols-[1fr_0.86fr]">
+        <div className="overflow-hidden rounded-[1.25rem] border border-line bg-white/[0.025]">
+          <div className="border-b border-line px-5 py-4">
+            <p className="font-mono text-[9px] uppercase tracking-[0.15em] text-white/35">Utility boundary</p>
+            <h3 className="mt-1 text-xl font-semibold text-white">Live settlement vs locked design</h3>
+          </div>
+          <div className="divide-y divide-line">
+            {utilities.map((item) => {
+              const live = item.status === "live";
+              return (
+                <div key={String(item.utility)} className="flex items-center justify-between gap-4 px-5 py-4">
+                  <div className="flex items-center gap-3">
+                    <span className={`grid h-8 w-8 place-items-center rounded-lg border ${live ? "border-mint/25 bg-mint/10 text-mint" : "border-line bg-ink/50 text-white/28"}`}>
+                      {live ? <CheckCircle2 className="h-3.5 w-3.5" /> : <LockKeyhole className="h-3.5 w-3.5" />}
+                    </span>
+                    <span className={live ? "text-white" : "text-white/48"}>{String(item.utility)}</span>
+                  </div>
+                  <span className={`rounded-full border px-2.5 py-1 font-mono text-[8px] uppercase tracking-[0.12em] ${live ? "border-mint/25 text-mint" : "border-line text-white/30"}`}>{String(item.status)}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="rounded-[1.25rem] border border-amber/20 bg-amber/[0.035] p-5">
+          <p className="font-mono text-[9px] uppercase tracking-[0.15em] text-amber">Launch policy</p>
+          <h3 className="mt-2 text-xl font-semibold text-white">Evidence before speculation.</h3>
+          <p className="mt-4 text-sm leading-6 text-white/52">{String(policy.launchRule ?? "No token launch until every launch gate passes.")}</p>
+          <div className="mt-5 grid gap-3">
+            <ReadinessPolicy label="Current phase" value={String(data.status ?? "closed-beta")} />
+            <ReadinessPolicy label="Settlement" value={String(policy.settlementAsset ?? "USDC on Base")} />
+            <ReadinessPolicy label="Beta policy" value={String(policy.beta ?? "Monitored seller onboarding")} />
+          </div>
+          <p className="mt-5 border-t border-amber/10 pt-4 font-mono text-[9px] uppercase tracking-[0.11em] text-white/27">
+            Updated {data.generatedAt ? new Date(String(data.generatedAt)).toLocaleString() : "from live telemetry"}
+          </p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function ReadinessPolicy({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border border-amber/10 bg-ink/55 p-3">
+      <p className="font-mono text-[8px] uppercase tracking-[0.12em] text-white/30">{label}</p>
+      <p className="mt-1 text-sm leading-5 text-white/65">{value}</p>
+    </div>
+  );
+}
+
+function formatGateLabel(value: string) {
+  return value.replace(/([a-z])([A-Z])/g, "$1 $2").replace(/^./, (character) => character.toUpperCase());
 }
 
 function OverviewData({ data }: { data: ApiData }) {

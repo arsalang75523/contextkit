@@ -258,8 +258,9 @@ contextRoutes.post(
   "/experience/buy",
   requireApiKey("context:write"),
   apiKeyRateLimit(),
-  apiCreditOrX402PaymentRequired("experience-buy"),
   zValidator("json", experienceBuySchema),
+  purchasePreflight(),
+  apiCreditOrX402PaymentRequired("experience-buy"),
   async (c) => {
     const body = c.req.valid("json");
     const result = await runExperienceBuy(c, body);
@@ -348,8 +349,9 @@ contextRoutes.post(
   "/skills/buy",
   requireApiKey("context:write"),
   apiKeyRateLimit(),
-  apiCreditOrX402PaymentRequired("experience-buy"),
   zValidator("json", experienceBuySchema),
+  purchasePreflight(),
+  apiCreditOrX402PaymentRequired("experience-buy"),
   async (c) => {
     const body = c.req.valid("json");
     const result = await runExperienceBuy(c, body);
@@ -362,13 +364,38 @@ contextRoutes.post(
   "/skills/clone",
   requireApiKey("context:write"),
   apiKeyRateLimit(),
-  apiCreditOrX402PaymentRequired("experience-buy"),
   zValidator("json", experienceBuySchema),
+  purchasePreflight(),
+  apiCreditOrX402PaymentRequired("experience-buy"),
   async (c) => {
     const body = { ...c.req.valid("json"), mode: "skill-clone" as const };
     const result = await runExperienceBuy(c, body);
     await completeOperation(c, "/skills/clone", body, JSON.stringify(result), c.get("payment")?.paymentId);
     return c.json(result);
+  }
+);
+
+contextRoutes.post(
+  "/skills/access",
+  requireApiKey("context:write"),
+  apiKeyRateLimit(),
+  zValidator("json", experienceBuySchema),
+  async (c) => {
+    const ownerId = accountOwnerId(c);
+    if (!ownerId) throw new HTTPException(401, { message: "Authenticated buyer identity is required." });
+    const body = c.req.valid("json");
+    const skillId = body.experienceId ?? body.skillId ?? body.listingId ?? "";
+    try {
+      return c.json(await new ExperienceService(c.env ?? {}).access(skillId, ownerId));
+    } catch (error) {
+      if (error instanceof Error && error.message === "purchase_not_found") {
+        throw new HTTPException(404, { message: "No permanent skill access exists for this buyer." });
+      }
+      if (error instanceof Error && error.message === "skill_bundle_not_found") {
+        throw new HTTPException(503, { message: "The purchased skill bundle is temporarily unavailable." });
+      }
+      throw error;
+    }
   }
 );
 
@@ -512,6 +539,7 @@ contextRoutes.post("/internal/experience/search", requireInternalToken(), zValid
 
 contextRoutes.post("/internal/experience/buy", requireInternalToken(), zValidator("json", experienceBuySchema), async (c) => {
   const body = c.req.valid("json");
+  await preflightExperienceBuy(c, body);
   await markHostedPayment(c, "experience-buy", "/internal/experience/buy");
   const result = await runExperienceBuy(c, body);
   await completeOperation(c, "/internal/experience/buy", body, JSON.stringify(result));
@@ -583,9 +611,14 @@ async function resolveExperienceConsiderContext(c: Context<AppBindings>, body: E
 
 async function runExperienceBuy(c: Context<AppBindings>, body: ExperienceBuyInput) {
   try {
-    const buyerId = accountOwnerId(c) ?? body.buyerId ?? "bankr-buyer";
+    const buyerId = purchaseBuyerId(c, body);
     const amountUsd = c.get("payment")?.amountUsd ?? c.get("creditCharge")?.amountUsd ?? endpointPricing["experience-buy"];
-    return await new ExperienceService(c.env ?? {}).buy(body, buyerId, amountUsd);
+    return await new ExperienceService(c.env ?? {}).buy(
+      body,
+      buyerId,
+      amountUsd,
+      purchaseIdentityStrength(c)
+    );
   } catch (error) {
     if (error instanceof Error && error.message === "experience_not_found") {
       throw new HTTPException(404, { message: "Experience record was not found or is not published." });
@@ -593,8 +626,65 @@ async function runExperienceBuy(c: Context<AppBindings>, body: ExperienceBuyInpu
     if (error instanceof Error && error.message === "skill_bundle_not_found") {
       throw new HTTPException(503, { message: "The published skill bundle is temporarily unavailable. No install response was issued." });
     }
+    if (error instanceof Error && error.message === "self_purchase_forbidden") {
+      throw new HTTPException(403, { message: "Sellers cannot buy their own skill." });
+    }
+    if (error instanceof Error && error.message === "already_purchased") {
+      throw new HTTPException(409, { message: "This buyer already owns the skill. Use /api/skills/access to download it again without another payment." });
+    }
     throw error;
   }
+}
+
+function purchasePreflight() {
+  return async (c: Context<AppBindings>, next: () => Promise<void>) => {
+    const body = await c.req.json<ExperienceBuyInput>();
+    await preflightExperienceBuy(c, body);
+    await next();
+  };
+}
+
+async function preflightExperienceBuy(c: Context<AppBindings>, body: ExperienceBuyInput) {
+  try {
+    await new ExperienceService(c.env ?? {}).preflightBuy(body, purchaseBuyerId(c, body));
+  } catch (error) {
+    if (error instanceof HTTPException) throw error;
+    if (error instanceof Error && error.message === "experience_not_found") {
+      throw new HTTPException(404, { message: "Experience record was not found or is not published." });
+    }
+    if (error instanceof Error && error.message === "self_purchase_forbidden") {
+      throw new HTTPException(403, { message: "Sellers cannot buy their own skill." });
+    }
+    if (error instanceof Error && error.message === "already_purchased") {
+      throw new HTTPException(409, { message: "This buyer already owns the skill. Use /api/skills/access without another payment." });
+    }
+    if (error instanceof Error && error.message === "skill_bundle_not_found") {
+      throw new HTTPException(503, { message: "The published skill bundle is temporarily unavailable." });
+    }
+    throw error;
+  }
+}
+
+function purchaseBuyerId(c: Context<AppBindings>, body: ExperienceBuyInput) {
+  const authenticatedOwner = accountOwnerId(c);
+  const paymentPayer = c.get("payment")?.payer;
+  if (!authenticatedOwner && body.buyerId?.startsWith("acct_")) {
+    throw new HTTPException(422, { message: "Account buyer IDs can only come from an authenticated API key." });
+  }
+  const buyerId = authenticatedOwner
+    ?? (paymentPayer && paymentPayer !== "bankr-hosted" ? `wallet:${paymentPayer.toLowerCase()}` : undefined)
+    ?? body.buyerId;
+  if (!buyerId) {
+    throw new HTTPException(422, { message: "Bankr purchases require a stable buyerId so ownership and permanent access can be preserved." });
+  }
+  return buyerId;
+}
+
+function purchaseIdentityStrength(c: Context<AppBindings>) {
+  if (accountOwnerId(c)) return "account" as const;
+  const paymentPayer = c.get("payment")?.payer;
+  if (paymentPayer && paymentPayer !== "bankr-hosted") return "wallet" as const;
+  return "declared" as const;
 }
 
 async function runExperienceWrite<T>(operation: () => Promise<T>) {
@@ -621,6 +711,24 @@ async function runExperienceWrite<T>(operation: () => Promise<T>) {
     }
     if (error instanceof Error && error.message === "skill_bundle_required_for_publish") {
       throw new HTTPException(422, { message: "Every new public skill requires a pushed executable bundle that passes the skill-repository-v1 policy. Legacy SKILL.md-only listings remain readable but cannot be newly published." });
+    }
+    if (error instanceof Error && error.message === "skill_archived") {
+      throw new HTTPException(409, { message: "Archived skills cannot be republished. Create a new semantic version instead." });
+    }
+    if (error instanceof Error && error.message === "skill_suspended") {
+      throw new HTTPException(403, { message: "This skill is suspended pending administrator review." });
+    }
+    if (error instanceof Error && error.message === "skill_duplicate") {
+      throw new HTTPException(409, { message: "An identical skill repository is already published." });
+    }
+    if (error instanceof Error && error.message === "skill_name_taken") {
+      throw new HTTPException(409, { message: "That public skill name is already registered. Publish a new version on the existing listing or choose a distinct name." });
+    }
+    if (error instanceof Error && error.message === "skill_publish_quota_exceeded") {
+      throw new HTTPException(429, { message: "Daily publish limit reached. Each creator can publish up to three new skills per UTC day." });
+    }
+    if (error instanceof Error && error.message === "seller_beta_access_required") {
+      throw new HTTPException(403, { message: "Marketplace closed beta is active. This seller needs an administrator invite before publishing." });
     }
     if (error instanceof Error && error.message === "skill_version_immutable") {
       throw new HTTPException(409, { message: "That repository version already exists with a different digest. Bump the semantic version instead of overwriting it." });

@@ -172,6 +172,43 @@ Skill policy:
 - Search/inspect expose previews and manifests, never paid source contents.
 - Clone returns every file plus generated `checksums.json`, validation, safe materialization instructions, and a non-resale license.
 
+### Pre-Token Marketplace Hardening
+
+Token launch has not started. Current settlement is USDC on Base. Future stake-based publishing capacity, curation/reputation, and fee-discount utilities remain locked until all public usage, validation-quality, buyer-retention, and paid-payout gates pass.
+
+Operations:
+
+- `GET /api/health`: dependency-independent liveness; no storage query.
+- `GET /api/ready`: storage and configuration readiness; 503 only when storage fails.
+- `GET /api/public/launch-readiness`: closed-beta gate report with `tokenLaunch: "not-started"`.
+- `CONTEXTKIT_MARKETPLACE_BETA_MODE=true` activates invite-only public publishing.
+- `CONTEXTKIT_BETA_SELLERS` provides a comma-separated environment allowlist.
+- `POST /api/admin/marketplace/beta-sellers` grants or revokes database-backed seller access.
+
+Marketplace lifecycle:
+
+- `POST /api/dashboard/skills/:skillId/lifecycle` accepts `delist`, `relist`, or irreversible `archive`.
+- `POST /api/admin/skills/:skillId/moderation` accepts `suspend` or `restore` plus a reason.
+- `GET /api/dashboard/skills/library` lists permanent purchases.
+- `POST /api/skills/access` returns a previously purchased account-owned bundle without payment.
+- Delist, archive, and suspension never revoke an existing buyer's immutable bundle access.
+
+Buyer identity:
+
+- Direct API-key buy/clone calls derive buyer identity from the authenticated ContextKit account.
+- Bankr buy/clone calls require a stable pseudonymous `buyerId`, for example `agent:team-42`.
+- Do not use email, secrets, rotating random IDs, or an unauthenticated `acct_...` value as `buyerId`.
+
+Seller payouts:
+
+- Challenge: `POST /api/dashboard/payout/wallet/challenge`.
+- Signature verification: `POST /api/dashboard/payout/wallet/verify`.
+- Request: `POST /api/dashboard/payout/request`, minimum 1 USDC.
+- Admin ledger: `GET /api/admin/payouts`.
+- Admin review/settlement verification: `POST /api/admin/payouts/:payoutId`.
+- `mark-paid` verifies a confirmed Base USDC Transfer to the verified destination for at least the reserved amount and rejects reused transaction hashes.
+- ContextKit stores no private key and does not execute the treasury transfer.
+
 ## Recommended Agent Integration Pattern
 
 1. Use summarize after long planning sessions.

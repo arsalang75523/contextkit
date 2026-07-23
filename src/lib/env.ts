@@ -21,6 +21,11 @@ export function readEnv(c?: { env?: Record<string, unknown> }) {
     x402Network: get("X402_NETWORK", "base"),
     x402FacilitatorUrl: get("X402_FACILITATOR_URL", "https://facilitator.x402.org"),
     creditBaseRpcUrl: get("CREDIT_BASE_RPC_URL", "https://mainnet.base.org"),
-    creditUsdcContract: get("CREDIT_USDC_CONTRACT", "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913")
+    creditUsdcContract: get("CREDIT_USDC_CONTRACT", "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"),
+    marketplaceBetaMode: get("CONTEXTKIT_MARKETPLACE_BETA_MODE").toLowerCase() === "true",
+    betaSellers: get("CONTEXTKIT_BETA_SELLERS")
+      .split(",")
+      .map((value) => value.trim())
+      .filter(Boolean)
   };
 }

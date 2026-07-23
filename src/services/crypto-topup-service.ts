@@ -3,8 +3,7 @@ import { AppKV } from "@/storage/app-kv";
 import type { AppBindings } from "@/types/bindings";
 import { createId } from "@/utils/id";
 import { CreditService } from "@/services/credit-service";
-
-const transferTopic = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
+import { isEvmAddress, normalizeTxHash, verifyBaseUsdcTransfer } from "@/lib/base-usdc";
 
 export type CreditTopUpInvoice = {
   id: string;
@@ -34,10 +33,10 @@ export class CryptoTopUpService {
     const env = readEnv({ env: this.env });
     const amountUsd = normalizeAmount(input.amountUsd);
     if (amountUsd < 1) throw new Error("minimum_topup_is_1_usd");
-    if (!isAddress(env.x402PayTo) || /^0x0{40}$/i.test(env.x402PayTo)) {
+    if (!isEvmAddress(env.x402PayTo) || /^0x0{40}$/i.test(env.x402PayTo)) {
       throw new Error("topup_wallet_not_configured");
     }
-    if (!isAddress(env.creditUsdcContract)) throw new Error("topup_token_not_configured");
+    if (!isEvmAddress(env.creditUsdcContract)) throw new Error("topup_token_not_configured");
 
     const invoice: CreditTopUpInvoice = {
       id: createId("inv"),
@@ -69,7 +68,9 @@ export class CryptoTopUpService {
     const used = await this.kv.get<{ invoiceId: string }>(txKey(txHash));
     if (used) throw new Error("transaction_already_used");
 
-    const verified = await this.verifyUsdcTransfer({
+    const env = readEnv({ env: this.env });
+    const verified = await verifyBaseUsdcTransfer({
+      rpcUrl: env.creditBaseRpcUrl,
       txHash,
       payTo: invoice.payTo,
       tokenContract: invoice.tokenContract,
@@ -95,50 +96,6 @@ export class CryptoTopUpService {
     return paid;
   }
 
-  private async verifyUsdcTransfer(input: { txHash: string; payTo: string; tokenContract: string; minimumUnits: bigint }) {
-    const env = readEnv({ env: this.env });
-    const receipt = await rpc<{ status?: string; logs?: Array<{ address?: string; topics?: string[]; data?: string }> }>(
-      env.creditBaseRpcUrl,
-      "eth_getTransactionReceipt",
-      [input.txHash]
-    );
-    if (!receipt || receipt.status !== "0x1") return false;
-
-    const recipientTopic = addressTopic(input.payTo);
-    const token = input.tokenContract.toLowerCase();
-    return (receipt.logs ?? []).some((log) => {
-      const topics = log.topics ?? [];
-      if ((log.address ?? "").toLowerCase() !== token) return false;
-      if ((topics[0] ?? "").toLowerCase() !== transferTopic) return false;
-      if ((topics[2] ?? "").toLowerCase() !== recipientTopic) return false;
-      return BigInt(log.data ?? "0x0") >= input.minimumUnits;
-    });
-  }
-}
-
-async function rpc<T>(url: string, method: string, params: unknown[]) {
-  const response = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params })
-  });
-  const payload = await response.json() as { result?: T; error?: unknown };
-  if (!response.ok || payload.error) throw new Error("rpc_request_failed");
-  return payload.result ?? null;
-}
-
-function addressTopic(address: string) {
-  return `0x${address.toLowerCase().replace(/^0x/, "").padStart(64, "0")}`;
-}
-
-function isAddress(value: string) {
-  return /^0x[a-fA-F0-9]{40}$/.test(value);
-}
-
-function normalizeTxHash(value: string) {
-  const txHash = value.trim().toLowerCase();
-  if (!/^0x[a-f0-9]{64}$/.test(txHash)) throw new Error("invalid_transaction_hash");
-  return txHash;
 }
 
 function invoiceKey(id: string) {

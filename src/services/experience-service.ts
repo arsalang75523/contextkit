@@ -30,6 +30,7 @@ import {
   type SkillBundleValidation
 } from "@/services/skill-bundle-service";
 import { AccountService } from "@/services/account-service";
+import { SellerPayoutService } from "@/services/seller-payout-service";
 
 export type ExperienceRecord = {
   id: string;
@@ -45,7 +46,7 @@ export type ExperienceRecord = {
   tags: string[];
   confidence: number;
   source: string;
-  visibility: "private" | "public";
+  visibility: "private" | "public" | "delisted" | "archived";
   priceUsd: number;
   sales: number;
   earnedUsd: number;
@@ -63,6 +64,12 @@ export type ExperienceRecord = {
     digest: string;
     manifest: SkillBundleManifest;
     validation: SkillBundleValidation;
+  };
+  moderation?: {
+    status: "approved" | "suspended";
+    reason?: string;
+    previousVisibility?: ExperienceRecord["visibility"];
+    updatedAt: string;
   };
 };
 
@@ -92,9 +99,11 @@ type SkillSaleRecord = {
   experienceId: string;
   amountUsd: number;
   createdAt: string;
+  identityStrength?: "account" | "wallet" | "declared";
 };
 
 export type MarketplaceSort = "trending" | "latest" | "rating" | "installs";
+const purchaseLocks = new Map<string, Promise<void>>();
 
 export class ExperienceService {
   private readonly kv: AppKV;
@@ -159,6 +168,38 @@ export class ExperienceService {
     if (!existing?.repository?.validation.publishEligible) {
       throw new Error("skill_bundle_required_for_publish");
     }
+    const beta = await this.sellerBetaStatus(context.ownerId);
+    if (beta.enabled && !beta.allowed) throw new Error("seller_beta_access_required");
+    if (existing?.visibility === "archived") throw new Error("skill_archived");
+    if (existing?.moderation?.status === "suspended") throw new Error("skill_suspended");
+
+    const fingerprint = skillFingerprint(skill, existing.repository.digest);
+    const fingerprintOwner = await this.kv.get<{ skillId: string }>(skillFingerprintKey(fingerprint));
+    if (fingerprintOwner && fingerprintOwner.skillId !== existing?.id) {
+      throw new Error("skill_duplicate");
+    }
+    const nameOwner = await this.kv.get<{ skillId: string }>(skillNameKey(skill.name));
+    if (nameOwner && nameOwner.skillId !== existing?.id) {
+      throw new Error("skill_name_taken");
+    }
+    const publicRecords = await this.recordsFromIndex("experience-public:");
+    const duplicateRecord = publicRecords.find((record) =>
+      record.id !== existing?.id
+      && record.repository
+      && record.skill
+      && skillFingerprint(record.skill, record.repository.digest) === fingerprint
+    );
+    if (duplicateRecord) throw new Error("skill_duplicate");
+    const nameCollision = publicRecords.find((record) =>
+      record.id !== existing?.id
+      && record.skill
+      && normalizeTag(record.skill.name) === normalizeTag(skill.name)
+    );
+    if (nameCollision) throw new Error("skill_name_taken");
+    if (!existing?.publishedAt) {
+      const publishCount = await this.kv.increment(dailyPublishKey(context.ownerId), secondsUntilUtcTomorrow());
+      if (publishCount > 3) throw new Error("skill_publish_quota_exceeded");
+    }
 
     const record: ExperienceRecord = {
       ...(existing ?? {
@@ -183,11 +224,25 @@ export class ExperienceService {
         ...(context.contextMetadata ?? {}),
         ...(input.metadata ?? {}),
         ...(input.experience?.metadata ?? {})
+      },
+      moderation: existing?.moderation ?? {
+        status: "approved",
+        updatedAt: now
       }
     };
 
-    await this.writeRecord(record);
-    await this.kv.set(publicIndexKey(record.id), { id: record.id });
+    await Promise.all([
+      this.writeRecord(record),
+      this.kv.set(publicIndexKey(record.id), { id: record.id }),
+      this.kv.set(skillFingerprintKey(fingerprint), { skillId: record.id }),
+      this.kv.set(skillNameKey(skill.name), { skillId: record.id }),
+      this.writeAudit({
+        action: "skill.published",
+        skillId: record.id,
+        actorId: context.ownerId,
+        details: { priceUsd: record.priceUsd, fingerprint }
+      })
+    ]);
 
     return {
       experience: publicExperience(record, { includeContent: true }),
@@ -411,10 +466,10 @@ export class ExperienceService {
       };
     }));
     const grossRevenueUsd = Number(records.reduce((total, record) => total + record.earnedUsd, 0).toFixed(6));
-    const paidOutUsd = (await this.kv.get<number>(sellerPaidTotalKey(ownerId))) ?? 0;
-    const pendingUsd = Number(Math.max(grossRevenueUsd - paidOutUsd, 0).toFixed(6));
+    const payout = await new SellerPayoutService(this.env).summary(ownerId);
 
     return {
+      beta: await this.sellerBetaStatus(ownerId),
       totals: {
         skills: records.length,
         published: records.filter((record) => record.visibility === "public").length,
@@ -424,12 +479,17 @@ export class ExperienceService {
         averageRating: weightedSellerRating(listings)
       },
       payout: {
-        pendingUsd,
-        paidOutUsd: Number(paidOutUsd.toFixed(6)),
+        pendingUsd: payout.availableUsd,
+        availableUsd: payout.availableUsd,
+        reservedUsd: payout.reservedUsd,
+        paidOutUsd: payout.paidOutUsd,
         nextPayoutAt: nextFridayIso(),
-        status: pendingUsd > 0 ? "pending" : "no-balance",
-        settlement: "USDC on Base",
-        note: "Payout ledger is weekly; settlement requires a verified seller wallet."
+        status: payout.availableUsd > 0 ? "available" : payout.reservedUsd > 0 ? "processing" : "no-balance",
+        settlement: payout.settlement,
+        wallet: payout.wallet,
+        requests: payout.requests,
+        minimumPayoutUsd: payout.minimumPayoutUsd,
+        note: "Payout requests reserve earned USDC and are marked paid only after the Base transfer is verified on-chain."
       },
       listings: listings.sort((a, b) => b.earnedUsd - a.earnedUsd || b.sales - a.sales || b.updatedAt.localeCompare(a.updatedAt)),
       recentSales: sales
@@ -441,6 +501,183 @@ export class ExperienceService {
           amountUsd: sale.amountUsd,
           createdAt: sale.createdAt
         }))
+    };
+  }
+
+  async sellerBetaStatus(ownerId: string) {
+    const env = readEnv({ env: this.env });
+    const granted = await this.kv.get<{ granted: boolean; updatedAt: string }>(sellerBetaKey(ownerId));
+    return {
+      enabled: env.marketplaceBetaMode,
+      allowed: !env.marketplaceBetaMode || env.betaSellers.includes(ownerId) || granted?.granted === true,
+      source: env.betaSellers.includes(ownerId) ? "environment" : granted?.granted ? "admin" : "default"
+    };
+  }
+
+  async setSellerBetaAccess(ownerId: string, allowed: boolean, adminId = "admin") {
+    const record = {
+      granted: allowed,
+      updatedAt: new Date().toISOString(),
+      updatedBy: adminId
+    };
+    await Promise.all([
+      this.kv.set(sellerBetaKey(ownerId), record),
+      this.writeAudit({
+        action: allowed ? "beta.seller_granted" : "beta.seller_revoked",
+        actorId: adminId,
+        details: { ownerId }
+      })
+    ]);
+    return {
+      ownerId,
+      ...record,
+      status: await this.sellerBetaStatus(ownerId)
+    };
+  }
+
+  async updateListing(
+    skillId: string,
+    ownerId: string,
+    action: "delist" | "relist" | "archive"
+  ) {
+    const record = await this.requireOwned(skillId, ownerId);
+    if (!record.skill) throw new Error("experience_not_found");
+    if (record.moderation?.status === "suspended") throw new Error("skill_suspended");
+    if (record.visibility === "archived" && action !== "archive") throw new Error("skill_archived");
+
+    const now = new Date().toISOString();
+    let visibility: ExperienceRecord["visibility"];
+    if (action === "relist") {
+      const beta = await this.sellerBetaStatus(ownerId);
+      if (beta.enabled && !beta.allowed) throw new Error("seller_beta_access_required");
+      if (!record.repository?.validation.publishEligible || !validateSkill(record.skill).eligible) {
+        throw new Error("skill_not_publishable:Skill and repository validation must pass before relisting.");
+      }
+      visibility = "public";
+    } else {
+      visibility = action === "archive" ? "archived" : "delisted";
+    }
+    const updated = { ...record, visibility, updatedAt: now };
+
+    await this.writeRecord(updated);
+    if (visibility === "public") {
+      await this.kv.set(publicIndexKey(skillId), { id: skillId });
+    } else {
+      await this.kv.delete(publicIndexKey(skillId));
+    }
+    await this.writeAudit({
+      action: `skill.${action}`,
+      skillId,
+      actorId: ownerId
+    });
+
+    return {
+      experience: publicExperience(updated, { includeContent: false }),
+      buyerAccessPreserved: true
+    };
+  }
+
+  async moderate(
+    skillId: string,
+    action: "suspend" | "restore",
+    adminId: string,
+    reason?: string
+  ) {
+    const record = await this.kv.get<ExperienceRecord>(recordKey(skillId));
+    if (!record?.skill) throw new Error("experience_not_found");
+    const now = new Date().toISOString();
+    const previousVisibility = action === "suspend"
+      ? record.visibility
+      : record.moderation?.previousVisibility ?? "delisted";
+    const restoredVisibility = previousVisibility === "public" ? "public" : "delisted";
+    const updated: ExperienceRecord = {
+      ...record,
+      visibility: action === "suspend" ? "delisted" : restoredVisibility,
+      updatedAt: now,
+      moderation: action === "suspend"
+        ? {
+            status: "suspended",
+            reason: cleanText(reason ?? "Policy review"),
+            previousVisibility,
+            updatedAt: now
+          }
+        : {
+            status: "approved",
+            reason: cleanText(reason ?? "Restored after review"),
+            updatedAt: now
+          }
+    };
+
+    await this.writeRecord(updated);
+    if (updated.visibility === "public") {
+      await this.kv.set(publicIndexKey(skillId), { id: skillId });
+    } else {
+      await this.kv.delete(publicIndexKey(skillId));
+    }
+    await this.writeAudit({
+      action: `moderation.${action}`,
+      skillId,
+      actorId: adminId,
+      details: { reason: updated.moderation?.reason }
+    });
+
+    return {
+      experience: publicExperience(updated, { includeContent: false }),
+      moderation: updated.moderation,
+      buyerAccessPreserved: true
+    };
+  }
+
+  async buyerLibrary(buyerId: string) {
+    const purchases = await this.kv.getMany<SkillSaleRecord>(purchasePrefix(buyerId));
+    const latestBySkill = new Map<string, SkillSaleRecord>();
+    for (const purchase of purchases.sort((a, b) => b.createdAt.localeCompare(a.createdAt))) {
+      if (!latestBySkill.has(purchase.experienceId)) latestBySkill.set(purchase.experienceId, purchase);
+    }
+    const items = await Promise.all(Array.from(latestBySkill.values()).map(async (purchase) => {
+      const record = await this.kv.get<ExperienceRecord>(recordKey(purchase.experienceId));
+      if (!record?.skill) return null;
+      return {
+        purchaseId: purchase.id,
+        purchasedAt: purchase.createdAt,
+        amountUsd: purchase.amountUsd,
+        skill: publicExperience(record, { includeContent: false }),
+        access: "permanent"
+      };
+    }));
+
+    return {
+      results: items.filter((item): item is NonNullable<typeof item> => Boolean(item)),
+      count: items.filter(Boolean).length
+    };
+  }
+
+  async access(skillId: string, buyerId: string) {
+    const record = await this.kv.get<ExperienceRecord>(recordKey(skillId));
+    if (!record?.skill || !await this.hasPurchased(skillId, buyerId)) {
+      throw new Error("purchase_not_found");
+    }
+    return {
+      access: "permanent",
+      ...(await this.installAccess(record))
+    };
+  }
+
+  async preflightBuy(input: ExperienceBuyInput, buyerId: string) {
+    const id = input.experienceId ?? input.skillId ?? input.listingId ?? "";
+    const record = await this.kv.get<ExperienceRecord>(recordKey(id));
+    if (!record || record.visibility !== "public" || !record.skill || !validateSkill(record.skill).eligible) {
+      throw new Error("experience_not_found");
+    }
+    await this.assertBuyerAllowed(record, buyerId);
+    if (await this.hasPurchased(record.id, buyerId)) throw new Error("already_purchased");
+    if (record.repository && !await new SkillBundleService(this.env).get(record.repository.digest)) {
+      throw new Error("skill_bundle_not_found");
+    }
+    return {
+      skillId: record.id,
+      sellerId: record.ownerId,
+      priceUsd: record.priceUsd
     };
   }
 
@@ -577,52 +814,93 @@ export class ExperienceService {
     };
   }
 
-  async buy(input: ExperienceBuyInput, buyerId: string, amountUsd = 0.05) {
+  async buy(
+    input: ExperienceBuyInput,
+    buyerId: string,
+    amountUsd = 0.05,
+    identityStrength: SkillSaleRecord["identityStrength"] = "declared"
+  ) {
     const id = input.experienceId ?? input.skillId ?? input.listingId ?? "";
-    const record = await this.kv.get<ExperienceRecord>(recordKey(id));
-    if (!record || record.visibility !== "public" || !record.skill) {
-      throw new Error("experience_not_found");
-    }
+    return withPurchaseLock(id, async () => {
+      const record = await this.kv.get<ExperienceRecord>(recordKey(id));
+      if (!record || record.visibility !== "public" || !record.skill) {
+        throw new Error("experience_not_found");
+      }
+      await this.assertBuyerAllowed(record, buyerId);
+      if (await this.hasPurchased(record.id, buyerId)) throw new Error("already_purchased");
+      const skill = record.skill;
+      const validation = validateSkill(skill);
+      if (!validation.eligible) throw new Error("experience_not_found");
+      const claimKey = purchaseClaimKey(buyerId, record.id);
+      if (await this.kv.increment(claimKey) > 1) throw new Error("already_purchased");
+
+      const purchaseId = createId("buy");
+      try {
+        const now = new Date().toISOString();
+        const updated: ExperienceRecord = {
+          ...record,
+          sales: record.sales + 1,
+          earnedUsd: Number((record.earnedUsd + amountUsd).toFixed(6)),
+          updatedAt: now
+        };
+        const sale: SkillSaleRecord = {
+          id: purchaseId,
+          buyerId,
+          sellerId: record.ownerId,
+          experienceId: record.id,
+          amountUsd,
+          createdAt: now,
+          identityStrength
+        };
+
+        await this.kv.set(purchaseKey(buyerId, purchaseId), sale);
+        await this.kv.set(skillSaleKey(record.id, purchaseId), sale);
+        await this.kv.set(sellerSaleKey(record.ownerId, purchaseId), sale);
+        await this.writeRecord(updated);
+        await this.writeAudit({
+          action: "skill.purchased",
+          skillId: record.id,
+          actorId: buyerId,
+          details: {
+            purchaseId,
+            amountUsd,
+            identityStrength: sale.identityStrength
+          }
+        });
+
+        return {
+          purchase: {
+            id: purchaseId,
+            experienceId: record.id,
+            amountUsd,
+            createdAt: now
+          },
+          ...(await this.installAccess(updated))
+        };
+      } catch (error) {
+        await Promise.allSettled([
+          this.writeRecord(record),
+          this.kv.delete(purchaseKey(buyerId, purchaseId)),
+          this.kv.delete(skillSaleKey(record.id, purchaseId)),
+          this.kv.delete(sellerSaleKey(record.ownerId, purchaseId)),
+          this.kv.delete(claimKey)
+        ]);
+        throw error;
+      }
+    });
+  }
+
+  private async installAccess(record: ExperienceRecord) {
     const skill = record.skill;
+    if (!skill) throw new Error("experience_not_found");
     const validation = validateSkill(skill);
-    if (!validation.eligible) throw new Error("experience_not_found");
     const repositoryBundle = record.repository
       ? await new SkillBundleService(this.env).get(record.repository.digest)
       : null;
     if (record.repository && !repositoryBundle) throw new Error("skill_bundle_not_found");
 
-    const now = new Date().toISOString();
-    const updated: ExperienceRecord = {
-      ...record,
-      sales: record.sales + 1,
-      earnedUsd: Number((record.earnedUsd + amountUsd).toFixed(6)),
-      updatedAt: now
-    };
-    const purchaseId = createId("buy");
-    const sale: SkillSaleRecord = {
-      id: purchaseId,
-      buyerId,
-      sellerId: record.ownerId,
-      experienceId: record.id,
-      amountUsd,
-      createdAt: now
-    };
-
-    await Promise.all([
-      this.writeRecord(updated),
-      this.kv.set(purchaseKey(buyerId, purchaseId), sale),
-      this.kv.set(skillSaleKey(record.id, purchaseId), sale),
-      this.kv.set(sellerSaleKey(record.ownerId, purchaseId), sale)
-    ]);
-
     return {
-      purchase: {
-        id: purchaseId,
-        experienceId: record.id,
-        amountUsd,
-        createdAt: now
-      },
-      experience: publicExperience(updated, { includeContent: true }),
+      experience: publicExperience(record, { includeContent: true }),
       skill: publicSkill(skill, true),
       installBundle: repositoryBundle
         ? {
@@ -644,7 +922,7 @@ export class ExperienceService {
             fileName: "SKILL.md",
             skillMarkdown: skill.skillMarkdown,
             manifest: {
-              id: updated.id,
+              id: record.id,
               name: skill.name,
               version: skill.version,
               license: skill.license,
@@ -791,6 +1069,14 @@ export class ExperienceService {
     return purchases.some((purchase) => purchase.experienceId === skillId);
   }
 
+  private async assertBuyerAllowed(record: ExperienceRecord, buyerId: string) {
+    if (record.ownerId === buyerId) throw new Error("self_purchase_forbidden");
+    const sellerWallet = await this.kv.get<{ address?: string }>(`seller-payout-wallet:${record.ownerId}`);
+    if (sellerWallet?.address && buyerId === `wallet:${sellerWallet.address.toLowerCase()}`) {
+      throw new Error("self_purchase_forbidden");
+    }
+  }
+
   private async requireOwned(id: string, ownerId: string, publishToken?: string) {
     const record = await this.kv.get<ExperienceRecord>(recordKey(id));
     if (!record) throw new Error("experience_not_found");
@@ -807,6 +1093,20 @@ export class ExperienceService {
       this.kv.set(recordKey(record.id), record),
       this.kv.set(ownerIndexKey(record.ownerId, record.id), { id: record.id })
     ]);
+  }
+
+  private async writeAudit(input: {
+    action: string;
+    actorId: string;
+    skillId?: string;
+    details?: Record<string, unknown>;
+  }) {
+    const id = createId("aud");
+    await this.kv.set(`marketplace-audit:${new Date().toISOString()}:${id}`, {
+      id,
+      ...input,
+      createdAt: new Date().toISOString()
+    });
   }
 }
 
@@ -1277,12 +1577,67 @@ function publicIndexKey(id: string) {
   return `experience-public:${id}`;
 }
 
+function sellerBetaKey(ownerId: string) {
+  return `seller-beta-access:${ownerId}`;
+}
+
+function skillFingerprint(skill: VerifiedSkillDraft, repositoryDigest: string) {
+  return createHash("sha256")
+    .update(JSON.stringify({
+      name: normalizeTag(skill.name),
+      description: cleanText(skill.description).toLowerCase(),
+      steps: skill.steps.map((step) => cleanText(step).toLowerCase()),
+      repositoryDigest
+    }))
+    .digest("hex");
+}
+
+function skillFingerprintKey(fingerprint: string) {
+  return `skill-fingerprint:${fingerprint}`;
+}
+
+function skillNameKey(name: string) {
+  return `skill-name:${normalizeTag(name)}`;
+}
+
+function dailyPublishKey(ownerId: string) {
+  return `skill-publish-daily:${new Date().toISOString().slice(0, 10)}:${ownerId}`;
+}
+
+function secondsUntilUtcTomorrow() {
+  const tomorrow = new Date();
+  tomorrow.setUTCHours(24, 0, 0, 0);
+  return Math.max(Math.ceil((tomorrow.getTime() - Date.now()) / 1000), 60);
+}
+
 function purchaseKey(buyerId: string, purchaseId: string) {
   return `${purchasePrefix(buyerId)}${purchaseId}`;
 }
 
 function purchasePrefix(buyerId: string) {
   return `experience-purchase:${buyerId}:`;
+}
+
+function purchaseClaimKey(buyerId: string, skillId: string) {
+  return `experience-purchase-claim:${buyerId}:${skillId}`;
+}
+
+async function withPurchaseLock<T>(skillId: string, operation: () => Promise<T>) {
+  const previous = purchaseLocks.get(skillId) ?? Promise.resolve();
+  let release = () => {};
+  const current = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const tail = previous.then(() => current);
+  purchaseLocks.set(skillId, tail);
+  await previous;
+
+  try {
+    return await operation();
+  } finally {
+    release();
+    if (purchaseLocks.get(skillId) === tail) purchaseLocks.delete(skillId);
+  }
 }
 
 function skillSaleKey(skillId: string, purchaseId: string) {
@@ -1307,10 +1662,6 @@ function reviewIndexKey(skillId: string, reviewerId: string) {
 
 function reviewIndexPrefix(skillId: string) {
   return `skill-review-index:${skillId}:`;
-}
-
-function sellerPaidTotalKey(sellerId: string) {
-  return `seller-payout-paid:${sellerId}`;
 }
 
 function repositoryVersionKey(ownerId: string, repository: string, version: string) {

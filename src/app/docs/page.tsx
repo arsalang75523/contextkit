@@ -182,6 +182,18 @@ const dashboardLogin = `curl -i -X POST https://contextkit.pro/api/dashboard/log
     "password": "replace-with-12-plus-chars"
   }'`;
 
+const operationsProbes = `curl -fsS https://contextkit.pro/api/health
+curl -fsS https://contextkit.pro/api/ready
+curl -fsS https://contextkit.pro/api/public/launch-readiness`;
+
+const sellerBetaConfig = `CONTEXTKIT_MARKETPLACE_BETA_MODE=true
+CONTEXTKIT_BETA_SELLERS=acct_REPLACE_ME,acct_SECOND_SELLER
+
+curl -X POST https://contextkit.pro/api/admin/marketplace/beta-sellers \\
+  -H "Authorization: Bearer <CONTEXTKIT_ADMIN_TOKEN>" \\
+  -H "Content-Type: application/json" \\
+  -d '{"ownerId":"acct_REPLACE_ME","allowed":true}'`;
+
 const tokenEstimate = directApiCurl("/api/tokens/estimate", {
   modelFamily: "openai",
   input: [{ role: "user", content: "Long context to estimate." }],
@@ -263,6 +275,7 @@ const navItems = [
   "Access Paths",
   "Bankr Hosted x402",
   "Dashboard And Keys",
+  "Operations",
   "MCP",
   "Skill Repositories",
   "Long Context",
@@ -364,6 +377,35 @@ export default function DocsPage() {
               </div>
               <div className="mt-4 rounded-md border border-aqua/20 bg-aqua/10 p-4 text-sm leading-6 text-white/65">
                 Create and revoke API keys in <code>/dashboard/keys</code>. Use API keys with <code>Authorization: Bearer &lt;CONTEXTKIT_API_KEY&gt;</code>.
+              </div>
+            </DocSection>
+
+            <DocSection id="operations" title="Operations">
+              <p>
+                Pre-token operations are intentionally separate from token launch. ContextKit currently settles marketplace access and reviewed seller payouts in Base USDC; the public readiness contract always reports <code>tokenLaunch: not-started</code>.
+              </p>
+              <div className="mt-4 grid gap-3 md:grid-cols-3">
+                <InfoCard title="Liveness" body="/api/health proves the process is running without querying storage or consuming normal request budgets." />
+                <InfoCard title="Readiness" body="/api/ready verifies persistent storage and production configuration; storage failure returns HTTP 503." />
+                <InfoCard title="Launch gates" body="/api/public/launch-readiness counts verified usage, quality, retention, and paid-payout evidence without activating a token." />
+              </div>
+              <div className="mt-4">
+                <h3 className="mb-2 font-semibold text-white">Operational probes</h3>
+                <CodeBlock code={operationsProbes} />
+              </div>
+              <div className="mt-5 grid gap-4 lg:grid-cols-2">
+                <div>
+                  <h3 className="mb-2 font-semibold text-white">Optional seller closed beta</h3>
+                  <CodeBlock code={sellerBetaConfig} />
+                </div>
+                <div className="rounded-md border border-amber/25 bg-amber/[0.07] p-5 text-sm leading-6 text-white/65">
+                  <h3 className="font-semibold text-white">Marketplace safety contract</h3>
+                  <p className="mt-3">Sellers can delist, relist, or irreversibly archive their own listing. Administrators can suspend or restore discovery. Prior buyers keep permanent payment-free access through <code>/api/skills/access</code>.</p>
+                  <p className="mt-3">Seller payouts require a signed wallet challenge, a minimum 1 USDC balance, admin review, and a confirmed one-time Base USDC transfer before the ledger becomes paid.</p>
+                </div>
+              </div>
+              <div className="mt-4 rounded-md border border-mint/20 bg-mint/[0.07] p-4 text-sm leading-6 text-white/65">
+                The Readiness tab in Dashboard shows every public gate, whether seller beta mode is active, which utility is live, and which future utility concepts remain locked.
               </div>
             </DocSection>
 

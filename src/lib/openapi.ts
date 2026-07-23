@@ -8,10 +8,17 @@ import {
   experienceConsiderSchema,
   experiencePublishSchema,
   experienceSearchSchema,
-  skillBundlePushSchema,
   loginSchema,
+  payoutAdminActionSchema,
+  payoutRequestSchema,
+  payoutWalletChallengeSchema,
+  payoutWalletVerifySchema,
   revokeApiKeySchema,
+  sellerBetaAccessSchema,
   signupSchema,
+  skillBundlePushSchema,
+  skillLifecycleSchema,
+  skillModerationSchema,
   tokenEstimateSchema,
   webhookRegistrationSchema,
   webhookReplaySchema
@@ -35,6 +42,20 @@ registry.registerComponent("securitySchemes", "X402Payment", {
   description: "x402 payment payload returned from a prior HTTP 402 response."
 });
 
+registry.registerComponent("securitySchemes", "DashboardSession", {
+  type: "apiKey",
+  in: "cookie",
+  name: "ck_session",
+  description: "Dashboard session cookie created by the dashboard login flow."
+});
+
+registry.registerComponent("securitySchemes", "AdminToken", {
+  type: "http",
+  scheme: "bearer",
+  bearerFormat: "ContextKit admin token",
+  description: "Server-side administration token. Never expose this credential to browsers, MCP clients, or public agents."
+});
+
 const errorSchema = z.object({
   error: z.object({
     code: z.string(),
@@ -42,6 +63,81 @@ const errorSchema = z.object({
     requestId: z.string(),
     details: z.unknown().optional()
   })
+});
+
+const healthResponse = z.object({
+  name: z.literal("ContextKit"),
+  status: z.literal("ok"),
+  time: z.string()
+});
+
+const readinessResponse = z.object({
+  name: z.literal("ContextKit"),
+  status: z.enum(["ready", "degraded", "unavailable"]),
+  checks: z.object({
+    storage: z.object({
+      status: z.enum(["ok", "error"]),
+      latencyMs: z.number(),
+      message: z.string().optional()
+    }),
+    configuration: z.object({
+      bankrLlm: z.boolean(),
+      internalAuth: z.boolean(),
+      webhookSigning: z.boolean(),
+      x402Wallet: z.boolean()
+    })
+  }),
+  latencyMs: z.number(),
+  time: z.string()
+});
+
+const payoutRecordSchema = z.object({
+  id: z.string(),
+  ownerId: z.string(),
+  destination: z.string(),
+  amountUsd: z.number(),
+  amountUnits: z.string(),
+  status: z.enum(["requested", "approved", "rejected", "paid"]),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  approvedAt: z.string().optional(),
+  rejectedAt: z.string().optional(),
+  paidAt: z.string().optional(),
+  txHash: z.string().optional(),
+  note: z.string().optional()
+});
+
+const listingActionResponse = z.object({
+  experience: z.record(z.unknown()),
+  buyerAccessPreserved: z.literal(true)
+});
+
+const launchReadinessResponse = z.object({
+  status: z.enum(["closed-beta", "eligible-for-governance-review"]),
+  tokenLaunch: z.literal("not-started"),
+  summary: z.object({
+    passed: z.number(),
+    total: z.number(),
+    progressPercent: z.number()
+  }),
+  gates: z.array(z.object({
+    key: z.string(),
+    value: z.number(),
+    target: z.number(),
+    passed: z.boolean(),
+    progressPercent: z.number()
+  })),
+  utilityDesign: z.array(z.object({
+    utility: z.string(),
+    status: z.enum(["live", "locked"])
+  })),
+  policy: z.object({
+    settlementAsset: z.literal("USDC on Base"),
+    launchRule: z.string(),
+    betaModeEnabled: z.boolean(),
+    beta: z.string()
+  }),
+  generatedAt: z.string()
 });
 
 const contextUploadResponse = z.object({
@@ -225,6 +321,40 @@ const routes = [
 ] as const;
 
 registry.registerPath({
+  method: "get",
+  path: "/api/health",
+  summary: "Process liveness probe",
+  description: "Dependency-independent liveness probe. It bypasses application rate-limit and concurrency accounting and does not query persistent storage.",
+  tags: ["Operations"],
+  responses: {
+    200: response("The ContextKit process is running.", healthResponse)
+  }
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/api/ready",
+  summary: "Dependency and configuration readiness probe",
+  description: "Checks persistent storage plus required production configuration. Returns 200 for ready or degraded service when storage works; returns 503 only when persistent storage is unavailable. It bypasses application rate-limit and concurrency accounting.",
+  tags: ["Operations"],
+  responses: {
+    200: response("Storage is available; configuration may be ready or degraded.", readinessResponse),
+    503: response("Persistent storage is unavailable.", readinessResponse)
+  }
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/api/public/launch-readiness",
+  summary: "Get public pre-token launch gates",
+  description: "Reports closed-beta usage, quality, buyer-retention, and payout gates. The response explicitly states tokenLaunch=not-started. Locked utility concepts are design targets, not an active token, sale, staking program, or airdrop.",
+  tags: ["Operations"],
+  responses: {
+    200: response("Public launch-gate report.", launchReadinessResponse)
+  }
+});
+
+registry.registerPath({
   method: "post",
   path: "/api/context/upload",
   summary: "Upload long context for contextId-based calls",
@@ -335,6 +465,238 @@ skillRoutes.forEach(([path, summary, requestSchema, price]) => {
   });
 });
 
+registry.registerPath({
+  method: "post",
+  path: "/api/skills/access",
+  summary: "Re-download a previously purchased skill without another payment",
+  description: "Requires the buyer's account-scoped API key. Access is permanent after purchase and remains available after seller delisting, irreversible seller archiving, or administrator suspension. The authenticated account, not a caller-supplied buyerId, selects the library record.",
+  tags: ["Verified Skills"],
+  security: [{ ApiKeyAuth: [] }],
+  request: {
+    body: {
+      content: {
+        "application/json": { schema: experienceBuySchema }
+      }
+    }
+  },
+  responses: {
+    200: response("Permanent install access and immutable skill bundle.", z.record(z.unknown())),
+    401: response("Authenticated buyer identity is required.", errorSchema),
+    404: response("No purchase exists for this account and skill.", errorSchema),
+    503: response("The purchased bundle is temporarily unavailable.", errorSchema)
+  }
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/api/dashboard/skills/library",
+  summary: "List the signed-in buyer's permanent skill library",
+  description: "Returns one permanent library entry per purchased skill, including delisted, archived, or moderated listings.",
+  tags: ["Marketplace"],
+  security: [{ DashboardSession: [] }],
+  responses: {
+    200: response("Buyer skill library.", z.object({
+      results: z.array(z.record(z.unknown())),
+      count: z.number()
+    })),
+    401: response("Dashboard login required.", errorSchema)
+  }
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/api/admin/marketplace/beta-sellers",
+  summary: "Grant or revoke closed-beta seller access",
+  description: "Controls database-backed seller access while CONTEXTKIT_MARKETPLACE_BETA_MODE=true. Environment allowlisted sellers remain allowed until removed from CONTEXTKIT_BETA_SELLERS.",
+  tags: ["Marketplace Administration"],
+  security: [{ AdminToken: [] }],
+  request: {
+    body: {
+      content: {
+        "application/json": { schema: sellerBetaAccessSchema }
+      }
+    }
+  },
+  responses: {
+    200: response("Seller beta access updated.", z.object({
+      ownerId: z.string(),
+      granted: z.boolean(),
+      updatedAt: z.string(),
+      updatedBy: z.string(),
+      status: z.object({
+        enabled: z.boolean(),
+        allowed: z.boolean(),
+        source: z.string()
+      })
+    })),
+    401: response("Admin bearer token required.", errorSchema)
+  }
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/api/dashboard/skills/{skillId}/lifecycle",
+  summary: "Delist, relist, or archive a seller-owned skill",
+  description: "Delist hides a listing and is reversible. Relist requires current repository validation and is blocked while suspended. Archive is irreversible; publish a new semantic version instead. Every action preserves existing buyer access.",
+  tags: ["Marketplace"],
+  security: [{ DashboardSession: [] }],
+  request: {
+    params: z.object({ skillId: z.string().regex(/^exp_[a-f0-9]{24}$/) }),
+    body: {
+      content: {
+        "application/json": { schema: skillLifecycleSchema }
+      }
+    }
+  },
+  responses: {
+    200: response("Listing lifecycle updated.", listingActionResponse),
+    401: response("Dashboard login required.", errorSchema),
+    403: response("The seller does not own this listing.", errorSchema),
+    404: response("Skill not found.", errorSchema),
+    409: response("The skill is suspended or irreversibly archived.", errorSchema)
+  }
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/api/admin/skills/{skillId}/moderation",
+  summary: "Suspend or restore a skill listing",
+  description: "Server-side administrator action with a required reason. Suspension removes the public listing but never revokes permanent buyer access. Restore returns the skill to its prior public or delisted state.",
+  tags: ["Marketplace Administration"],
+  security: [{ AdminToken: [] }],
+  request: {
+    params: z.object({ skillId: z.string().regex(/^exp_[a-f0-9]{24}$/) }),
+    body: {
+      content: {
+        "application/json": { schema: skillModerationSchema }
+      }
+    }
+  },
+  responses: {
+    200: response("Moderation state updated.", z.object({
+      experience: z.record(z.unknown()),
+      moderation: z.record(z.unknown()),
+      buyerAccessPreserved: z.literal(true)
+    })),
+    401: response("Admin bearer token required.", errorSchema),
+    404: response("Skill not found.", errorSchema)
+  }
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/api/dashboard/payout/wallet/challenge",
+  summary: "Create a seller payout-wallet signature challenge",
+  description: "Creates a ten-minute EIP-191 message for a Base-compatible wallet. Signing proves address control and does not authorize a transaction.",
+  tags: ["Seller Payouts"],
+  security: [{ DashboardSession: [] }],
+  request: {
+    body: {
+      content: {
+        "application/json": { schema: payoutWalletChallengeSchema }
+      }
+    }
+  },
+  responses: {
+    200: response("Wallet challenge created.", z.object({
+      ownerId: z.string(),
+      address: z.string(),
+      nonce: z.string(),
+      message: z.string(),
+      expiresAt: z.string()
+    })),
+    401: response("Dashboard login required.", errorSchema),
+    422: response("Invalid EVM address.", errorSchema)
+  }
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/api/dashboard/payout/wallet/verify",
+  summary: "Verify and store a seller payout wallet",
+  description: "Verifies the exact active challenge message and stores the normalized payout address. ContextKit never requests or stores a private key.",
+  tags: ["Seller Payouts"],
+  security: [{ DashboardSession: [] }],
+  request: {
+    body: {
+      content: {
+        "application/json": { schema: payoutWalletVerifySchema }
+      }
+    }
+  },
+  responses: {
+    200: response("Payout wallet verified.", z.object({
+      wallet: z.object({
+        address: z.string(),
+        verifiedAt: z.string()
+      })
+    })),
+    401: response("Dashboard login required.", errorSchema),
+    404: response("Challenge not found.", errorSchema),
+    409: response("Challenge expired.", errorSchema),
+    422: response("Signature verification failed.", errorSchema)
+  }
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/api/dashboard/payout/request",
+  summary: "Request seller settlement in Base USDC",
+  description: "Reserves the requested available seller balance for manual review. A verified payout wallet and a minimum balance of 1 USDC are required.",
+  tags: ["Seller Payouts"],
+  security: [{ DashboardSession: [] }],
+  request: {
+    body: {
+      content: {
+        "application/json": { schema: payoutRequestSchema }
+      }
+    }
+  },
+  responses: {
+    201: response("Payout request recorded.", z.object({ payout: payoutRecordSchema })),
+    401: response("Dashboard login required.", errorSchema),
+    409: response("A request is already in progress.", errorSchema),
+    422: response("Wallet, balance, or minimum-payout validation failed.", errorSchema)
+  }
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/api/admin/payouts",
+  summary: "List the payout review ledger",
+  description: "Returns requested, approved, rejected, and paid payout records for server-side reconciliation.",
+  tags: ["Marketplace Administration"],
+  security: [{ AdminToken: [] }],
+  responses: {
+    200: response("Payout ledger.", z.object({ payouts: z.array(payoutRecordSchema) })),
+    401: response("Admin bearer token required.", errorSchema)
+  }
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/api/admin/payouts/{payoutId}",
+  summary: "Approve, reject, or verify a paid payout",
+  description: "Approve/reject updates the review ledger. mark-paid requires a Base transaction hash and verifies a confirmed USDC Transfer to the seller's verified destination for at least the reserved amount before recording settlement. ContextKit does not execute treasury transfers.",
+  tags: ["Marketplace Administration"],
+  security: [{ AdminToken: [] }],
+  request: {
+    params: z.object({ payoutId: z.string() }),
+    body: {
+      content: {
+        "application/json": { schema: payoutAdminActionSchema }
+      }
+    }
+  },
+  responses: {
+    200: response("Payout ledger updated.", z.object({ payout: payoutRecordSchema })),
+    401: response("Admin bearer token required.", errorSchema),
+    404: response("Payout request not found.", errorSchema),
+    409: response("Payout status or transaction conflicts with the requested action.", errorSchema),
+    422: response("Transaction hash or confirmed Base USDC transfer is invalid.", errorSchema)
+  }
+});
+
 function formatUsd(price: number) {
   return `$${price.toFixed(3).replace(/0+$/, "").replace(/\.$/, "")}`;
 }
@@ -441,8 +803,12 @@ export function createOpenApiDocument() {
     tags: [
       { name: "Context" },
       { name: "Verified Skills" },
+      { name: "Marketplace" },
+      { name: "Seller Payouts" },
+      { name: "Marketplace Administration" },
       { name: "Authentication" },
       { name: "Analytics" },
+      { name: "Operations" },
       { name: "Tokens" },
       { name: "Webhooks" }
     ],

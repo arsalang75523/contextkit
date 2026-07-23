@@ -5,6 +5,7 @@ import { kvStore } from "@/db/schema";
 type StoredValue = unknown;
 
 const memoryKV = new Map<string, { value: StoredValue; expiresAt?: number }>();
+const incrementLocks = new Map<string, Promise<void>>();
 const localStoragePath = ".contextkit/local-kv.json";
 
 export class AppKV {
@@ -92,10 +93,28 @@ export class AppKV {
       return Number(row?.value ?? 1);
     }
 
-    const current = (await this.get<number>(key)) ?? 0;
-    const next = current + 1;
-    await this.set(key, next, ttlSeconds);
-    return next;
+    return withIncrementLock(key, async () => {
+      const current = (await this.get<number>(key)) ?? 0;
+      const next = current + 1;
+      await this.set(key, next, ttlSeconds);
+      return next;
+    });
+  }
+
+  async delete(key: string) {
+    if (this.kv) {
+      await this.kv.delete(key);
+      return;
+    }
+
+    if (hasDatabaseUrl()) {
+      await db().delete(kvStore).where(eq(kvStore.key, key));
+      return;
+    }
+
+    await hydrateLocalKV();
+    memoryKV.delete(key);
+    await persistLocalKV();
   }
 
   async list(prefix: string) {
@@ -126,6 +145,24 @@ export class AppKV {
       }
     }
     return values;
+  }
+}
+
+async function withIncrementLock<T>(key: string, operation: () => Promise<T>) {
+  const previous = incrementLocks.get(key) ?? Promise.resolve();
+  let release = () => {};
+  const current = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const tail = previous.then(() => current);
+  incrementLocks.set(key, tail);
+  await previous;
+
+  try {
+    return await operation();
+  } finally {
+    release();
+    if (incrementLocks.get(key) === tail) incrementLocks.delete(key);
   }
 }
 

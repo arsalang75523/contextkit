@@ -12,7 +12,7 @@ import type { AppBindings } from "@/types/bindings";
 
 export function rateLimit(limit = 30, windowSeconds = 60): MiddlewareHandler<AppBindings> {
   return async (c, next) => {
-    if (c.req.method === "OPTIONS") {
+    if (c.req.method === "OPTIONS" || isProbePath(c.req.path)) {
       await next();
       return;
     }
@@ -55,7 +55,7 @@ export function rateLimit(limit = 30, windowSeconds = 60): MiddlewareHandler<App
 
 export function concurrencyLimit(): MiddlewareHandler<AppBindings> {
   return async (c, next) => {
-    if (c.req.method === "OPTIONS") {
+    if (c.req.method === "OPTIONS" || isProbePath(c.req.path)) {
       await next();
       return;
     }
@@ -122,6 +122,10 @@ export function apiKeyRateLimit(limit = 600, windowSeconds = 60): MiddlewareHand
 
     await next();
   };
+}
+
+function isProbePath(path: string) {
+  return path === "/api/health" || path === "/api/ready";
 }
 
 function setRateLimitHeaders(

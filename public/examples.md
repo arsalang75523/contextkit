@@ -35,8 +35,10 @@ Buy and clone the complete immutable repository:
 ```bash
 bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-experience-buy \
   -X POST \
-  -d '{"mode":"skill-clone","skillId":"exp_REPLACE_ME"}'
+  -d '{"mode":"skill-clone","skillId":"exp_REPLACE_ME","buyerId":"agent:team-42"}'
 ```
+
+Use the same pseudonymous `buyerId` for every Bankr purchase by that buyer. Direct API-key purchases use the authenticated account instead.
 
 ## Direct API With Credits
 
@@ -48,6 +50,25 @@ curl -X POST https://contextkit.pro/api/summarize \
 ```
 
 The repository flow is `/api/skills/compile` -> `/validate` -> `/push` -> explicit `/publish`; buyers use `/search`, `/inspect`, and `/clone`.
+
+Re-download an account-owned purchase without another payment:
+
+```bash
+curl -X POST https://contextkit.pro/api/skills/access \
+  -H "Authorization: Bearer <CONTEXTKIT_API_KEY>" \
+  -H "Content-Type: application/json" \
+  -d '{"skillId":"exp_REPLACE_ME"}'
+```
+
+Check deployment and pre-token launch gates:
+
+```bash
+curl -fsS https://contextkit.pro/api/health
+curl -fsS https://contextkit.pro/api/ready
+curl -fsS https://contextkit.pro/api/public/launch-readiness
+```
+
+The launch-readiness response reports `tokenLaunch: "not-started"`; this is not an active token, sale, staking program, or airdrop.
 
 ## TypeScript SDK
 

@@ -17,6 +17,7 @@
     "api:dev": "tsx src/server.ts",
     "autocapture:test": "npm test --workspace @basedchef/contextkit-autocapture",
     "skill:test": "tsx --test src/services/skill-validation.test.ts src/services/skill-bundle-service.test.ts src/services/experience-service.test.ts src/lib/marketplace-seo.test.ts",
+    "prelaunch:test": "node --import tsx --test src/routes/health.test.ts src/services/experience-lifecycle.test.ts src/services/seller-payout-service.test.ts src/services/launch-readiness-service.test.ts src/lib/openapi.test.ts src/lib/rate-limit.test.ts",
     "rate-limit:test": "tsx --test src/lib/rate-limit.test.ts",
     "extension:package": "npm run package --prefix extensions/contextkit-autocapture",
     "x402:deploy": "bankr x402 deploy",

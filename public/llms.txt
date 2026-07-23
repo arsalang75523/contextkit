@@ -64,8 +64,21 @@ ContextKit provides a stateless Streamable HTTP MCP server at https://contextkit
 - POST https://contextkit.pro/api/skills/inspect
 - POST https://contextkit.pro/api/skills/buy
 - POST https://contextkit.pro/api/skills/clone
+- POST https://contextkit.pro/api/skills/access
 - POST https://contextkit.pro/api/tokens/estimate
+- GET https://contextkit.pro/api/health
+- GET https://contextkit.pro/api/ready
+- GET https://contextkit.pro/api/public/launch-readiness
 - GET https://contextkit.pro/openapi.json
+
+## Pre-Token State
+
+- Token launch has not started.
+- Marketplace and reviewed seller payouts settle in USDC on Base.
+- `/api/public/launch-readiness` reports closed-beta gates and `tokenLaunch: "not-started"`.
+- Seller delist/archive and admin suspension never revoke paid buyer access.
+- Bankr skill buy/clone calls require a stable pseudonymous `buyerId`; direct API-key calls use the authenticated account.
+- Account buyers re-download through `/api/skills/access` without another payment.
 
 ## SDK
 

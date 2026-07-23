@@ -167,6 +167,33 @@ export const bankrEndpoints = [
     path: "contextkit-experience-buy",
     price: "$0.05",
     modes: ["skill-buy", "skill-clone"],
-    description: "Buy or clone a verified skill through Bankr x402. Repository-backed purchases return every source, test, example, config, lockfile, checksum, manifest, and license file; legacy SKILL.md listings remain compatible."
+    description: "Buy or clone a verified skill through Bankr x402. Bankr callers must send a stable pseudonymous buyerId; API-key purchases use the authenticated account. Repository-backed purchases return every source, test, example, config, lockfile, checksum, manifest, and license file, while permanent account access survives delisting, archiving, and moderation."
+  }
+];
+
+export const preTokenLaunchContracts = [
+  {
+    name: "Liveness",
+    method: "GET",
+    path: "/api/health",
+    description: "Dependency-independent process probe; no storage query and no request-budget consumption."
+  },
+  {
+    name: "Readiness",
+    method: "GET",
+    path: "/api/ready",
+    description: "Storage and production-configuration checks; 503 only when persistent storage is unavailable."
+  },
+  {
+    name: "Permanent buyer access",
+    method: "POST",
+    path: "/api/skills/access",
+    description: "Account-authenticated, payment-free re-download after purchase, including after delist, archive, or suspension."
+  },
+  {
+    name: "Launch gates",
+    method: "GET",
+    path: "/api/public/launch-readiness",
+    description: "Public closed-beta metrics. tokenLaunch remains not-started until every usage, quality, retention, and payout gate passes."
   }
 ];

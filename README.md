@@ -59,6 +59,47 @@ The V1 lifecycle is strict:
 5. `contextkit_skill_search` and `contextkit_skill_inspect` expose verified previews and manifests without paid file contents.
 6. `contextkit_skill_clone` settles access and returns the complete immutable file tree plus validation and license.
 
+## Pre-Token Launch Hardening
+
+ContextKit is in a closed-beta hardening phase. **Token launch has not started.** Marketplace settlement and seller payouts use USDC on Base. Future stake capacity, curation/reputation, and fee-discount concepts remain locked until the public launch gates pass.
+
+Operational probes:
+
+```bash
+curl -fsS https://contextkit.pro/api/health
+curl -fsS https://contextkit.pro/api/ready
+curl -fsS https://contextkit.pro/api/public/launch-readiness
+```
+
+- `GET /api/health` is a dependency-independent liveness probe. It does not query storage and bypasses normal request-budget and concurrency accounting.
+- `GET /api/ready` checks persistent storage and required production configuration. It returns `200` for `ready` or `degraded`, and `503` only when storage is unavailable.
+- `GET /api/public/launch-readiness` reports closed-beta usage, validation, buyer-retention, and paid-payout gates with `tokenLaunch: "not-started"`.
+
+Optional seller closed beta:
+
+```env
+CONTEXTKIT_MARKETPLACE_BETA_MODE=true
+CONTEXTKIT_BETA_SELLERS=acct_REPLACE_ME,acct_SECOND_SELLER
+```
+
+When beta mode is active, only environment-allowlisted sellers or accounts granted through `POST /api/admin/marketplace/beta-sellers` can publish. Send `{"ownerId":"acct_REPLACE_ME","allowed":true}` to grant access and `allowed:false` to revoke the database grant. This never removes an environment allowlist entry.
+
+Seller and buyer safety:
+
+- Sellers manage listings with `POST /api/dashboard/skills/:skillId/lifecycle` and `action: delist|relist|archive`. Delist is reversible; archive is irreversible.
+- Administrators use `POST /api/admin/skills/:skillId/moderation` with `action: suspend|restore` and a reason.
+- Delisting, archiving, and suspension remove public discovery but never remove paid buyer access.
+- Account buyers can list purchases at `GET /api/dashboard/skills/library` and re-download without another payment through `POST /api/skills/access`.
+- Bankr buy/clone calls must include a stable, pseudonymous `buyerId` such as `agent:team-42`. Never use an email, wallet secret, or an `acct_...` account identifier supplied by an unauthenticated caller.
+
+Seller payout flow:
+
+1. Create a ten-minute wallet challenge with `POST /api/dashboard/payout/wallet/challenge`.
+2. Sign the returned message and verify it with `POST /api/dashboard/payout/wallet/verify`. The message does not authorize a transaction; ContextKit never receives a private key.
+3. Request at least `1 USDC` with `POST /api/dashboard/payout/request`.
+4. A server administrator reviews with `GET /api/admin/payouts`, then approves or rejects through `POST /api/admin/payouts/:payoutId`.
+5. After the treasury sends Base USDC manually, `action: mark-paid` verifies the confirmed on-chain transfer, destination, token contract, amount, and one-time transaction hash before updating the ledger.
+
 Every repository version requires `SKILL.md`, `skill.json`, and `LICENSE`. Public executable bundles also require `package.json`, `package-lock.json`, `config.schema.json`, meaningful `src/`, `tests/`, and `examples/`. V1 rejects unsafe paths, credentials, private key material, install lifecycle hooks, identity mismatches, and decoded bundles above 320KB. Published versions cannot be overwritten. Legacy `SKILL.md` purchases remain compatible.
 
 Install the repository CLI for a safe Git-like creator and buyer workflow:
@@ -215,7 +256,7 @@ bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd82
 
 bankr x402 call https://x402.bankr.bot/0xdace98cd605dd56b2edc66f0f4df3687f64fd824/contextkit-experience-buy \
   -X POST \
-  -d '{"mode":"skill-clone","skillId":"exp_REPLACE_ME"}'
+  -d '{"mode":"skill-clone","skillId":"exp_REPLACE_ME","buyerId":"agent:team-42"}'
 ```
 
 ## Long Context

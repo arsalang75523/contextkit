@@ -161,6 +161,46 @@ export const skillReviewSchema = z.object({
   body: z.string().trim().min(8).max(1_200)
 });
 
+export const skillLifecycleSchema = z.object({
+  action: z.enum(["delist", "relist", "archive"])
+});
+
+export const skillModerationSchema = z.object({
+  action: z.enum(["suspend", "restore"]),
+  reason: z.string().trim().min(4).max(500)
+});
+
+export const payoutWalletChallengeSchema = z.object({
+  address: z.string().regex(/^0x[a-fA-F0-9]{40}$/)
+});
+
+export const payoutWalletVerifySchema = z.object({
+  address: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
+  signature: z.string().regex(/^0x[a-fA-F0-9]+$/).max(1_024)
+});
+
+export const payoutRequestSchema = z.object({
+  amountUsd: z.number().positive().max(1_000_000).optional()
+});
+
+export const payoutAdminActionSchema = z.object({
+  action: z.enum(["approve", "reject", "mark-paid"]),
+  note: z.string().trim().min(3).max(500).optional(),
+  txHash: z.string().regex(/^0x[a-fA-F0-9]{64}$/).optional()
+}).superRefine((value, ctx) => {
+  if (value.action === "reject" && !value.note) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["note"], message: "A rejection note is required." });
+  }
+  if (value.action === "mark-paid" && !value.txHash) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["txHash"], message: "txHash is required to verify a paid payout." });
+  }
+});
+
+export const sellerBetaAccessSchema = z.object({
+  ownerId: z.string().min(3).max(160),
+  allowed: z.boolean()
+});
+
 export const skillBundleFileSchema = z.object({
   path: z.string().min(1).max(240),
   content: z.string().max(450_000),

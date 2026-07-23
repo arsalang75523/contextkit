@@ -231,10 +231,11 @@
             "mode": { "type": "string", "enum": ["skill-buy", "skill-clone"], "description": "Both modes settle access and return the full installable bundle when available." },
             "listingId": { "type": "string", "description": "Marketplace listing ID." },
             "skillId": { "type": "string", "description": "Verified skill ID. Either skillId or listingId is accepted." },
+            "buyerId": { "type": "string", "description": "Required stable pseudonymous buyer identity, for example agent:team-42. Reuse it for permanent access; never send an email, secret, or spoofed ContextKit account ID." },
             "buyerContext": { "type": "string", "description": "Optional current task context for matching." },
             "contextId": { "type": "string", "description": "Optional uploaded ContextKit context ID for buyer context." }
           },
-          "required": []
+          "required": ["buyerId"]
         },
         "output": {
           "type": "object",
