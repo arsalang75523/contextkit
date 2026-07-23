@@ -249,3 +249,15 @@ test("rejects malformed discovery categories without restricting the domain", ()
   assert.equal(report.eligible, false);
   assert.ok(report.findings.some((finding) => finding.includes("lowercase slug")));
 });
+
+test("rejects incomplete legacy skill records without throwing", () => {
+  const report = validateSkill({
+    name: "legacy-timeout-note",
+    description: "Old marketplace record created before repository evidence fields were required.",
+    ecosystem: "x402"
+  });
+
+  assert.equal(report.eligible, false);
+  assert.equal(report.writeEligible, false);
+  assert.match(report.findings.join(" "), /structure is incomplete/i);
+});

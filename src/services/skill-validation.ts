@@ -108,7 +108,8 @@ const testMethodPattern = /\b(?:run|ran|call|called|execute|executed|compare|com
 const observableResultPattern = /\b(?:pass(?:ed)?|fail(?:ed)?|success(?:ful(?:ly)?)?|completed?|returned?|responded?|status|exit code|created?|generated?|matched?|verified?|built|compiled|deployed|unchanged|http\s*\/?\d*(?:\.\d+)?\s*[1-5]\d\d|[1-5]\d\d)\b/i;
 const speculativeResultPattern = /\b(?:should|would|will|expected to|planned to|not yet|pending)\b/i;
 
-export function validateSkill(skill: VerifiedSkillDraft, threshold = 75): SkillValidationReport {
+export function validateSkill(skillInput: VerifiedSkillDraft | Partial<VerifiedSkillDraft>, threshold = 75): SkillValidationReport {
+  const skill = normalizeSkillForValidation(skillInput);
   const serialized = JSON.stringify(skill);
   const findings: string[] = [];
   const hasSecrets = secretPattern.test(serialized);
@@ -295,6 +296,68 @@ export function validateSkill(skill: VerifiedSkillDraft, threshold = 75): SkillV
     tests,
     findings: Array.from(new Set(findings))
   };
+}
+
+function normalizeSkillForValidation(skillInput: VerifiedSkillDraft | Partial<VerifiedSkillDraft>): VerifiedSkillDraft {
+  const input = skillInput && typeof skillInput === "object" ? skillInput : {};
+  const evidence: Partial<VerifiedSkillDraft["evidence"]> =
+    input.evidence && typeof input.evidence === "object" ? input.evidence : {};
+  const testCases = Array.isArray(input.testCases)
+    ? input.testCases
+        .filter((test): test is SkillTestCase => Boolean(test && typeof test === "object"))
+        .map((test) => ({
+          name: String(test.name ?? ""),
+          input: String(test.input ?? ""),
+          expectedOutcome: String(test.expectedOutcome ?? ""),
+          successCriteria: textArray(test.successCriteria),
+          testMethod: String(test.testMethod ?? ""),
+          observedOutcome: String(test.observedOutcome ?? ""),
+          evidenceType: validEvidenceType(test.evidenceType) ? test.evidenceType : "assertion",
+          evidenceExcerpt: String(test.evidenceExcerpt ?? ""),
+          passed: test.passed === true,
+          evidenceVerified: test.evidenceVerified === true,
+          sourceMessageIndex: Number.isInteger(test.sourceMessageIndex) ? test.sourceMessageIndex : undefined
+        }))
+    : [];
+
+  return {
+    name: String(input.name ?? ""),
+    description: String(input.description ?? ""),
+    license: String(input.license ?? ""),
+    version: String(input.version ?? ""),
+    ecosystem: String(input.ecosystem ?? ""),
+    compatibility: textArray(input.compatibility),
+    trigger: String(input.trigger ?? ""),
+    prerequisites: textArray(input.prerequisites),
+    inputs: textArray(input.inputs),
+    outputs: textArray(input.outputs),
+    steps: textArray(input.steps),
+    verification: textArray(input.verification),
+    failureHandling: textArray(input.failureHandling),
+    doNotUseWhen: textArray(input.doNotUseWhen),
+    rollback: textArray(input.rollback),
+    tags: textArray(input.tags),
+    testCases,
+    evidence: {
+      userRequest: String(evidence.userRequest ?? ""),
+      agentMethod: String(evidence.agentMethod ?? ""),
+      outcome: String(evidence.outcome ?? ""),
+      reusableLesson: String(evidence.reusableLesson ?? "")
+    },
+    skillMarkdown: String(input.skillMarkdown ?? "")
+  };
+}
+
+function textArray(value: unknown) {
+  return Array.isArray(value) ? value.map((item) => String(item)).filter(Boolean) : [];
+}
+
+function validEvidenceType(value: unknown): value is SkillTestCase["evidenceType"] {
+  return value === "command-output" ||
+    value === "test-log" ||
+    value === "http-response" ||
+    value === "artifact" ||
+    value === "assertion";
 }
 
 export function renderSkillMarkdown(skill: Omit<VerifiedSkillDraft, "skillMarkdown">) {

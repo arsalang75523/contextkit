@@ -340,6 +340,42 @@ test("never publishes an uncompiled legacy note", async () => {
   );
 });
 
+test("skips incomplete legacy public skills instead of crashing marketplace", async () => {
+  const kv = memoryNamespace();
+  const id = "exp_111111111111111111111111";
+  const now = new Date().toISOString();
+  await kv.put(`experience-public:${id}`, JSON.stringify({ id }));
+  await kv.put(`experience:${id}`, JSON.stringify({
+    id,
+    ownerId: "legacy-owner",
+    title: "Legacy timeout note",
+    summary: "Stored before evidence-backed repository fields were required.",
+    content: "Legacy record",
+    constraints: [],
+    decisions: [],
+    tags: ["x402"],
+    confidence: 0.7,
+    source: "legacy",
+    visibility: "public",
+    priceUsd: 0.05,
+    sales: 0,
+    earnedUsd: 0,
+    createdAt: now,
+    updatedAt: now,
+    publishedAt: now,
+    kind: "verified-skill",
+    skill: {
+      name: "legacy-timeout-note",
+      description: "Stored before evidence-backed repository fields were required.",
+      ecosystem: "x402"
+    }
+  }));
+
+  const marketplace = await new ExperienceService({ CONTEXTKIT_KV: kv }).marketplace({ limit: 100 });
+  assert.equal(marketplace.count, 0);
+  assert.equal(marketplace.totalListings, 0);
+});
+
 test("rejects an unstructured or trivial legacy write", async () => {
   const service = new ExperienceService({ CONTEXTKIT_KV: memoryNamespace() });
 
