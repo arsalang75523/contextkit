@@ -35,10 +35,10 @@ const skillTestCaseSchema = z.object({
   input: z.string().min(1).max(1_200),
   expectedOutcome: z.string().min(1).max(1_200),
   successCriteria: z.array(z.string().min(1).max(280)).min(1).max(10),
-  testMethod: z.string().min(12).max(1_200),
-  observedOutcome: z.string().min(12).max(1_200),
+  testMethod: z.string().min(4).max(1_200),
+  observedOutcome: z.string().min(4).max(1_200),
   evidenceType: z.enum(["command-output", "test-log", "http-response", "artifact", "assertion"]),
-  evidenceExcerpt: z.string().min(12).max(1_200),
+  evidenceExcerpt: z.string().min(4).max(1_200),
   passed: z.literal(true)
 });
 

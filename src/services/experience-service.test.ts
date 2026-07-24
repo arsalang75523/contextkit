@@ -463,6 +463,97 @@ test("compiles the compact LLM wire format without losing validation", async () 
   }
 });
 
+test("normalizes common test field aliases from skill compiler models", async () => {
+  const originalFetch = globalThis.fetch;
+  const candidate = compactLlmCandidate();
+  const aliasCandidate = {
+    ...candidate,
+    s: {
+      ...candidate.s,
+      tests: candidate.s.tests.map((item) => ({
+        title: item[0],
+        testInput: item[1],
+        expected: item[2],
+        criteria: [item[3]],
+        command: item[4],
+        result: item[5],
+        type: item[6],
+        excerpt: item[7],
+        status: "PASS"
+      }))
+    }
+  };
+  globalThis.fetch = async () => Response.json({
+    choices: [{ message: { content: JSON.stringify(aliasCandidate) } }]
+  });
+
+  try {
+    const service = new ExperienceService({
+      CONTEXTKIT_KV: memoryNamespace(),
+      BANKR_LLM_KEY: "bk_test_server_only",
+      BANKR_LLM_BASE_URL: "https://llm.test/v1"
+    });
+    const compiled = await service.consider({
+      messages: [
+        { role: "user", content: "Repair a Bankr x402 timeout without changing the response contract." },
+        { role: "tool", content: "Origin returned HTTP 200.\nPaid endpoint returned HTTP 200.\nSchema comparison test passed." }
+      ],
+      minConfidence: 0.72,
+      autoSave: true,
+      priceUsd: 0.05
+    }, { ownerId: "bankr-hosted" });
+
+    assert.equal(compiled.shouldSave, true);
+    assert.equal(compiled.validation?.eligible, true);
+    assert.equal(compiled.validation?.requirements.publish.passedEvidenceTests, 3);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("grounds concise technical evidence excerpts from the source conversation", async () => {
+  const originalFetch = globalThis.fetch;
+  const candidate = compactLlmCandidate();
+  const evidence = ["HTTP 200", "2 passed", "exit code 0"];
+  candidate.s.tests = candidate.s.tests.map((item, index) => [
+    item[0],
+    item[1],
+    item[2],
+    item[3],
+    index === 0 ? "curl -fsS /api/health" : index === 1 ? "pytest -q" : "npm test",
+    evidence[index],
+    item[6],
+    evidence[index],
+    item[8]
+  ]);
+  globalThis.fetch = async () => Response.json({
+    choices: [{ message: { content: JSON.stringify(candidate) } }]
+  });
+
+  try {
+    const service = new ExperienceService({
+      CONTEXTKIT_KV: memoryNamespace(),
+      BANKR_LLM_KEY: "bk_test_server_only",
+      BANKR_LLM_BASE_URL: "https://llm.test/v1"
+    });
+    const compiled = await service.consider({
+      messages: [
+        { role: "user", content: "Repair and verify the reusable workflow." },
+        { role: "tool", content: "HTTP 200\n2 passed\nexit code 0" }
+      ],
+      minConfidence: 0.72,
+      autoSave: true,
+      priceUsd: 0.05
+    }, { ownerId: "bankr-hosted" });
+
+    assert.equal(compiled.shouldSave, true);
+    assert.equal(compiled.validation?.eligible, true);
+    assert.equal(compiled.validation?.requirements.publish.passedEvidenceTests, 3);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test("supplies exact source evidence candidates to the skill compiler", async () => {
   const originalFetch = globalThis.fetch;
   let requestBody = "";

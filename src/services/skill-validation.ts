@@ -107,6 +107,9 @@ const executableActionPattern = /\b(?:analyze|audit|build|call|capture|check|com
 const testMethodPattern = /\b(?:run|ran|call|called|execute|executed|compare|compared|inspect|inspected|validate|validated|verify|verified|build|built|deploy|deployed|request|requested|query|queried|measure|measured|render|rendered|test|tested|curl|npm)\b/i;
 const observableResultPattern = /\b(?:pass(?:ed)?|fail(?:ed)?|success(?:ful(?:ly)?)?|completed?|returned?|responded?|status|exit code|created?|generated?|matched?|verified?|built|compiled|deployed|unchanged|http\s*\/?\d*(?:\.\d+)?\s*[1-5]\d\d|[1-5]\d\d)\b/i;
 const speculativeResultPattern = /\b(?:should|would|will|expected to|planned to|not yet|pending)\b/i;
+const genericTestDetailPattern = /^(?:it\s+works?|works?|ok(?:ay)?|done|pass(?:ed)?|success(?:ful)?|test|check|result|input|output|none|n\/a)$/i;
+const commandPattern = /(?:^|\s)(?:npm|pnpm|yarn|bun|node|npx|pytest|python\d*|curl|wget|go\s+test|cargo\s+test|php\s+artisan|composer|docker|git)\b/i;
+const technicalDetailPattern = /(?:https?:\/\/|\/[A-Za-z0-9_.-]+|\\[A-Za-z0-9_.-]+|--[a-z0-9-]+|\b[A-Za-z0-9_-]+\.(?:json|ya?ml|toml|tsx?|jsx?|py|go|rs|php|rb|java|cs)\b|\b(?:HTTP(?:\/\d(?:\.\d)?)?\s*)?[1-5]\d\d\b|\b\d+\s+(?:tests?\s+)?(?:passed|failed)\b|\bexit\s+(?:code\s+)?\d+\b)/i;
 
 export function validateSkill(skillInput: VerifiedSkillDraft | Partial<VerifiedSkillDraft>, threshold = 75): SkillValidationReport {
   const skill = normalizeSkillForValidation(skillInput);
@@ -174,16 +177,15 @@ export function validateSkill(skillInput: VerifiedSkillDraft | Partial<VerifiedS
     const evidenceExcerpt = String(test.evidenceExcerpt ?? "");
     const evidenceType = test.evidenceType ?? "assertion";
     if (!name.trim()) testFindings.push("Missing test name.");
-    if (input.trim().length < 12) testFindings.push("Test input is not concrete enough.");
-    if (expectedOutcome.trim().length < 12) testFindings.push("Expected outcome is not concrete enough.");
-    if (!successCriteria.length || successCriteria.some((criterion) => String(criterion).trim().length < 6)) {
+    if (!isConcreteTestDetail(input)) testFindings.push("Test input must identify a concrete payload, route, file, command, or condition.");
+    if (!isConcreteTestDetail(expectedOutcome)) testFindings.push("Expected outcome must identify a concrete result or acceptance condition.");
+    if (!successCriteria.length || successCriteria.some((criterion) => !isConcreteTestDetail(String(criterion), 2))) {
       testFindings.push("Success criteria are missing or incomplete.");
     }
-    if (testMethod.trim().length < 12) testFindings.push("Test method is not concrete enough.");
-    if (observedOutcome.trim().length < 12) testFindings.push("Observed test outcome is not concrete enough.");
-    if (evidenceExcerpt.trim().length < 12) testFindings.push("Test evidence excerpt is missing or too short.");
+    if (!isConcreteTestMethod(testMethod)) testFindings.push("Test method must name an executed command or validation action.");
+    if (!isConcreteObservedResult(observedOutcome)) testFindings.push("Observed test outcome must contain a concrete execution result.");
+    if (!isConcreteEvidenceExcerpt(evidenceExcerpt)) testFindings.push("Test evidence excerpt is missing or non-specific.");
     if (evidenceType === "assertion") testFindings.push("A plain assertion is not accepted as executed test evidence.");
-    if (!testMethodPattern.test(testMethod)) testFindings.push("Test method does not describe an executed validation action.");
     if (!observableResultPattern.test(`${observedOutcome} ${evidenceExcerpt}`)) {
       testFindings.push("Test evidence has no observable execution result.");
     }
@@ -438,6 +440,32 @@ function normalizeComparable(value: string) {
 
 function meaningfulWordCount(value: string) {
   return value.trim().split(/\s+/).filter((word) => /[a-z0-9]/i.test(word)).length;
+}
+
+function isConcreteTestDetail(value: string, minimumWords = 3) {
+  const normalized = value.trim();
+  if (!normalized || genericTestDetailPattern.test(normalized)) return false;
+  return meaningfulWordCount(normalized) >= minimumWords || technicalDetailPattern.test(normalized);
+}
+
+function isConcreteTestMethod(value: string) {
+  const normalized = value.trim();
+  if (!normalized || genericTestDetailPattern.test(normalized)) return false;
+  const executable = testMethodPattern.test(normalized) || commandPattern.test(normalized);
+  return executable && (meaningfulWordCount(normalized) >= 2 || technicalDetailPattern.test(normalized));
+}
+
+function isConcreteObservedResult(value: string) {
+  const normalized = value.trim();
+  if (!normalized || genericTestDetailPattern.test(normalized)) return false;
+  return observableResultPattern.test(normalized) &&
+    (meaningfulWordCount(normalized) >= 2 || technicalDetailPattern.test(normalized));
+}
+
+function isConcreteEvidenceExcerpt(value: string) {
+  const normalized = value.trim();
+  if (normalized.length < 4 || genericTestDetailPattern.test(normalized)) return false;
+  return meaningfulWordCount(normalized) >= 2 || technicalDetailPattern.test(normalized);
 }
 
 function yamlScalar(value: string) {

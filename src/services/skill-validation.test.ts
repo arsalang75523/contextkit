@@ -159,6 +159,64 @@ test("accepts a portable tested Bankr skill", () => {
   assert.match(validSkill().skillMarkdown, /Evidence excerpt: Paid endpoint returned HTTP 200/);
 });
 
+test("accepts concise technical commands and observable results without arbitrary character padding", () => {
+  const skill = validSkill();
+  skill.testCases = [
+    {
+      ...skill.testCases[0],
+      input: "GET /api/health",
+      expectedOutcome: "HTTP 200",
+      successCriteria: ["HTTP 200"],
+      testMethod: "curl -fsS /api/health",
+      observedOutcome: "HTTP 200",
+      evidenceExcerpt: "HTTP/2 200"
+    },
+    {
+      ...skill.testCases[1],
+      input: "tests/test_auth.py",
+      expectedOutcome: "2 passed",
+      successCriteria: ["2 tests passed"],
+      testMethod: "pytest -q tests/test_auth.py",
+      observedOutcome: "2 passed",
+      evidenceExcerpt: "2 passed in 0.31s"
+    },
+    {
+      ...skill.testCases[2],
+      input: "package.json test script",
+      expectedOutcome: "exit code 0",
+      successCriteria: ["exit code 0"],
+      testMethod: "npm test",
+      observedOutcome: "exit code 0",
+      evidenceExcerpt: "exit code 0"
+    }
+  ];
+  rerender(skill);
+
+  const report = validateSkill(skill);
+  assert.equal(report.eligible, true);
+  assert.equal(report.tests.every((item) => item.passed), true);
+  assert.equal(report.tests.some((item) => item.findings.some((finding) => finding.includes("concrete"))), false);
+});
+
+test("still rejects vague test labels even when they are marked as passing", () => {
+  const skill = validSkill();
+  skill.testCases[0] = {
+    ...skill.testCases[0],
+    input: "input",
+    expectedOutcome: "it works",
+    successCriteria: ["success"],
+    testMethod: "test",
+    observedOutcome: "passed",
+    evidenceExcerpt: "it works"
+  };
+  rerender(skill);
+
+  const report = validateSkill(skill);
+  assert.equal(report.eligible, false);
+  assert.equal(report.tests[0]?.passed, false);
+  assert.ok((report.tests[0]?.findings.length ?? 0) >= 5);
+});
+
 test("rejects project-specific paths and embedded secrets", () => {
   const skill = validSkill();
   skill.steps[0] = "Read /Users/alice/private-repo/.env with api_key=sk_1234567890123456.";

@@ -65,6 +65,15 @@ const autoCaptureBootstrap = `npx @basedchef/contextkit-autocapture setup
 # Optional verification
 contextkit-autocapture doctor`;
 
+const firstSellerSetup = `npx @basedchef/contextkit-autocapture@latest setup
+
+# Confirm OAuth, MCP, and auto-capture
+contextkit-autocapture doctor`;
+
+const firstSellerPrompt = `Turn the ContextKit draft from this completed task into a complete skill repository.
+Validate and push the bundle, show me the validation report,
+and ask for my approval before publishing.`;
+
 const extensionBuild = `npm run extension:package
 
 # Then install this file from the IDE extension screen
@@ -286,6 +295,85 @@ export default function McpGuidePage() {
           </div>
         </section>
 
+        <section id="first-sale" className="mt-14 scroll-mt-24">
+          <SectionHeading
+            number="00"
+            eyebrow="First skill"
+            title="From first sign-in to your first paid clone."
+            text="One complete seller path. ContextKit handles capture and validation, the agent assembles the repository, and only you can approve a public listing."
+          />
+
+          <div className="mt-8 overflow-hidden rounded-[1.5rem] border border-mint/20 bg-[linear-gradient(145deg,rgba(107,240,192,0.065),rgba(7,13,12,0.96)_42%,rgba(87,205,255,0.045))] shadow-[0_22px_80px_rgba(0,0,0,0.28)]">
+            <div className="grid border-b border-white/[0.08] lg:grid-cols-[0.78fr_1.22fr]">
+              <div className="border-b border-white/[0.08] p-6 sm:p-8 lg:border-b-0 lg:border-r">
+                <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-mint">One-command onboarding</p>
+                <h3 className="mt-3 max-w-md text-2xl font-semibold tracking-[-0.035em] text-white sm:text-3xl">Connect the account. Let the bridge configure every detected agent.</h3>
+                <p className="mt-4 max-w-xl text-sm leading-7 text-white/58">Create or sign in to a ContextKit account, verify the email, and add USDC credits. Run setup once; browser OAuth opens, then ContextKit installs the supported Claude, Codex, Hermes, OpenCode, and OpenClaw adapters it detects.</p>
+                <div className="mt-6 flex flex-wrap gap-2">
+                  <SellerControl label="Automatic" text="capture + private draft" tone="mint" />
+                  <SellerControl label="Agent" text="bundle + validation" tone="aqua" />
+                  <SellerControl label="You" text="public approval" tone="amber" />
+                </div>
+              </div>
+              <div className="p-4 sm:p-5">
+                <CodeBlock code={firstSellerSetup} />
+                <p className="mt-3 px-1 text-xs leading-5 text-white/42">No API key copy, shell export, or manual per-agent config is required. OAuth credentials stay in a user-only local file.</p>
+              </div>
+            </div>
+
+            <div className="relative grid gap-px bg-white/[0.08] md:grid-cols-2 xl:grid-cols-4">
+              <SellerJourneyStep index="01" label="Connect" title="Account + credits" text="Sign in, verify email, fund the account, and approve secure OAuth access." tone="mint" />
+              <SellerJourneyStep index="02" label="Work" title="Finish real work" text="Solve a reusable task with actual files, commands, tests, and observed output." tone="aqua" />
+              <SellerJourneyStep index="03" label="Capture" title="Private by default" text="The completion hook rejects trivial work and saves a qualifying method as a private draft." tone="mint" />
+              <SellerJourneyStep index="04" label="Build" title="Complete repository" text="The agent creates SKILL.md, manifest, license, source, tests, examples, and checksums." tone="aqua" />
+              <SellerJourneyStep index="05" label="Prove" title="Pass the gates" text="ContextKit validates evidence, safe files, portability, reproducibility, and secrets." tone="amber" />
+              <SellerJourneyStep index="06" label="Approve" title="You control publish" text="Review the report and explicitly approve the immutable $0.05 marketplace listing." tone="amber" />
+              <SellerJourneyStep index="07" label="Clone" title="Buyer gets everything" text="A paid buyer receives the full verified file tree, not only a SKILL.md summary." tone="mint" />
+              <SellerJourneyStep index="08" label="Earn" title="Track every sale" text="Installs, sales, and skill revenue appear in Dashboard → Skills." tone="aqua" />
+            </div>
+          </div>
+
+          <div className="mt-5 grid gap-5 xl:grid-cols-[1.08fr_0.92fr]">
+            <article className="overflow-hidden rounded-[1.35rem] border border-aqua/20 bg-aqua/[0.035]">
+              <div className="border-b border-aqua/15 px-6 py-5">
+                <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-aqua">Give this to the agent after a successful task</p>
+                <h3 className="mt-2 text-xl font-semibold text-white">One prompt moves the private draft toward market.</h3>
+              </div>
+              <div className="p-4"><CodeBlock code={firstSellerPrompt} /></div>
+              <p className="px-6 pb-6 text-sm leading-6 text-white/52">The agent can compile, validate, and push. It must stop before public publishing and show the report for your approval.</p>
+            </article>
+
+            <article className="rounded-[1.35rem] border border-amber/20 bg-amber/[0.035] p-6 sm:p-7">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-amber">Public quality gate</p>
+                  <h3 className="mt-2 text-xl font-semibold text-white">Proof before price.</h3>
+                </div>
+                <span className="rounded-full border border-amber/25 bg-amber/[0.08] px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.14em] text-amber">Required</span>
+              </div>
+              <div className="mt-6 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.08]">
+                <SellerMetric value="75+" label="quality score" />
+                <SellerMetric value="3" label="grounded PASS proofs" />
+                <SellerMetric value="0" label="secret files" />
+                <SellerMetric value="$0.05" label="listing price" />
+              </div>
+              <p className="mt-5 text-sm leading-6 text-white/52">A claim is not evidence. Public skills need reproducible commands, verbatim successful output, safety boundaries, rollback, and a portable bundle another agent can actually run.</p>
+            </article>
+          </div>
+
+          <div className="mt-5 flex flex-col gap-5 rounded-[1.35rem] border border-mint/20 bg-mint/[0.055] p-6 sm:flex-row sm:items-center sm:justify-between sm:p-7">
+            <div>
+              <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-mint">Seller outcome</p>
+              <h3 className="mt-2 text-xl font-semibold text-white">Real task → verified repository → paid clone.</h3>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-white/54">Start with credits, work normally, and approve only after the evidence report is clean. Buyers can inspect the listing, pay, and clone the complete immutable repository.</p>
+            </div>
+            <div className="flex shrink-0 flex-wrap gap-2">
+              <Link href="/dashboard/credits" className="inline-flex h-10 items-center gap-2 rounded-lg bg-mint px-4 text-sm font-semibold text-ink transition hover:bg-white">Add credits <ArrowRight className="h-4 w-4" /></Link>
+              <Link href="/marketplace" className="inline-flex h-10 items-center gap-2 rounded-lg border border-mint/25 bg-black/20 px-4 text-sm font-semibold text-mint transition hover:bg-mint/10 hover:text-white">View marketplace</Link>
+            </div>
+          </div>
+        </section>
+
         <section id="claude" className="mt-14 scroll-mt-24">
           <SectionHeading number="01" eyebrow="Claude app" title="Connect from Claude&apos;s Connector UI." text="Use this when you are adding ContextKit from the Claude app settings, not by editing a local file." />
           <div className="mt-8 grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">
@@ -398,6 +486,42 @@ function FlowStep({ index, icon, title, text }: { index: string; icon: ReactNode
 
 function McpRepositoryStep({ index, tool, title, text }: { index: string; tool: string; title: string; text: string }) {
   return <article className="min-w-0 bg-carbon/92 p-5"><div className="flex items-center justify-between gap-3"><span className="font-mono text-[10px] text-mint">{index}</span><span className="h-1.5 w-1.5 rounded-full bg-aqua" /></div><code className="mt-4 block break-all text-xs text-aqua">{tool}</code><h3 className="mt-3 text-lg font-semibold text-white">{title}</h3><p className="mt-2 text-sm leading-6 text-white/52">{text}</p></article>;
+}
+
+function SellerJourneyStep({ index, label, title, text, tone }: { index: string; label: string; title: string; text: string; tone: "mint" | "aqua" | "amber" }) {
+  const tones = {
+    mint: "border-mint/25 bg-mint/[0.08] text-mint",
+    aqua: "border-aqua/25 bg-aqua/[0.08] text-aqua",
+    amber: "border-amber/25 bg-amber/[0.08] text-amber"
+  } as const;
+
+  return (
+    <article className="relative min-h-[13rem] bg-carbon/92 p-5 sm:p-6">
+      <div className="flex items-center justify-between gap-3">
+        <span className={`rounded-full border px-2.5 py-1 font-mono text-[9px] uppercase tracking-[0.15em] ${tones[tone]}`}>{label}</span>
+        <span className="font-mono text-[10px] text-white/28">{index}</span>
+      </div>
+      <div className="mt-8 flex items-center gap-2">
+        <span className={`h-2 w-2 rounded-full ${tone === "mint" ? "bg-mint" : tone === "aqua" ? "bg-aqua" : "bg-amber"}`} />
+        <span className="h-px flex-1 bg-white/[0.09]" />
+      </div>
+      <h3 className="mt-5 text-lg font-semibold text-white">{title}</h3>
+      <p className="mt-2 text-sm leading-6 text-white/50">{text}</p>
+    </article>
+  );
+}
+
+function SellerControl({ label, text, tone }: { label: string; text: string; tone: "mint" | "aqua" | "amber" }) {
+  const tones = {
+    mint: "border-mint/20 bg-mint/[0.06] text-mint",
+    aqua: "border-aqua/20 bg-aqua/[0.06] text-aqua",
+    amber: "border-amber/20 bg-amber/[0.06] text-amber"
+  } as const;
+  return <span className={`rounded-full border px-3 py-1.5 font-mono text-[9px] uppercase tracking-[0.13em] ${tones[tone]}`}><strong>{label}</strong><span className="ml-1.5 text-white/42">{text}</span></span>;
+}
+
+function SellerMetric({ value, label }: { value: string; label: string }) {
+  return <div className="bg-carbon/75 p-4"><p className="font-mono text-xl font-semibold text-white">{value}</p><p className="mt-1 font-mono text-[9px] uppercase tracking-[0.13em] text-white/36">{label}</p></div>;
 }
 
 function Step({ number, text }: { number: string; text: string }) {

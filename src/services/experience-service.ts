@@ -955,13 +955,14 @@ export class ExperienceService {
           "Remove names, private paths/domains/IDs, credentials, secrets, and environment-specific values; parameterize necessary values.",
           "Require exactly 3 concise executable steps, 1 verification, 1 failure response, 1 safety boundary, and 1 rollback.",
           "Return 1-3 tests that were actually executed in the conversation; never invent hypothetical tests or results.",
-          "Use only exact excerpts from evidenceCandidates for test evidence. Each test needs method, observed outcome, PASS=true, hard evidence type (command-output, test-log, http-response, or artifact), and an exact 12+ character excerpt.",
+          "Use only exact excerpts from evidenceCandidates for test evidence. Each test needs a concrete input, expected outcome, success criterion, executed method, observed outcome, PASS=true, hard evidence type (command-output, test-log, http-response, or artifact), and an exact source excerpt.",
+          "Concrete technical shorthand is valid when exact: npm test, pytest -q, GET /api/health, HTTP 200, exit code 0, and 3 passed. Never replace these with vague labels such as input, output, test, success, or it works.",
           "When evidenceCandidates contains at least three independent passing results, return exactly three tests using three distinct excerpts. Otherwise return only the grounded tests available; the draft must remain private.",
           "Never treat a claim like 'it works', future plan, generic status sentence, or model-authored assertion as test evidence.",
           "Use distinct evidence excerpts for independent tests. If no executed passing test evidence exists, set save=false.",
           "Reject greetings, trivial requests, placeholders, plans, brainstorms, incomplete attempts, generic notes, pure summaries, one-off private project details, private data, or invented evidence.",
           "A reusable skill needs concrete prerequisites, inputs, outputs, exactly 3 distinct executable steps, verification, failure handling, a safety boundary, rollback, and at least 2 tags.",
-          "Keep the full JSON below 700 tokens; each string must be a complete thought and no longer than 160 characters.",
+          "Keep the full JSON below 1100 tokens; every field must be complete, but concise technical commands and status results may remain verbatim.",
           `Set save=true only when confidence >= ${minConfidence}; otherwise return the same schema with concise empty skill fields.`
         ].join(" ")
       },
@@ -1217,16 +1218,19 @@ function normalizeSkill(input: unknown, evidence: VerifiedSkillDraft["evidence"]
         };
       }
       const test = objectValue(item);
+      const successCriteria = test.successCriteria ?? test.criteria ?? test.success ?? test.acceptanceCriteria;
       return {
-        name: redactSensitive(cleanText(String(test.name ?? "scenario"))).slice(0, 120),
-        input: redactSensitive(cleanText(String(test.input ?? ""))).slice(0, 1_200),
-        expectedOutcome: redactSensitive(cleanText(String(test.expectedOutcome ?? ""))).slice(0, 1_200),
-        successCriteria: cleanList(arrayOfStrings(test.successCriteria).map(redactSensitive)).slice(0, 10),
-        testMethod: redactSensitive(cleanText(String(test.testMethod ?? ""))).slice(0, 1_200),
-        observedOutcome: redactSensitive(cleanText(String(test.observedOutcome ?? ""))).slice(0, 1_200),
-        evidenceType: normalizeEvidenceType(test.evidenceType),
-        evidenceExcerpt: redactSensitive(cleanText(String(test.evidenceExcerpt ?? ""))).slice(0, 1_200),
-        passed: booleanValue(test.passed),
+        name: redactSensitive(cleanText(String(test.name ?? test.title ?? "scenario"))).slice(0, 120),
+        input: redactSensitive(cleanText(String(test.input ?? test.testInput ?? test.fixture ?? test.target ?? ""))).slice(0, 1_200),
+        expectedOutcome: redactSensitive(cleanText(String(test.expectedOutcome ?? test.expected ?? test.expectedResult ?? ""))).slice(0, 1_200),
+        successCriteria: cleanList(
+          (Array.isArray(successCriteria) ? arrayOfStrings(successCriteria) : [String(successCriteria ?? "")]).map(redactSensitive)
+        ).slice(0, 10),
+        testMethod: redactSensitive(cleanText(String(test.testMethod ?? test.method ?? test.command ?? test.executed ?? ""))).slice(0, 1_200),
+        observedOutcome: redactSensitive(cleanText(String(test.observedOutcome ?? test.observed ?? test.actualOutcome ?? test.result ?? ""))).slice(0, 1_200),
+        evidenceType: normalizeEvidenceType(test.evidenceType ?? test.type),
+        evidenceExcerpt: redactSensitive(cleanText(String(test.evidenceExcerpt ?? test.evidence ?? test.excerpt ?? test.outputExcerpt ?? ""))).slice(0, 1_200),
+        passed: booleanValue(test.passed ?? test.pass ?? test.status),
         evidenceVerified: Boolean(test.evidenceVerified),
         sourceMessageIndex: numberValue(test.sourceMessageIndex)
       };
@@ -1267,7 +1271,7 @@ function groundSkillTestEvidence(skill: VerifiedSkillDraft, messages: Conversati
   const sanitizedMessages = messages.map((message) => redactSensitive(cleanText(message.content)));
   const testCases = skill.testCases.map((test) => {
     const evidence = normalizeComparable(test.evidenceExcerpt);
-    const sourceMessageIndex = evidence.length >= 12
+    const sourceMessageIndex = evidence.length >= 4
       ? sanitizedMessages.findIndex((message) => normalizeComparable(message).includes(evidence))
       : -1;
     return {
@@ -1292,7 +1296,7 @@ function sourceEvidenceCandidates(messages: ConversationMessage[]) {
       .split(/\r?\n/)
       .flatMap((line) => line.split(/(?<=[.!?])\s+/))
       .map((line) => cleanText(line))
-      .filter((line) => line.length >= 12 && line.length <= 360);
+      .filter((line) => line.length >= 4 && line.length <= 360);
 
     for (const excerpt of segments) {
       const normalized = normalizeComparable(excerpt);
