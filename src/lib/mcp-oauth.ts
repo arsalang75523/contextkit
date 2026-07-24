@@ -303,7 +303,125 @@ export function authorizationFormHtml(authorization: AuthorizationRequest, accou
     ...(authorization.state ? [["state", authorization.state]] : [])
   ].map(([key, value]) => `<input type="hidden" name="${escapeHtml(key)}" value="${escapeHtml(value)}">`).join("");
 
-  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Authorize ContextKit MCP</title><style>body{margin:0;background:#07100f;color:#edf8f4;font:16px ui-sans-serif,system-ui;display:grid;min-height:100vh;place-items:center}.card{max-width:540px;margin:24px;padding:32px;border:1px solid #24443a;border-radius:18px;background:#0b1915;box-shadow:0 24px 80px #0008}h1{margin:0 0 12px;font-size:28px}.muted{color:#a7c4b8;line-height:1.6}.scope{margin:20px 0;padding:16px;border-radius:12px;background:#10251f}.actions{display:flex;gap:12px;margin-top:24px}button{border:0;border-radius:10px;padding:12px 16px;font:inherit;font-weight:700;cursor:pointer}.allow{background:#82f5bd;color:#062116}.deny{background:#26342f;color:#eaf7f1}</style></head><body><main class="card"><p class="muted">ContextKit MCP authorization</p><h1>Connect ${escapeHtml(authorization.client.clientName)}</h1><p class="muted">Signed in as ${escapeHtml(account.name || "your ContextKit account")}. This client will be able to call ContextKit MCP tools and spend credits from this account.</p><div class="scope"><strong>Requested permission</strong><br><span class="muted">context:write</span></div><form method="post" action="/oauth/authorize">${fields}<div class="actions"><button class="allow" name="decision" value="allow">Allow connection</button><button class="deny" name="decision" value="deny">Cancel</button></div></form></main></body></html>`;
+  const clientName = escapeHtml(authorization.client.clientName);
+  const accountName = escapeHtml(account.name || "your ContextKit account");
+
+  return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Connect ${clientName} | ContextKit</title>
+  <style>
+    :root{--ink:#f2fff9;--muted:#91a69d;--line:rgba(181,255,224,.14);--line-strong:rgba(115,243,195,.34);--panel:rgba(9,16,13,.88);--mint:#73f3c3;--cyan:#68d8ff;--coral:#ff7b6b;--bg:#040706}
+    *{box-sizing:border-box}
+    html{min-height:100%;background:var(--bg)}
+    body{min-height:100vh;margin:0;overflow-x:hidden;background:radial-gradient(circle at 12% 9%,rgba(115,243,195,.13),transparent 28rem),radial-gradient(circle at 92% 84%,rgba(104,216,255,.08),transparent 28rem),var(--bg);color:var(--ink);font:16px/1.5 ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+    body:before{position:fixed;inset:0;pointer-events:none;content:"";background-image:linear-gradient(rgba(219,255,239,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(219,255,239,.04) 1px,transparent 1px);background-size:48px 48px;mask-image:linear-gradient(to bottom,black,transparent 88%)}
+    .shell{position:relative;display:grid;grid-template-columns:minmax(0,.9fr) minmax(480px,1.1fr);gap:clamp(36px,7vw,112px);width:min(1120px,calc(100% - 40px));min-height:100vh;margin:auto;padding:clamp(32px,6vh,72px) 0;align-items:center}
+    .brand{display:flex;align-items:center;gap:13px;margin-bottom:clamp(56px,10vh,112px)}
+    .brand-mark{position:relative;display:grid;width:44px;height:44px;border:1px solid var(--line-strong);border-radius:13px;background:linear-gradient(145deg,rgba(115,243,195,.12),rgba(104,216,255,.04));place-items:center;box-shadow:inset 0 0 24px rgba(115,243,195,.06)}
+    .brand-mark:before{width:19px;height:12px;border-left:2px solid var(--mint);border-right:2px solid var(--mint);content:"";transform:skew(-15deg);box-shadow:7px 0 0 -5px var(--mint)}
+    .brand-mark:after{position:absolute;right:-3px;bottom:-3px;width:8px;height:8px;border:3px solid var(--bg);border-radius:50%;background:var(--mint);content:"";box-shadow:0 0 16px var(--mint)}
+    .brand-copy strong{display:block;font-size:17px;letter-spacing:.08em}.brand-copy span{display:block;margin-top:2px;color:var(--muted);font:10px/1.2 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.2em;text-transform:uppercase}
+    .eyebrow{display:flex;align-items:center;gap:10px;margin:0 0 18px;color:var(--mint);font:700 11px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.19em;text-transform:uppercase}
+    .pulse{width:7px;height:7px;border-radius:50%;background:var(--mint);box-shadow:0 0 0 5px rgba(115,243,195,.08),0 0 18px rgba(115,243,195,.6);animation:pulse 2.4s ease-in-out infinite}
+    h1{max-width:620px;margin:0;font-size:clamp(42px,5.4vw,70px);line-height:.96;letter-spacing:-.055em}
+    h1 em{display:block;margin-top:8px;background:linear-gradient(90deg,var(--mint),var(--cyan));background-clip:text;-webkit-background-clip:text;color:transparent;font-style:normal}
+    .lead{max-width:540px;margin:26px 0 0;color:#b8c9c1;font-size:17px;line-height:1.75}
+    .trust-row{display:flex;flex-wrap:wrap;gap:10px;margin-top:32px}
+    .trust{display:flex;align-items:center;gap:8px;padding:9px 12px;border:1px solid var(--line);border-radius:999px;background:rgba(9,16,13,.54);color:#b8c9c1;font:600 10px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.1em;text-transform:uppercase}
+    .trust:before{width:6px;height:6px;border-radius:50%;background:var(--mint);content:"";box-shadow:0 0 9px rgba(115,243,195,.45)}
+    .card{position:relative;overflow:hidden;border:1px solid var(--line);border-radius:24px;background:linear-gradient(145deg,rgba(255,255,255,.025),transparent 36%),var(--panel);box-shadow:0 32px 100px rgba(0,0,0,.42),inset 0 1px rgba(255,255,255,.035);backdrop-filter:blur(18px)}
+    .card:before{position:absolute;inset:0;pointer-events:none;background:linear-gradient(120deg,rgba(115,243,195,.06),transparent 25%,transparent 72%,rgba(104,216,255,.04));content:""}
+    .card-head,.client,.permission,.identity,.actions,.card-foot{position:relative}
+    .card-head{display:flex;align-items:center;justify-content:space-between;padding:20px 22px;border-bottom:1px solid var(--line)}
+    .overline{color:var(--muted);font:700 10px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.18em;text-transform:uppercase}
+    .live{display:flex;align-items:center;gap:8px;color:var(--mint);font:700 10px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.16em;text-transform:uppercase}.live:before{width:6px;height:6px;border-radius:50%;background:var(--mint);content:"";box-shadow:0 0 12px var(--mint)}
+    .client{display:grid;grid-template-columns:54px 1fr;gap:16px;padding:26px 24px 20px;align-items:center}
+    .client-icon{display:grid;width:54px;height:54px;border:1px solid var(--line-strong);border-radius:16px;background:rgba(115,243,195,.07);color:var(--mint);font:700 17px ui-monospace,SFMono-Regular,Menlo,monospace;place-items:center}
+    .client-icon:before{content:"MCP"}
+    .client-label{margin:0 0 5px;color:var(--muted);font:700 10px ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.14em;text-transform:uppercase}
+    .client-name{margin:0;font-size:21px;line-height:1.25;letter-spacing:-.02em;overflow-wrap:anywhere}
+    .identity{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:0 24px;padding:14px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+    .identity span{color:var(--muted);font:10px ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.13em;text-transform:uppercase}.identity strong{max-width:60%;font-size:13px;font-weight:650;text-align:right;overflow-wrap:anywhere}
+    .permission{margin:20px 24px;padding:18px;border:1px solid rgba(115,243,195,.2);border-radius:15px;background:rgba(115,243,195,.055)}
+    .permission-top{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+    .permission h2{margin:4px 0 5px;font:700 14px/1.3 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--ink)}.permission p{margin:0;color:var(--muted);font-size:13px;line-height:1.55}
+    .scope{flex:none;padding:7px 9px;border:1px solid rgba(104,216,255,.23);border-radius:7px;background:rgba(104,216,255,.06);color:var(--cyan);font:700 10px/1 ui-monospace,SFMono-Regular,Menlo,monospace}
+    .permission-note{display:flex;gap:9px;margin-top:14px;padding-top:14px;border-top:1px solid rgba(115,243,195,.11);color:#a9bbb3;font-size:12px;line-height:1.5}.permission-note:before{color:var(--mint);content:"//";font:700 11px ui-monospace,SFMono-Regular,Menlo,monospace}
+    form{margin:0}
+    .actions{display:grid;grid-template-columns:1fr auto;gap:10px;padding:4px 24px 24px}
+    button{min-height:50px;border-radius:12px;padding:0 18px;font:750 14px ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;cursor:pointer;transition:transform .18s ease,border-color .18s ease,background .18s ease,box-shadow .18s ease}
+    button:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}
+    button:hover{transform:translateY(-1px)}
+    .allow{border:1px solid var(--mint);background:var(--mint);color:#031a10;box-shadow:0 12px 34px rgba(115,243,195,.16)}.allow:hover{background:#8bffd0;box-shadow:0 14px 40px rgba(115,243,195,.24)}
+    .deny{border:1px solid var(--line);background:rgba(255,255,255,.025);color:#b8c9c1}.deny:hover{border-color:rgba(255,123,107,.35);color:#fff}
+    .card-foot{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:15px 24px;border-top:1px solid var(--line);color:#71857c;font:9px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.1em;text-transform:uppercase}
+    @keyframes pulse{0%,100%{opacity:.55;transform:scale(.9)}50%{opacity:1;transform:scale(1.08)}}
+    @media(max-width:880px){.shell{grid-template-columns:1fr;width:min(620px,calc(100% - 32px));padding:28px 0 48px}.brand{margin-bottom:64px}.intro{padding:0 4px}h1{font-size:clamp(40px,12vw,62px)}.card{margin-top:4px}}
+    @media(max-width:520px){.shell{width:min(100% - 24px,620px)}.brand{margin-bottom:46px}.lead{font-size:15px}.trust-row{gap:7px}.trust{padding:8px 9px;font-size:9px}.card{border-radius:19px}.client{grid-template-columns:45px 1fr;padding:22px 18px 17px}.client-icon{width:45px;height:45px;border-radius:13px;font-size:13px}.identity,.permission{margin-left:18px;margin-right:18px}.permission-top{display:block}.scope{display:inline-block;margin-top:13px}.actions{grid-template-columns:1fr;padding:2px 18px 18px}.allow{order:1}.deny{order:2}.card-foot{align-items:flex-start;padding:14px 18px}.card-foot span:last-child{text-align:right}}
+    @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="intro" aria-labelledby="connection-title">
+      <div class="brand" aria-label="ContextKit">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <span class="brand-copy"><strong>ContextKit</strong><span>Agent continuity layer</span></span>
+      </div>
+      <p class="eyebrow"><span class="pulse" aria-hidden="true"></span>Secure MCP handshake</p>
+      <h1 id="connection-title">Connect your agent.<em>Keep control.</em></h1>
+      <p class="lead">Authorize a scoped connection for automatic skill capture and agent continuity. No API key copying, no private wallet access, and no public publishing without your approval.</p>
+      <div class="trust-row" aria-label="Connection safeguards">
+        <span class="trust">PKCE S256</span>
+        <span class="trust">Scoped access</span>
+        <span class="trust">Revocable</span>
+      </div>
+    </section>
+    <section class="card" aria-label="ContextKit connection approval">
+      <header class="card-head">
+        <span class="overline">Connection request</span>
+        <span class="live">Verified origin</span>
+      </header>
+      <div class="client">
+        <span class="client-icon" aria-hidden="true"></span>
+        <div>
+          <p class="client-label">Agent client</p>
+          <h2 class="client-name">${clientName}</h2>
+        </div>
+      </div>
+      <div class="identity">
+        <span>Signed in as</span>
+        <strong>${accountName}</strong>
+      </div>
+      <div class="permission">
+        <div class="permission-top">
+          <div>
+            <h2>Context write access</h2>
+            <p>Call ContextKit MCP tools and use credits from this account.</p>
+          </div>
+          <span class="scope">context:write</span>
+        </div>
+        <div class="permission-note">Private drafts may be captured automatically. Public marketplace publishing still requires explicit approval.</div>
+      </div>
+      <form method="post" action="/oauth/authorize">
+        ${fields}
+        <div class="actions">
+          <button class="allow" type="submit" name="decision" value="allow">Allow secure connection &rarr;</button>
+          <button class="deny" type="submit" name="decision" value="deny">Cancel</button>
+        </div>
+      </form>
+      <footer class="card-foot">
+        <span>OAuth 2.0 + PKCE</span>
+        <span>Resource: contextkit.pro/mcp</span>
+      </footer>
+    </section>
+  </main>
+</body>
+</html>`;
 }
 
 function requestedScopes(scope: string | null) {

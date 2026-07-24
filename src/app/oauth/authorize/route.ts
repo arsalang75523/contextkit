@@ -43,7 +43,19 @@ function redirectToLogin(request: Request) {
 
 function authorizationError(error: unknown) {
   const oauthError = error instanceof OAuthRequestError ? error : new OAuthRequestError("server_error", 500);
-  return html(`<!doctype html><title>ContextKit OAuth error</title><main><h1>Connection could not be authorized</h1><p>${escapeHtml(oauthError.message)}</p></main>`, oauthError.status);
+  return html(`<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>ContextKit connection error</title>
+  <style>
+    *{box-sizing:border-box}body{display:grid;min-height:100vh;margin:0;padding:24px;background:radial-gradient(circle at 50% 10%,rgba(255,123,107,.1),transparent 28rem),#040706;color:#f2fff9;font:16px/1.6 ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;place-items:center}main{width:min(560px,100%);padding:38px;border:1px solid rgba(255,123,107,.25);border-radius:22px;background:rgba(10,15,13,.94);box-shadow:0 30px 100px rgba(0,0,0,.45)}.label{margin:0 0 12px;color:#ff7b6b;font:700 10px ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.18em;text-transform:uppercase}h1{margin:0;font-size:clamp(34px,7vw,52px);line-height:1;letter-spacing:-.045em}p:last-child{margin:20px 0 0;padding:15px;border:1px solid rgba(181,255,224,.12);border-radius:12px;background:#050807;color:#a9bbb3;font:13px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;overflow-wrap:anywhere}
+  </style>
+</head>
+<body><main><p class="label">OAuth handshake interrupted</p><h1>Connection could not be authorized.</h1><p>${escapeHtml(oauthError.message)}</p></main></body>
+</html>`, oauthError.status);
 }
 
 function html(body: string, status = 200) {
@@ -52,7 +64,7 @@ function html(body: string, status = 200) {
     headers: {
       "Content-Type": "text/html; charset=utf-8",
       "Cache-Control": "no-store",
-      "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'",
+      "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'",
       "Referrer-Policy": "no-referrer",
       "X-Content-Type-Options": "nosniff"
     }

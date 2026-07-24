@@ -256,11 +256,11 @@ async function callbackServer(expectedState) {
     response.writeHead(valid ? 200 : 400, {
       "Content-Type": "text/html; charset=utf-8",
       "Cache-Control": "no-store",
+      "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'",
+      "Referrer-Policy": "no-referrer",
       "X-Content-Type-Options": "nosniff"
     });
-    response.end(valid
-      ? "<!doctype html><title>ContextKit connected</title><main style=\"font:18px system-ui;padding:48px\"><h1>ContextKit connected</h1><p>You can close this tab and return to the terminal.</p></main>"
-      : "<!doctype html><title>ContextKit connection failed</title><main style=\"font:18px system-ui;padding:48px\"><h1>Connection failed</h1><p>Return to the terminal and retry setup.</p></main>");
+    response.end(oauthCallbackPage(valid));
 
     if (settled) return;
     settled = true;
@@ -292,6 +292,80 @@ async function callbackServer(expectedState) {
       await new Promise((resolveClose) => server.close(resolveClose));
     }
   };
+}
+
+function oauthCallbackPage(connected) {
+  const stateClass = connected ? "connected" : "failed";
+  const status = connected ? "Handshake complete" : "Handshake interrupted";
+  const title = connected ? "ContextKit connected." : "Connection failed.";
+  const detail = connected
+    ? "Your scoped MCP credential is being stored locally. Auto-capture setup will finish in the terminal."
+    : "No credential was stored. Return to the terminal to review the error and retry setup.";
+  const terminalLine = connected
+    ? "$ contextkit-autocapture setup  // connected"
+    : "$ contextkit-autocapture setup  // retry";
+
+  return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>${connected ? "ContextKit connected" : "ContextKit connection failed"}</title>
+  <style>
+    :root{--ink:#f2fff9;--muted:#91a69d;--line:rgba(181,255,224,.14);--mint:#73f3c3;--cyan:#68d8ff;--coral:#ff7b6b;--bg:#040706}
+    *{box-sizing:border-box}
+    html{min-height:100%;background:var(--bg)}
+    body{display:grid;min-height:100vh;margin:0;overflow:hidden;background:radial-gradient(circle at 50% 22%,rgba(115,243,195,.12),transparent 28rem),radial-gradient(circle at 90% 90%,rgba(104,216,255,.07),transparent 25rem),var(--bg);color:var(--ink);font:16px/1.5 ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;place-items:center}
+    body:before{position:fixed;inset:0;pointer-events:none;content:"";background-image:linear-gradient(rgba(219,255,239,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(219,255,239,.04) 1px,transparent 1px);background-size:48px 48px;mask-image:radial-gradient(circle at 50% 40%,black,transparent 78%)}
+    .wrap{position:relative;width:min(680px,calc(100% - 28px));padding:32px 0}
+    .brand{display:flex;align-items:center;justify-content:center;gap:11px;margin-bottom:28px;color:#cce0d7;font:700 11px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.16em;text-transform:uppercase}
+    .brand:before{width:8px;height:8px;border-radius:50%;background:var(--mint);content:"";box-shadow:0 0 16px var(--mint)}
+    .card{position:relative;overflow:hidden;border:1px solid var(--line);border-radius:26px;background:linear-gradient(145deg,rgba(255,255,255,.03),transparent 36%),rgba(8,15,12,.92);box-shadow:0 34px 110px rgba(0,0,0,.5),inset 0 1px rgba(255,255,255,.04);text-align:center}
+    .card:before{position:absolute;inset:0;pointer-events:none;background:linear-gradient(120deg,rgba(115,243,195,.065),transparent 26%,transparent 74%,rgba(104,216,255,.04));content:""}
+    .content{position:relative;padding:clamp(34px,8vw,68px)}
+    .signal{position:relative;display:grid;width:82px;height:82px;margin:0 auto 30px;border:1px solid rgba(115,243,195,.3);border-radius:24px;background:rgba(115,243,195,.07);color:var(--mint);place-items:center;box-shadow:0 0 0 10px rgba(115,243,195,.025),0 0 50px rgba(115,243,195,.08)}
+    .signal:before{font:800 31px/1 ui-monospace,SFMono-Regular,Menlo,monospace;content:"✓"}
+    .signal:after{position:absolute;right:-4px;bottom:-4px;width:12px;height:12px;border:4px solid var(--bg);border-radius:50%;background:var(--mint);content:"";box-shadow:0 0 15px var(--mint);animation:pulse 2s ease-in-out infinite}
+    .failed .signal{border-color:rgba(255,123,107,.35);background:rgba(255,123,107,.07);color:var(--coral);box-shadow:0 0 0 10px rgba(255,123,107,.025),0 0 50px rgba(255,123,107,.08)}
+    .failed .signal:before{content:"!"}.failed .signal:after{background:var(--coral);box-shadow:0 0 15px var(--coral)}
+    .eyebrow{margin:0 0 14px;color:var(--mint);font:700 10px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.18em;text-transform:uppercase}.failed .eyebrow{color:var(--coral)}
+    h1{margin:0;font-size:clamp(38px,8vw,60px);line-height:1;letter-spacing:-.05em}
+    .detail{max-width:510px;margin:20px auto 0;color:#a9bbb3;font-size:16px;line-height:1.7}
+    .terminal{display:flex;align-items:center;justify-content:space-between;gap:20px;margin-top:32px;padding:16px 18px;border:1px solid var(--line);border-radius:13px;background:rgba(2,5,4,.68);text-align:left}
+    .terminal code{color:#c9ded4;font:12px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;overflow-wrap:anywhere}.terminal span{flex:none;color:var(--mint);font:700 9px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.13em;text-transform:uppercase}.failed .terminal span{color:var(--coral)}
+    .steps{display:grid;grid-template-columns:repeat(3,1fr);margin-top:22px;border:1px solid var(--line);border-radius:13px;overflow:hidden}
+    .step{padding:13px 10px;color:#687a72;font:700 9px/1.35 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.1em;text-transform:uppercase}.step+.step{border-left:1px solid var(--line)}.step.done{color:#b7cbc1}.step.active{background:rgba(115,243,195,.055);color:var(--mint)}.failed .step.active{background:rgba(255,123,107,.055);color:var(--coral)}
+    .foot{position:relative;display:flex;align-items:center;justify-content:center;gap:9px;padding:16px 20px;border-top:1px solid var(--line);color:#73867d;font:9px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.12em;text-transform:uppercase}.foot:before{color:var(--cyan);content:"//"}
+    @keyframes pulse{0%,100%{opacity:.55;transform:scale(.85)}50%{opacity:1;transform:scale(1.1)}}
+    @media(max-width:540px){body{overflow:auto}.content{padding:36px 20px}.terminal{display:block}.terminal span{display:block;margin-top:12px}.steps{grid-template-columns:1fr}.step+.step{border-top:1px solid var(--line);border-left:0}}
+    @media(prefers-reduced-motion:reduce){*{animation:none!important}}
+  </style>
+</head>
+<body>
+  <main class="wrap ${stateClass}">
+    <div class="brand">ContextKit / secure agent link</div>
+    <section class="card" aria-labelledby="callback-title">
+      <div class="content">
+        <div class="signal" aria-hidden="true"></div>
+        <p class="eyebrow">${status}</p>
+        <h1 id="callback-title">${title}</h1>
+        <p class="detail">${detail}</p>
+        <div class="terminal">
+          <code>${terminalLine}</code>
+          <span>${connected ? "Return to terminal" : "Retry in terminal"}</span>
+        </div>
+        <div class="steps" aria-label="Connection progress">
+          <div class="step done">01 / Sign in</div>
+          <div class="step done">02 / Authorize</div>
+          <div class="step active">03 / ${connected ? "Finish setup" : "Retry"}</div>
+        </div>
+      </div>
+      <footer class="foot">${connected ? "You may safely close this tab" : "No account changes were completed"}</footer>
+    </section>
+  </main>
+</body>
+</html>`;
 }
 
 async function selectedAgents(args) {
