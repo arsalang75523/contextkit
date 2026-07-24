@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Activity, Github } from "lucide-react";
 import "./globals.css";
+import { CookieConsent, CookiePreferencesButton } from "@/components/cookie-consent";
 import { site } from "@/lib/site";
 import { safeJsonLd } from "@/lib/marketplace-seo";
 
@@ -161,9 +162,13 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <footer className="border-t border-line px-5 py-10 text-sm text-white/55">
           <div className="mx-auto flex max-w-7xl flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <p>ContextKit turns agent state into durable memory and proven work into cloneable skill repositories.</p>
-            <p>Evidence-gated. Bankr-native. x402-powered.</p>
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+              <CookiePreferencesButton />
+              <p>Evidence-gated. Bankr-native. x402-powered.</p>
+            </div>
           </div>
         </footer>
+        <CookieConsent />
       </body>
     </html>
   );

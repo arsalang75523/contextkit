@@ -202,7 +202,7 @@ export default function HomePage() {
 
 function EarnCard() {
   return (
-    <div className="mt-8 max-w-xl rounded-xl border border-amber/20 bg-amber/[0.045] px-3.5 py-2.5 lg:mt-10">
+    <div className="mt-8 max-w-xl -translate-y-5 rounded-xl border border-amber/20 bg-amber/[0.045] px-3.5 py-2.5 lg:mt-10">
       <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
           <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-amber">MCP V2 revenue loop</p>

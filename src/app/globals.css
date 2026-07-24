@@ -40,6 +40,77 @@ body {
   mask-image: linear-gradient(to bottom, black, transparent 82%);
 }
 
+.cookie-shell {
+  border-radius: 4px 22px 4px 22px;
+  animation: cookie-deck-in 520ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.cookie-shell::before {
+  position: absolute;
+  z-index: 2;
+  top: -1px;
+  left: 2.5rem;
+  width: 7.5rem;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #73f3c3, transparent);
+  box-shadow: 0 0 18px rgba(115, 243, 195, 0.75);
+  content: "";
+}
+
+.cookie-shell::after {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-right: 1px solid rgba(104, 216, 255, 0.55);
+  border-bottom: 1px solid rgba(104, 216, 255, 0.55);
+  content: "";
+}
+
+.cookie-shell {
+  scrollbar-color: rgba(115, 243, 195, 0.45) rgba(255, 255, 255, 0.035);
+  scrollbar-width: thin;
+}
+
+.cookie-shell::-webkit-scrollbar {
+  width: 4px;
+}
+
+.cookie-shell::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.cookie-shell::-webkit-scrollbar-thumb {
+  background: rgba(115, 243, 195, 0.45);
+}
+
+.cookie-scan {
+  background:
+    linear-gradient(90deg, transparent, rgba(115, 243, 195, 0.035) 45%, transparent 55%),
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.012) 0, rgba(255, 255, 255, 0.012) 1px, transparent 1px, transparent 4px);
+  background-size: 220% 100%, 100% 4px;
+  animation: cookie-scan 8s linear infinite;
+  opacity: 0.7;
+}
+
+.cookie-signal {
+  position: relative;
+  background:
+    linear-gradient(rgba(219, 255, 239, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(219, 255, 239, 0.035) 1px, transparent 1px),
+    radial-gradient(circle at center, rgba(115, 243, 195, 0.08), transparent 65%);
+  background-size: 16px 16px, 16px 16px, 100% 100%;
+}
+
+.cookie-signal > div > span:nth-child(2) {
+  animation: cookie-orbit 12s linear infinite;
+}
+
+.cookie-details {
+  animation: cookie-details-in 340ms ease both;
+}
+
 .code-block {
   overflow-x: hidden;
   overflow-y: auto;
@@ -395,6 +466,36 @@ body {
   100% { opacity: 0; }
 }
 
+@keyframes cookie-deck-in {
+  from {
+    opacity: 0;
+    transform: translateY(1.5rem) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes cookie-details-in {
+  from {
+    opacity: 0;
+    transform: translateY(-0.4rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes cookie-scan {
+  to { background-position: -220% 0, 0 0; }
+}
+
+@keyframes cookie-orbit {
+  to { transform: rotate(360deg); }
+}
+
 @keyframes stream-line-in {
   to {
     opacity: 1;
@@ -439,6 +540,13 @@ body {
 
   .roadmap-stop-pulse,
   .roadmap-location-pulse {
+    animation: none;
+  }
+
+  .cookie-shell,
+  .cookie-details,
+  .cookie-scan,
+  .cookie-signal > div > span:nth-child(2) {
     animation: none;
   }
 }
