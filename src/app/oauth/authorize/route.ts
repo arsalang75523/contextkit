@@ -64,7 +64,9 @@ function html(body: string, status = 200) {
     headers: {
       "Content-Type": "text/html; charset=utf-8",
       "Cache-Control": "no-store",
-      "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'",
+      // OAuth desktop clients can cross a canonical-host boundary before this form renders.
+      // Omitting form-action avoids a false CSP block while the POST remains same-route and PKCE protected.
+      "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'",
       "Referrer-Policy": "no-referrer",
       "X-Content-Type-Options": "nosniff"
     }
