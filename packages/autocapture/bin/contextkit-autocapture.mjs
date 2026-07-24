@@ -1,15 +1,29 @@
 #!/usr/bin/env node
+import { createHash, randomBytes } from "node:crypto";
 import { spawn, spawnSync } from "node:child_process";
-import { chmod, copyFile, readFile, writeFile, mkdir } from "node:fs/promises";
+import { createServer } from "node:http";
+import { access, chmod, copyFile, readFile, writeFile, mkdir } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import process from "node:process";
+import {
+  defaultAuthorizationPath,
+  removeAuthorization,
+  resolveAuthorization,
+  saveAuthorization
+} from "../src/contextkit-autocapture-auth.mjs";
 import { captureExperience, eventToMessages, parseTranscript, readTranscriptFile, redactSensitive } from "../src/core.mjs";
 
 const [command = "help", subject, ...rest] = process.argv.slice(2);
+const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const packageMetadata = JSON.parse(await readFile(resolve(packageRoot, "package.json"), "utf8"));
 
 try {
-  if (command === "hook" && subject === "claude") await claudeHook();
+  if (command === "setup") await setup([subject, ...rest].filter(Boolean));
+  else if (command === "doctor") await doctor();
+  else if (command === "logout") await logout();
+  else if (command === "version" || command === "--version" || command === "-v") printVersion();
+  else if (command === "hook" && subject === "claude") await claudeHook();
   else if (command === "hook" && subject === "codex") await codexHook();
   else if (command === "hook" && subject === "hermes") await hermesHook();
   else if (command === "run" && ["cursor", "claude", "codex"].includes(subject)) await runAgent(subject, rest);
@@ -122,6 +136,302 @@ async function submitFile(path) {
   process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
 }
 
+async function setup(args) {
+  const baseUrl = normalizeBaseUrl(optionValue(args, "--base-url") || process.env.CONTEXTKIT_BASE_URL || "https://contextkit.pro");
+  const agents = await selectedAgents(args);
+  if (agents.length === 0) {
+    throw new Error("No supported agent host was detected. Retry with `--agents claude,opencode`.");
+  }
+
+  process.stdout.write(`ContextKit setup\nDetected: ${agents.join(", ")}\n`);
+  await ensureGlobalInstall(args);
+  const authorization = await browserAuthorization(baseUrl);
+  const credentialPath = await saveAuthorization(authorization);
+
+  for (const agent of agents) {
+    await installAgent(agent);
+  }
+
+  await verifyMcpConnection({ token: authorization.accessToken, baseUrl });
+  process.stdout.write(`\nContextKit is connected.\nCredential: ${credentialPath} (0600)\nAuto-capture: ${agents.join(", ")}\nPublic publishing: approval required\n`);
+}
+
+async function doctor() {
+  const baseUrl = normalizeBaseUrl(process.env.CONTEXTKIT_BASE_URL || "https://contextkit.pro");
+  const authorization = await resolveAuthorization({ baseUrl });
+  await verifyMcpConnection({ token: authorization.token, baseUrl });
+  process.stdout.write(`ContextKit connection OK (${authorization.source}, ${authorization.transport}).\n`);
+}
+
+async function logout() {
+  const removed = await removeAuthorization();
+  process.stdout.write(removed ? "Removed the stored ContextKit login.\n" : "No stored ContextKit login was found.\n");
+}
+
+async function browserAuthorization(baseUrl) {
+  const verifier = randomBytes(48).toString("base64url");
+  const challenge = createHash("sha256").update(verifier).digest("base64url");
+  const state = randomBytes(24).toString("base64url");
+  const callback = await callbackServer(state);
+
+  try {
+    const registered = await jsonRequest(`${baseUrl}/oauth/register`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        client_name: `ContextKit Auto-Capture ${packageMetadata.version}`,
+        redirect_uris: [callback.redirectUri],
+        token_endpoint_auth_method: "none",
+        grant_types: ["authorization_code", "refresh_token"],
+        response_types: ["code"]
+      })
+    });
+    const clientId = registered.client_id;
+    if (!clientId) throw new Error("ContextKit OAuth registration did not return a client ID.");
+
+    const authorizationUrl = new URL("/oauth/authorize", baseUrl);
+    authorizationUrl.search = new URLSearchParams({
+      response_type: "code",
+      client_id: clientId,
+      redirect_uri: callback.redirectUri,
+      code_challenge: challenge,
+      code_challenge_method: "S256",
+      state,
+      scope: "context:write",
+      resource: `${baseUrl}/mcp`
+    }).toString();
+
+    process.stdout.write("Opening ContextKit sign-in in your browser...\n");
+    process.stdout.write(`If the browser does not open, use:\n${authorizationUrl}\n`);
+    if (!openBrowser(authorizationUrl.toString())) {
+      process.stdout.write("No browser launcher was detected; open the URL above manually.\n");
+    }
+    const code = await callback.waitForCode();
+    const token = await jsonRequest(`${baseUrl}/oauth/token`, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        grant_type: "authorization_code",
+        client_id: clientId,
+        code,
+        redirect_uri: callback.redirectUri,
+        code_verifier: verifier
+      })
+    });
+    if (!token.access_token || !token.refresh_token) throw new Error("ContextKit OAuth token exchange failed.");
+
+    return {
+      baseUrl,
+      clientId,
+      accessToken: token.access_token,
+      refreshToken: token.refresh_token,
+      expiresAt: Date.now() + Number(token.expires_in || 3600) * 1000,
+      scope: token.scope || "context:write"
+    };
+  } finally {
+    await callback.close();
+  }
+}
+
+async function callbackServer(expectedState) {
+  let settled = false;
+  let resolveCode;
+  let rejectCode;
+  const codePromise = new Promise((resolvePromise, rejectPromise) => {
+    resolveCode = resolvePromise;
+    rejectCode = rejectPromise;
+  });
+  const server = createServer((request, response) => {
+    const url = new URL(request.url || "/", "http://127.0.0.1");
+    if (url.pathname !== "/oauth/callback") {
+      response.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
+      response.end("Not found");
+      return;
+    }
+
+    const state = url.searchParams.get("state");
+    const code = url.searchParams.get("code");
+    const error = url.searchParams.get("error");
+    const valid = !error && state === expectedState && Boolean(code);
+    response.writeHead(valid ? 200 : 400, {
+      "Content-Type": "text/html; charset=utf-8",
+      "Cache-Control": "no-store",
+      "X-Content-Type-Options": "nosniff"
+    });
+    response.end(valid
+      ? "<!doctype html><title>ContextKit connected</title><main style=\"font:18px system-ui;padding:48px\"><h1>ContextKit connected</h1><p>You can close this tab and return to the terminal.</p></main>"
+      : "<!doctype html><title>ContextKit connection failed</title><main style=\"font:18px system-ui;padding:48px\"><h1>Connection failed</h1><p>Return to the terminal and retry setup.</p></main>");
+
+    if (settled) return;
+    settled = true;
+    if (error) rejectCode(new Error(`ContextKit authorization was denied: ${error}`));
+    else if (state !== expectedState) rejectCode(new Error("ContextKit OAuth state did not match."));
+    else if (!code) rejectCode(new Error("ContextKit authorization did not return a code."));
+    else resolveCode(code);
+  });
+
+  await new Promise((resolveListen, rejectListen) => {
+    server.once("error", rejectListen);
+    server.listen(0, "127.0.0.1", resolveListen);
+  });
+  const address = server.address();
+  if (!address || typeof address === "string") throw new Error("Could not start the local ContextKit OAuth callback.");
+  const timeout = setTimeout(() => {
+    if (settled) return;
+    settled = true;
+    rejectCode(new Error("ContextKit sign-in timed out. Run setup again."));
+  }, 5 * 60_000);
+  timeout.unref();
+
+  return {
+    redirectUri: `http://127.0.0.1:${address.port}/oauth/callback`,
+    waitForCode: () => codePromise,
+    close: async () => {
+      clearTimeout(timeout);
+      if (!server.listening) return;
+      await new Promise((resolveClose) => server.close(resolveClose));
+    }
+  };
+}
+
+async function selectedAgents(args) {
+  const explicit = optionValue(args, "--agents");
+  const supported = ["claude", "codex", "hermes", "opencode", "openclaw"];
+  if (explicit) {
+    const values = explicit === "all"
+      ? supported
+      : Array.from(new Set(explicit.split(",").map((value) => value.trim().toLowerCase()).filter(Boolean)));
+    const invalid = values.filter((value) => !supported.includes(value));
+    if (invalid.length) throw new Error(`Unsupported agent host: ${invalid.join(", ")}.`);
+    return values;
+  }
+
+  const home = process.env.HOME || "~";
+  const candidates = [
+    ["claude", "claude", resolve(home, ".claude")],
+    ["codex", "codex", resolve(home, ".codex")],
+    ["hermes", process.env.CONTEXTKIT_HERMES_BIN || "hermes", resolve(home, ".hermes")],
+    ["opencode", "opencode", resolve(home, ".config", "opencode")],
+    ["openclaw", process.env.CONTEXTKIT_OPENCLAW_BIN || "openclaw", resolve(home, ".openclaw")]
+  ];
+  const detected = [];
+  for (const [name, executable, configPath] of candidates) {
+    if (commandAvailable(executable) || await pathExists(configPath)) detected.push(name);
+  }
+  return detected;
+}
+
+async function installAgent(agent) {
+  if (agent === "claude") return installClaude(true);
+  if (agent === "codex") return installCodex(true);
+  if (agent === "hermes") return installHermes();
+  if (agent === "opencode") return installOpenCode(true);
+  if (agent === "openclaw") {
+    await installOpenClaw(true);
+    const openclaw = process.env.CONTEXTKIT_OPENCLAW_BIN || "openclaw";
+    const enabled = spawnSync(openclaw, ["config", "set", "plugins.entries.contextkit-autocapture.hooks.allowConversationAccess", "true"], {
+      encoding: "utf8",
+      stdio: "pipe"
+    });
+    if (enabled.status === 0) process.stdout.write("Enabled ContextKit OpenClaw conversation access.\n");
+    else process.stdout.write("OpenClaw requires one host approval for conversation access; see `contextkit-autocapture --help`.\n");
+  }
+}
+
+async function ensureGlobalInstall(args) {
+  if (args.includes("--skip-global-install")) return;
+  process.stdout.write(`Installing persistent ContextKit Auto-Capture ${packageMetadata.version}...\n`);
+  const installed = spawnSync(
+    process.platform === "win32" ? "npm.cmd" : "npm",
+    ["install", "--global", `${packageMetadata.name}@${packageMetadata.version}`],
+    { encoding: "utf8", stdio: "inherit" }
+  );
+  if (installed.error || installed.status !== 0) {
+    throw new Error("Could not install the persistent ContextKit runner. Fix npm global permissions and retry setup.");
+  }
+}
+
+async function verifyMcpConnection({ token, baseUrl }) {
+  const response = await fetch(`${baseUrl}/mcp`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: "application/json, text/event-stream",
+      "Content-Type": "application/json",
+      "MCP-Protocol-Version": "2025-03-26"
+    },
+    body: JSON.stringify({
+      jsonrpc: "2.0",
+      id: 1,
+      method: "initialize",
+      params: {
+        protocolVersion: "2025-03-26",
+        capabilities: {},
+        clientInfo: { name: "contextkit-autocapture", version: packageMetadata.version }
+      }
+    })
+  });
+  const body = await response.text();
+  if (!response.ok) throw new Error(`ContextKit connection check failed (HTTP ${response.status}).`);
+  const parsed = JSON.parse(body);
+  if (parsed?.result?.serverInfo?.name !== "contextkit") throw new Error("ContextKit MCP returned an invalid connection response.");
+}
+
+function openBrowser(url) {
+  const command = process.platform === "darwin" ? "open" : process.platform === "win32" ? "cmd" : "xdg-open";
+  if (process.platform !== "win32" && !commandAvailable(command)) return false;
+  const args = process.platform === "win32" ? ["/c", "start", "", url] : [url];
+  const opened = spawn(command, args, { detached: true, stdio: "ignore" });
+  opened.on("error", () => {});
+  opened.unref();
+  return true;
+}
+
+function commandAvailable(commandName) {
+  const command = process.platform === "win32" ? "where" : "which";
+  const result = spawnSync(command, [commandName], { stdio: "ignore" });
+  return result.status === 0;
+}
+
+async function pathExists(path) {
+  try {
+    await access(path);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function jsonRequest(url, init) {
+  const response = await fetch(url, init);
+  const text = await response.text();
+  let body;
+  try {
+    body = JSON.parse(text);
+  } catch {
+    body = null;
+  }
+  if (!response.ok) {
+    throw new Error(body?.error_description || body?.error?.message || `ContextKit returned HTTP ${response.status}.`);
+  }
+  return body || {};
+}
+
+function optionValue(args, name) {
+  const inline = args.find((value) => value.startsWith(`${name}=`));
+  if (inline) return inline.slice(name.length + 1);
+  const index = args.indexOf(name);
+  return index >= 0 ? args[index + 1] : undefined;
+}
+
+function normalizeBaseUrl(value) {
+  return new URL(String(value)).toString().replace(/\/$/, "");
+}
+
+function printVersion() {
+  process.stdout.write(`${packageMetadata.version}\n`);
+}
+
 async function installClaude(globalInstall) {
   const settingsPath = globalInstall
     ? resolve(process.env.HOME || "~", ".claude", "settings.json")
@@ -149,17 +459,20 @@ async function installOpenCode(globalInstall) {
   const pluginDirectory = globalInstall
     ? resolve(process.env.HOME || "~", ".config", "opencode", "plugins")
     : resolve(process.cwd(), ".opencode", "plugins");
-  const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
   const pluginTarget = resolve(pluginDirectory, "contextkit-autocapture.js");
   const coreTarget = resolve(pluginDirectory, "contextkit-autocapture-core.mjs");
 
   await mkdir(pluginDirectory, { recursive: true, mode: 0o700 });
   await Promise.all([
     copyFile(resolve(packageRoot, "templates", "opencode-plugin.mjs"), pluginTarget),
-    copyFile(resolve(packageRoot, "src", "core.mjs"), coreTarget)
+    copyFile(resolve(packageRoot, "src", "core.mjs"), coreTarget),
+    copyFile(
+      resolve(packageRoot, "src", "contextkit-autocapture-auth.mjs"),
+      resolve(pluginDirectory, "contextkit-autocapture-auth.mjs")
+    )
   ]);
   process.stdout.write(`Installed ContextKit OpenCode auto-capture plugin in ${pluginTarget}\n`);
-  process.stdout.write("Export CONTEXTKIT_API_KEY before starting OpenCode. Private drafts are automatic; public publishing still requires approval.\n");
+  process.stdout.write("Private drafts are automatic; public publishing still requires approval.\n");
 }
 
 async function installCodex(globalInstall) {
@@ -184,7 +497,7 @@ async function installCodex(globalInstall) {
   await mkdir(dirname(settingsPath), { recursive: true, mode: 0o700 });
   await writeFile(settingsPath, `${JSON.stringify(settings, null, 2)}\n`, { mode: 0o600 });
   process.stdout.write(`Installed ContextKit Codex Stop hook in ${settingsPath}\n`);
-  process.stdout.write("Run /hooks once inside Codex to review and trust the project hook. Export CONTEXTKIT_API_KEY before starting Codex.\n");
+  process.stdout.write("Run /hooks once inside Codex if it asks you to review hook trust.\n");
 }
 
 async function installHermes() {
@@ -204,21 +517,24 @@ async function installHermes() {
   if (!configPath) throw new Error("Hermes did not return its config path.");
   await mergeHermesHook(configPath, nodeCommand(hookTarget));
   process.stdout.write(`Installed ContextKit Hermes post_llm_call hook at ${hookTarget}\n`);
-  process.stdout.write("Run `hermes hooks list`, then approve the hook on first use. Export CONTEXTKIT_API_KEY before starting Hermes.\n");
+  process.stdout.write("Run `hermes hooks list`, then approve the hook on first use if Hermes asks.\n");
 }
 
 async function installOpenClaw(globalInstall) {
   const pluginDirectory = globalInstall
     ? resolve(process.env.HOME || "~", ".contextkit", "plugins", "openclaw-contextkit-autocapture")
     : resolve(process.cwd(), ".contextkit", "openclaw-contextkit-autocapture");
-  const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
   const templateDirectory = resolve(packageRoot, "templates", "openclaw");
   await mkdir(pluginDirectory, { recursive: true, mode: 0o700 });
   await Promise.all([
     copyFile(resolve(templateDirectory, "index.mjs"), resolve(pluginDirectory, "index.mjs")),
     copyFile(resolve(templateDirectory, "package.json"), resolve(pluginDirectory, "package.json")),
     copyFile(resolve(templateDirectory, "openclaw.plugin.json"), resolve(pluginDirectory, "openclaw.plugin.json")),
-    copyFile(resolve(packageRoot, "src", "core.mjs"), resolve(pluginDirectory, "contextkit-autocapture-core.mjs"))
+    copyFile(resolve(packageRoot, "src", "core.mjs"), resolve(pluginDirectory, "contextkit-autocapture-core.mjs")),
+    copyFile(
+      resolve(packageRoot, "src", "contextkit-autocapture-auth.mjs"),
+      resolve(pluginDirectory, "contextkit-autocapture-auth.mjs")
+    )
   ]);
 
   const openclaw = process.env.CONTEXTKIT_OPENCLAW_BIN || "openclaw";
@@ -231,16 +547,19 @@ async function installOpenClaw(globalInstall) {
   } else {
     process.stdout.write(`Installed ContextKit OpenClaw plugin from ${pluginDirectory}\n`);
   }
-  process.stdout.write("Enable raw conversation access for this plugin, export CONTEXTKIT_API_KEY, then restart the OpenClaw Gateway:\n");
+  process.stdout.write("Enable raw conversation access for this plugin, then restart the OpenClaw Gateway:\n");
   process.stdout.write("openclaw config set plugins.entries.contextkit-autocapture.hooks.allowConversationAccess true\n");
 }
 
 async function installHookFiles(hookDirectory, templateName, hookTarget) {
-  const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
   await mkdir(hookDirectory, { recursive: true, mode: 0o700 });
   await Promise.all([
     copyFile(resolve(packageRoot, "templates", templateName), hookTarget),
-    copyFile(resolve(packageRoot, "src", "core.mjs"), resolve(hookDirectory, "contextkit-autocapture-core.mjs"))
+    copyFile(resolve(packageRoot, "src", "core.mjs"), resolve(hookDirectory, "contextkit-autocapture-core.mjs")),
+    copyFile(
+      resolve(packageRoot, "src", "contextkit-autocapture-auth.mjs"),
+      resolve(hookDirectory, "contextkit-autocapture-auth.mjs")
+    )
   ]);
 }
 
@@ -361,5 +680,5 @@ async function readStdin() {
 }
 
 function printHelp() {
-  process.stdout.write(`ContextKit Auto-Capture\n\nCommands:\n  install claude [--global]\n  install codex [--global]\n  install hermes\n  install opencode [--global]\n  install openclaw [--global]\n  hook claude|codex|hermes\n  run cursor|claude|codex -- <task>\n  submit <transcript.jsonl>\n\nEnvironment:\n  CONTEXTKIT_API_KEY       scoped ContextKit key (required)\n  CONTEXTKIT_BASE_URL      defaults to https://contextkit.pro\n  CONTEXTKIT_CURSOR_BIN    defaults to cursor-agent\n  CONTEXTKIT_CLAUDE_BIN    defaults to claude\n  CONTEXTKIT_CODEX_BIN     defaults to codex\n  CONTEXTKIT_HERMES_BIN    defaults to hermes\n  CONTEXTKIT_OPENCLAW_BIN  defaults to openclaw\n`);
+  process.stdout.write(`ContextKit Auto-Capture\n\nQuick setup:\n  npx @basedchef/contextkit-autocapture setup\n  npx @basedchef/contextkit-autocapture setup --agents claude,opencode\n\nCommands:\n  setup [--agents LIST] [--base-url URL]\n  doctor\n  logout\n  install claude [--global]\n  install codex [--global]\n  install hermes\n  install opencode [--global]\n  install openclaw [--global]\n  hook claude|codex|hermes\n  run cursor|claude|codex -- <task>\n  submit <transcript.jsonl>\n  version\n\nSetup opens browser login, stores a refreshable OAuth credential in:\n  ${defaultAuthorizationPath()}\n\nEnvironment overrides:\n  CONTEXTKIT_API_KEY       optional scoped API-key override\n  CONTEXTKIT_BASE_URL      defaults to https://contextkit.pro\n  CONTEXTKIT_CURSOR_BIN    defaults to cursor-agent\n  CONTEXTKIT_CLAUDE_BIN    defaults to claude\n  CONTEXTKIT_CODEX_BIN     defaults to codex\n  CONTEXTKIT_HERMES_BIN    defaults to hermes\n  CONTEXTKIT_OPENCLAW_BIN  defaults to openclaw\n`);
 }

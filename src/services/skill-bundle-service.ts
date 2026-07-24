@@ -232,7 +232,7 @@ export function buildSkillBundle(input: BuildBundleInput): StoredSkillBundle {
       executableContract = false;
       findings.push("src/ must contain non-placeholder executable source code.");
     }
-    if (!testFiles.some((file) => /\b(?:test|describe|it|assert)(?:\.|\s*\()/i.test(file.content))) {
+    if (!testFiles.some(hasExecutableTest)) {
       executableContract = false;
       findings.push("tests/ must contain executable assertions, not evidence labels or empty placeholders.");
     }
@@ -322,6 +322,63 @@ function normalizeBundlePath(value: string) {
 function meaningfulCode(value: string) {
   const compact = value.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "").trim();
   return compact.length >= 20 && !/^(?:todo|tbd|placeholder|example only)$/i.test(compact);
+}
+
+function hasExecutableTest(file: SkillBundleFile) {
+  const content = file.content;
+  const extension = posix.extname(file.path).toLowerCase();
+
+  if ([".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx"].includes(extension)) {
+    const declaresTest = /\b(?:test|it)\s*\(/.test(content);
+    const assertsOutcome = /\b(?:assert(?:\.|\s*\()|expect\s*\()/.test(content);
+    return declaresTest && assertsOutcome;
+  }
+
+  if (extension === ".py") {
+    const declaresTest = /^(?:\s*@[\w.()]+\s*\n)*\s*(?:async\s+)?def\s+test_[A-Za-z0-9_]*\s*\(/m.test(content) ||
+      /^\s*class\s+Test[A-Za-z0-9_]*\s*(?:\([^)]*\))?\s*:/m.test(content);
+    const assertsOutcome = /^\s*assert(?:\s|\()/m.test(content) ||
+      /\b(?:self\.)?assert[A-Z][A-Za-z0-9_]*\s*\(/.test(content) ||
+      /\bpytest\.(?:raises|warns|approx)\s*\(/.test(content);
+    return declaresTest && assertsOutcome;
+  }
+
+  if (extension === ".go") {
+    return /\bfunc\s+Test[A-Za-z0-9_]*\s*\(\s*t\s+\*testing\.T\s*\)/.test(content) &&
+      /\bt\.(?:Error|Errorf|Fatal|Fatalf|Fail|FailNow)\s*\(/.test(content);
+  }
+
+  if (extension === ".rs") {
+    return /#\s*\[\s*test\s*\]/.test(content) &&
+      /\b(?:assert|assert_eq|assert_ne|debug_assert|debug_assert_eq|debug_assert_ne)!\s*\(/.test(content);
+  }
+
+  if (extension === ".php") {
+    const declaresTest = /\b(?:test|it)\s*\(/.test(content) ||
+      /\bfunction\s+test[A-Za-z0-9_]*\s*\(/i.test(content);
+    const assertsOutcome = /\b(?:assert[A-Z][A-Za-z0-9_]*|expect)\s*\(/.test(content);
+    return declaresTest && assertsOutcome;
+  }
+
+  if (extension === ".rb") {
+    const declaresTest = /\b(?:describe|context|it)\s+(?:["':]|do\b)/.test(content) ||
+      /^\s*def\s+test_[A-Za-z0-9_]*\b/m.test(content);
+    const assertsOutcome = /\b(?:assert|refute)(?:_[a-z_]+)?\b/.test(content) ||
+      /\bexpect\s*\(/.test(content);
+    return declaresTest && assertsOutcome;
+  }
+
+  if ([".java", ".kt", ".kts"].includes(extension)) {
+    return /@Test\b/.test(content) &&
+      /\b(?:assert[A-Z][A-Za-z0-9_]*|expect)\s*\(/.test(content);
+  }
+
+  if (extension === ".cs") {
+    return /\[(?:Fact|Theory|Test|TestMethod)\b[^\]]*\]/.test(content) &&
+      /\bAssert\.[A-Za-z0-9_]+\s*\(/.test(content);
+  }
+
+  return false;
 }
 
 function containsCredentialLikeMaterial(value: string) {

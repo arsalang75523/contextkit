@@ -7,29 +7,10 @@ Website: [https://contextkit.pro](https://contextkit.pro)
 Remote MCP instructions are portable but a host can ignore proactive tool guidance. ContextKit includes a completion bridge for environments that expose a real lifecycle signal.
 
 ```bash
-npm install -g @basedchef/contextkit-autocapture
-export CONTEXTKIT_API_KEY="ck_live_your_scoped_key"
-
-# Automatic after every completed Claude Code turn
-contextkit-autocapture install claude
-
-# Automatic after every completed Codex turn
-contextkit-autocapture install codex
-
-# Automatic after every successful Hermes turn
-contextkit-autocapture install hermes
-
-# Automatic after every completed OpenCode session
-contextkit-autocapture install opencode
-
-# Automatic after every successful OpenClaw agent run
-contextkit-autocapture install openclaw --global
-
-# Guaranteed structured runners
-contextkit-autocapture run cursor -- "Fix the failing checkout tests"
-contextkit-autocapture run claude -- "Implement webhook retries"
-contextkit-autocapture run codex -- "Verify the payment callback"
+npx @basedchef/contextkit-autocapture setup
 ```
+
+Setup opens ContextKit login in the browser, stores a refreshable OAuth credential in a user-only `0600` file, detects supported local agent hosts, installs their global adapters, and verifies MCP connectivity. No shell-profile edit or pasted API key is required. Limit setup to selected hosts with `--agents claude,opencode`; run `contextkit-autocapture doctor` any time to verify the connection.
 
 The bridge locally redacts common secrets, submits only the latest completed task, and skips duplicate or failed runs. Greetings, placeholders, plans, generic notes, project diaries, incomplete workflows, and plain claims are rejected. A private `SKILL.md` write requires a complete reusable workflow in any legitimate domain plus at least one executed PASS backed by verbatim command output, test log, HTTP response, or artifact evidence from the source conversation. Public publishing requires three independent grounded PASS results, an explicit reuse license, a validation score of at least 75, clean safety checks, and explicit user approval. Test method, observed outcome, evidence excerpt, and source message are embedded in the generated skill.
 
@@ -37,7 +18,7 @@ The VS Code-compatible extension for VS Code, Cursor, Windsurf, and VSCodium is 
 
 ```bash
 npm run extension:package
-code --install-extension extensions/contextkit-autocapture/contextkit-autocapture-0.1.0.vsix
+code --install-extension extensions/contextkit-autocapture/contextkit-autocapture-0.1.2.vsix
 ```
 
 ContextKit is a memory layer and versioned Verified Skill Repository for autonomous AI agents.

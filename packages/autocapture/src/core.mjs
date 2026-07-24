@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { resolveAuthorization } from "./contextkit-autocapture-auth.mjs";
 
 const MAX_TRANSCRIPT_BYTES = 8_000_000;
 const MAX_PAYLOAD_CHARS = 350_000;
@@ -70,21 +71,30 @@ export async function captureExperience(options) {
     return { skipped: true, reason: "No complete user-to-agent task found in transcript." };
   }
 
-  const apiKey = options.apiKey || process.env.CONTEXTKIT_API_KEY || process.env.CONTEXTKIT_MCP_KEY;
-  if (!apiKey) throw new Error("CONTEXTKIT_API_KEY is required for auto-capture.");
   const baseUrl = String(options.baseUrl || process.env.CONTEXTKIT_BASE_URL || "https://contextkit.pro").replace(/\/$/, "");
-  const recovered = await flushOutbox({ ...options, apiKey, baseUrl });
+  const authorization = await resolveAuthorization({ ...options, baseUrl });
+  const requestOptions = { ...options, authorization, baseUrl };
+  const recovered = await flushOutbox(requestOptions);
   const fingerprint = createHash("sha256").update(JSON.stringify(messages)).digest("hex");
-  if (options.dedupe !== false && await wasCaptured(fingerprint, options.cachePath)) {
-    return { skipped: true, reason: "This completed task was already considered.", fingerprint, recovered };
+  const priorCapture = options.dedupe !== false ? await capturedEntry(fingerprint, options.cachePath) : null;
+  if (priorCapture) {
+    const priorResult = priorCapture.result && typeof priorCapture.result === "object" ? priorCapture.result : {};
+    return {
+      ...priorResult,
+      skipped: true,
+      cached: true,
+      reason: "This completed task was already compiled; reuse the cached draft instead of paying again.",
+      fingerprint,
+      recovered
+    };
   }
 
   const item = captureItem(messages, fingerprint, options);
   await enqueueCapture(item, options.outboxPath, options.cachePath);
   try {
-    const body = await submitItem(item, { ...options, apiKey, baseUrl });
+    const body = await submitItem(item, requestOptions);
     await Promise.all([
-      rememberCapture(fingerprint, options.cachePath),
+      rememberCapture(fingerprint, body, options.cachePath),
       removeFromOutbox(fingerprint, options.outboxPath, options.cachePath)
     ]);
     return { ...body, fingerprint, recovered };
@@ -242,27 +252,65 @@ function expandHome(path) {
 }
 
 async function wasCaptured(hash, path) {
-  const cache = await readCache(path);
-  return cache.hashes.includes(hash);
+  return Boolean(await capturedEntry(hash, path));
 }
 
-async function rememberCapture(hash, path) {
+async function capturedEntry(hash, path) {
+  const cache = await readCache(path);
+  return cache.captures.find((item) => item.fingerprint === hash) ??
+    (cache.hashes.includes(hash) ? { fingerprint: hash } : null);
+}
+
+async function rememberCapture(hash, result, path) {
   const cachePath = path || defaultCachePath();
   const cache = await readCache(cachePath);
   const hashes = [hash, ...cache.hashes.filter((item) => item !== hash)].slice(0, CACHE_LIMIT);
+  const captures = [
+    {
+      fingerprint: hash,
+      capturedAt: new Date().toISOString(),
+      result: cacheableCaptureResult(result)
+    },
+    ...cache.captures.filter((item) => item.fingerprint !== hash)
+  ].slice(0, CACHE_LIMIT);
   await mkdir(dirname(cachePath), { recursive: true, mode: 0o700 });
   const temporary = `${cachePath}.${process.pid}.tmp`;
-  await writeFile(temporary, JSON.stringify({ hashes }), { mode: 0o600 });
+  await writeFile(temporary, JSON.stringify({ hashes, captures }), { mode: 0o600 });
   await rename(temporary, cachePath);
 }
 
 async function readCache(path) {
   try {
     const parsed = JSON.parse(await readFile(path || defaultCachePath(), "utf8"));
-    return { hashes: Array.isArray(parsed.hashes) ? parsed.hashes.filter((item) => typeof item === "string") : [] };
+    return {
+      hashes: Array.isArray(parsed.hashes) ? parsed.hashes.filter((item) => typeof item === "string") : [],
+      captures: Array.isArray(parsed.captures)
+        ? parsed.captures.filter((item) => item && typeof item === "object" && typeof item.fingerprint === "string")
+        : []
+    };
   } catch {
-    return { hashes: [] };
+    return { hashes: [], captures: [] };
   }
+}
+
+function cacheableCaptureResult(result) {
+  if (!result || typeof result !== "object") return {};
+  const experience = result.experience && typeof result.experience === "object"
+    ? {
+        id: result.experience.id,
+        title: result.experience.title,
+        version: result.experience.version,
+        visibility: result.experience.visibility
+      }
+    : undefined;
+  return {
+    shouldSave: result.shouldSave,
+    reason: result.reason,
+    confidence: result.confidence,
+    experience,
+    validation: result.validation,
+    nextAgentAction: result.nextAgentAction
+  };
 }
 
 function defaultCachePath() {
@@ -296,19 +344,12 @@ async function submitItem(item, options) {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), options.timeoutMs ?? 30_000);
     try {
-      const response = await fetcher(`${options.baseUrl}/api/experience/consider`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${options.apiKey}`,
-          "Content-Type": "application/json",
-          "User-Agent": "ContextKit-AutoCapture/0.1"
-        },
-        body: JSON.stringify(item.payload),
-        signal: controller.signal
-      });
+      const response = options.authorization.transport === "mcp"
+        ? await submitMcpItem(item, options, controller.signal)
+        : await submitApiItem(item, options, controller.signal);
       const bodyText = await response.text();
       const body = tryJson(bodyText) ?? { message: bodyText.slice(0, 500) };
-      if (response.ok) return body;
+      if (response.ok) return options.authorization.transport === "mcp" ? unwrapMcpResult(body) : body;
       const message = body?.error?.message || body?.message || `ContextKit returned HTTP ${response.status}.`;
       const error = new Error(redactSensitive(message));
       if (response.status < 500 && response.status !== 408 && response.status !== 429) throw error;
@@ -324,6 +365,63 @@ async function submitItem(item, options) {
   throw lastError instanceof Error ? lastError : new Error("ContextKit auto-capture request failed.");
 }
 
+function submitApiItem(item, options, signal) {
+  return (options.fetch ?? fetch)(`${options.baseUrl}/api/experience/consider`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${options.authorization.token}`,
+      "Content-Type": "application/json",
+      "User-Agent": "ContextKit-AutoCapture/0.2"
+    },
+    body: JSON.stringify(item.payload),
+    signal
+  });
+}
+
+function submitMcpItem(item, options, signal) {
+  return (options.fetch ?? fetch)(`${options.baseUrl}/mcp`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${options.authorization.token}`,
+      Accept: "application/json, text/event-stream",
+      "Content-Type": "application/json",
+      "MCP-Protocol-Version": "2025-03-26",
+      "User-Agent": "ContextKit-AutoCapture/0.2"
+    },
+    body: JSON.stringify({
+      jsonrpc: "2.0",
+      id: `capture-${item.fingerprint.slice(0, 16)}`,
+      method: "tools/call",
+      params: {
+        name: "contextkit_skill_compile",
+        arguments: {
+          messages: item.payload.messages,
+          minConfidence: item.payload.minConfidence,
+          autoSave: true,
+          metadata: item.payload.metadata
+        }
+      }
+    }),
+    signal
+  });
+}
+
+function unwrapMcpResult(payload) {
+  if (payload?.error) {
+    throw new Error(redactSensitive(payload.error.message || "ContextKit MCP request failed."));
+  }
+  const result = payload?.result;
+  const text = result?.content?.find((item) => item?.type === "text" && typeof item.text === "string")?.text;
+  const parsed = tryJson(text);
+  if (result?.isError) {
+    throw new Error(redactSensitive(parsed?.error || text || "ContextKit rejected the skill draft."));
+  }
+  if (!parsed || typeof parsed !== "object") {
+    throw new Error("ContextKit MCP returned an invalid tool response.");
+  }
+  return parsed;
+}
+
 async function flushOutbox(options) {
   const outbox = await readOutbox(options.outboxPath, options.cachePath);
   const recovered = [];
@@ -335,7 +433,7 @@ async function flushOutbox(options) {
     try {
       const result = await submitItem(item, options);
       await Promise.all([
-        rememberCapture(item.fingerprint, options.cachePath),
+        rememberCapture(item.fingerprint, result, options.cachePath),
         removeFromOutbox(item.fingerprint, options.outboxPath, options.cachePath)
       ]);
       recovered.push({ fingerprint: item.fingerprint, result });

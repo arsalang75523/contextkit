@@ -33,7 +33,6 @@ export const ContextKitAutoCapture = async ({ client, directory }) => ({
       const messages = records.flatMap(eventToMessages);
       const result = await captureExperience({
         messages,
-        apiKey: process.env.CONTEXTKIT_API_KEY || process.env.CONTEXTKIT_MCP_KEY,
         baseUrl: process.env.CONTEXTKIT_BASE_URL,
         source: "opencode-session-idle",
         agent: "opencode",

@@ -2,7 +2,7 @@
   "name": "contextkit-autocapture",
   "displayName": "ContextKit Auto-Capture",
   "description": "Secure ContextKit MCP V2 auto-capture for VS Code, Cursor, Windsurf, and VSCodium agent tasks.",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "publisher": "contextkit",
   "license": "MIT",
   "repository": {
@@ -106,6 +106,7 @@
   "files": [
     "extension.cjs",
     "dist/src/core.mjs",
+    "dist/src/contextkit-autocapture-auth.mjs",
     "README.md",
     "LICENSE"
   ]

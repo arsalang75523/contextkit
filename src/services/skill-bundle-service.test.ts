@@ -95,3 +95,51 @@ test("keeps instruction-only bundles private", () => {
   assert.equal(bundle.validation.publishEligible, false);
   assert.ok(bundle.validation.warnings.some((warning) => warning.includes("Instruction-only")));
 });
+
+test("accepts a pytest test with a plain Python assert", () => {
+  const pytestFiles = files().filter((file) => file.path !== "tests/recovery.test.ts");
+  pytestFiles.push({
+    path: "tests/test_recovery.py",
+    content: [
+      "from pathlib import Path",
+      "",
+      "def test_gateway_fixture_exists():",
+      "    fixture = Path(__file__).parent / 'fixtures' / 'gateway-response.json'",
+      "    assert fixture.name == 'gateway-response.json'"
+    ].join("\n"),
+    encoding: "utf8"
+  });
+
+  const bundle = buildSkillBundle({
+    repository: skill().name,
+    version: skill().version,
+    files: pytestFiles,
+    skill: skill()
+  });
+
+  assert.equal(bundle.validation.publishEligible, true);
+  assert.ok(!bundle.validation.findings.some((finding) => finding.includes("executable assertions")));
+});
+
+test("rejects Python evidence prose that is not an executable test", () => {
+  const fakeTestFiles = files().filter((file) => file.path !== "tests/recovery.test.ts");
+  fakeTestFiles.push({
+    path: "tests/test_recovery.py",
+    content: [
+      "# pytest passed during the agent conversation",
+      "result = 'RWA ORACLE PRICE FEED TEST PASSED'",
+      "assertion_summary = 'all checks succeeded'"
+    ].join("\n"),
+    encoding: "utf8"
+  });
+
+  const bundle = buildSkillBundle({
+    repository: skill().name,
+    version: skill().version,
+    files: fakeTestFiles,
+    skill: skill()
+  });
+
+  assert.equal(bundle.validation.publishEligible, false);
+  assert.ok(bundle.validation.findings.some((finding) => finding.includes("executable assertions")));
+});

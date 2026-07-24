@@ -94,3 +94,102 @@ test("queues a sanitized task and recovers it after a temporary failure", async 
   assert.equal(recovered.skipped, true);
   assert.equal(recovered.recovered.length, 1);
 });
+
+test("uses the stored-OAuth MCP transport without exposing an API key", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "contextkit-autocapture-mcp-"));
+  const requests = [];
+  const responsePayload = {
+    jsonrpc: "2.0",
+    id: "capture-test",
+    result: {
+      content: [{
+        type: "text",
+        text: JSON.stringify({ shouldSave: false, reason: "No reusable workflow." })
+      }]
+    }
+  };
+
+  const result = await captureExperience({
+    messages: [
+      { role: "user", content: "Check the deployment health endpoint." },
+      { role: "assistant", content: "Called the health endpoint and received HTTP 200." }
+    ],
+    oauthToken: "ck_oat_test_access_token",
+    baseUrl: "https://contextkit.example",
+    cachePath: join(directory, "cache.json"),
+    outboxPath: join(directory, "outbox.json"),
+    dedupe: false,
+    fetch: async (url, init) => {
+      requests.push({ url, init });
+      return {
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify(responsePayload)
+      };
+    }
+  });
+
+  assert.equal(result.shouldSave, false);
+  assert.equal(requests.length, 1);
+  assert.equal(requests[0].url, "https://contextkit.example/mcp");
+  assert.equal(requests[0].init.headers.Authorization, "Bearer ck_oat_test_access_token");
+  const rpc = JSON.parse(requests[0].init.body);
+  assert.equal(rpc.method, "tools/call");
+  assert.equal(rpc.params.name, "contextkit_skill_compile");
+  assert.equal(rpc.params.arguments.metadata.captureSource, "autocapture-bridge");
+});
+
+test("returns the cached draft id when a completed task is considered again", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "contextkit-autocapture-dedupe-"));
+  const cachePath = join(directory, "cache.json");
+  const outboxPath = join(directory, "outbox.json");
+  let requests = 0;
+  const options = {
+    messages: [
+      { role: "user", content: "Fix the pytest bundle validation bug." },
+      { role: "assistant", content: "Updated the validator and pytest regression tests passed." }
+    ],
+    oauthToken: "ck_oat_test_access_token",
+    baseUrl: "https://contextkit.example",
+    cachePath,
+    outboxPath,
+    fetch: async () => {
+      requests += 1;
+      return {
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify({
+          jsonrpc: "2.0",
+          id: "capture-test",
+          result: {
+            content: [{
+              type: "text",
+              text: JSON.stringify({
+                shouldSave: true,
+                reason: "Reusable validator correction.",
+                experience: {
+                  id: "exp_48a2a79e431b72625cebc0f4",
+                  title: "pytest-bundle-validation",
+                  version: "1.0.0",
+                  visibility: "private"
+                },
+                nextAgentAction: "Validate and push the complete bundle."
+              })
+            }]
+          }
+        })
+      };
+    }
+  };
+
+  const first = await captureExperience(options);
+  const repeated = await captureExperience(options);
+
+  assert.equal(first.experience.id, "exp_48a2a79e431b72625cebc0f4");
+  assert.equal(repeated.skipped, true);
+  assert.equal(repeated.cached, true);
+  assert.equal(repeated.shouldSave, true);
+  assert.equal(repeated.experience.id, "exp_48a2a79e431b72625cebc0f4");
+  assert.match(repeated.reason, /reuse the cached draft/);
+  assert.equal(requests, 1);
+});

@@ -13,6 +13,8 @@ const conversationInput = {
   contextId: z.string().regex(/^ctx_[a-f0-9]{24}$/).optional()
 };
 
+const captureMetadataInput = z.record(z.string(), z.unknown()).optional();
+
 const skillBundleFileInput = z.object({
   path: z.string().min(1).max(240),
   content: z.string().max(450_000),
@@ -138,13 +140,14 @@ export function createContextKitMcpServer(options: ContextKitMcpOptions) {
       inputSchema: {
         ...conversationInput,
         minConfidence: z.number().min(0.5).max(0.95).default(0.72),
-        autoSave: z.boolean().default(true)
+        autoSave: z.boolean().default(true),
+        metadata: captureMetadataInput
       }
     },
-    async ({ messages, contextId, minConfidence, autoSave }) => {
+    async ({ messages, contextId, minConfidence, autoSave, metadata }) => {
       const invalid = validateConversation({ messages, contextId });
       if (invalid) return toolError(invalid);
-      return callContextKit(options, "/skills/compile", { messages, contextId, minConfidence, autoSave });
+      return callContextKit(options, "/skills/compile", { messages, contextId, minConfidence, autoSave, metadata });
     }
   );
 
@@ -342,13 +345,14 @@ export function createContextKitMcpServer(options: ContextKitMcpOptions) {
       inputSchema: {
         ...conversationInput,
         minConfidence: z.number().min(0.5).max(0.95).default(0.72),
-        autoSave: z.boolean().default(true)
+        autoSave: z.boolean().default(true),
+        metadata: captureMetadataInput
       }
     },
-    async ({ messages, contextId, minConfidence, autoSave }) => {
+    async ({ messages, contextId, minConfidence, autoSave, metadata }) => {
       const invalid = validateConversation({ messages, contextId });
       if (invalid) return toolError(invalid);
-      return callContextKit(options, "/experience/consider", { messages, contextId, minConfidence, autoSave });
+      return callContextKit(options, "/experience/consider", { messages, contextId, minConfidence, autoSave, metadata });
     }
   );
 

@@ -2,34 +2,42 @@
 
 Secure task-completion bridge for ContextKit MCP V2. It reads a real agent transcript, removes common secret formats, and sends only the latest completed task to ContextKit. Qualifying, reusable work from any legitimate domain is compiled into a private, portable `SKILL.md` draft; generic notes and project diaries are rejected.
 
-## Claude Code: automatic Stop hook
+## One-command setup
 
 ```bash
-npm install -g @basedchef/contextkit-autocapture
-export CONTEXTKIT_API_KEY="ck_live_your_scoped_key"
-contextkit-autocapture install claude
+npx @basedchef/contextkit-autocapture setup
 ```
 
-The hook runs after every completed Claude Code turn. A duplicate transcript is ignored. Public publishing is offered only when the draft passes ContextKit validation and the user explicitly approves it.
+This opens ContextKit sign-in in the browser, installs a persistent runner, detects Claude Code, Codex, Hermes, OpenCode, and OpenClaw, installs the detected global adapters, stores a refreshable OAuth credential at `~/.contextkit/autocapture-credentials.json` with `0600` permissions, and verifies the MCP connection. It does not edit `.zshrc` or require the user to paste an API key.
 
-## Codex: automatic Stop hook
+Install only selected hosts:
 
 ```bash
-export CONTEXTKIT_API_KEY="ck_live_your_scoped_key"
-contextkit-autocapture install codex
+npx @basedchef/contextkit-autocapture setup --agents claude,opencode
 ```
 
-Use `--global` for every Codex workspace. Project hooks must be reviewed once through `/hooks` before Codex trusts them.
-
-## Hermes: automatic post-LLM hook
+Connection maintenance:
 
 ```bash
-export CONTEXTKIT_API_KEY="ck_live_your_scoped_key"
+contextkit-autocapture doctor
+contextkit-autocapture logout
+```
+
+The hooks run after completed turns. Duplicate, failed, and incomplete tasks are ignored. Public publishing is offered only when the private draft passes ContextKit validation and the user explicitly approves it.
+
+## Advanced manual installation
+
+OAuth setup is recommended. Existing API-key deployments remain supported through `CONTEXTKIT_API_KEY`.
+
+```bash
+contextkit-autocapture install claude --global
+contextkit-autocapture install codex --global
 contextkit-autocapture install hermes
-hermes hooks list
+contextkit-autocapture install opencode --global
+contextkit-autocapture install openclaw --global
 ```
 
-Hermes asks for first-use consent before executing the generated hook.
+Codex or Hermes may ask for one host-native hook trust review. OpenClaw must permit final conversation access for the installed plugin.
 
 ## Cursor, Claude, or Codex CLI: guaranteed runner
 
@@ -39,26 +47,6 @@ contextkit-autocapture run claude -- "Implement the webhook retry policy"
 contextkit-autocapture run codex -- "Verify the payment callback"
 ```
 
-## OpenCode: automatic session-idle capture
-
-```bash
-export CONTEXTKIT_API_KEY="ck_live_your_scoped_key"
-contextkit-autocapture install opencode
-opencode
-```
-
-Use `--global` to install under `~/.config/opencode/plugins` for every workspace. The plugin reads the completed OpenCode session when it becomes idle, skips failed and duplicate tasks, and saves only qualified private drafts.
-
-## OpenClaw: automatic agent-end capture
-
-```bash
-export CONTEXTKIT_API_KEY="ck_live_your_scoped_key"
-contextkit-autocapture install openclaw --global
-openclaw config set plugins.entries.contextkit-autocapture.hooks.allowConversationAccess true
-```
-
-Restart the OpenClaw Gateway after installation. The plugin runs only after a successful `agent_end` event and sends the final completed task through the same local sanitizer and private-draft detector.
-
 ## VS Code-compatible IDEs
 
 The packaged extension supports VS Code, Cursor, Windsurf, and VSCodium. It launches Cursor Agent, Claude Code, or Codex CLI through an observable structured runner, stores the ContextKit key in SecretStorage, and exposes public publishing only as an explicit user action.
@@ -67,7 +55,8 @@ The runner captures structured CLI output and submits it only after a successful
 
 ## Security
 
-- API keys remain in environment variables and are never included in the payload.
+- Browser setup uses a short-lived PKCE authorization code. Refreshable OAuth credentials are stored in a user-owned `0600` file and never included in captured payloads.
+- Existing API-key users can keep using environment variables as an explicit override.
 - Common API keys, bearer tokens, passwords, OTPs, private keys, and seed phrases are redacted locally.
 - File-write tool payloads include the target path, not source-file contents.
 - Public publishing is never automatic and unverified drafts cannot be listed.

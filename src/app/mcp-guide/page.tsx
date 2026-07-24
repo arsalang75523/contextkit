@@ -41,20 +41,9 @@ const bearerJsonConfig = `{
   }
 }`;
 
-const claudeAutoCapture = `npm install -g @basedchef/contextkit-autocapture
-export CONTEXTKIT_API_KEY="ck_live_your_scoped_key"
+const claudeAutoCapture = `npx @basedchef/contextkit-autocapture setup --agents claude`;
 
-# Installs a project-local Claude Code Stop hook
-contextkit-autocapture install claude`;
-
-const codexHermesAutoCapture = `# Codex project Stop hook
-contextkit-autocapture install codex
-
-# Or every Codex workspace
-contextkit-autocapture install codex --global
-
-# Hermes post_llm_call hook
-contextkit-autocapture install hermes`;
+const codexHermesAutoCapture = `npx @basedchef/contextkit-autocapture setup --agents codex,hermes`;
 
 const guaranteedRunner = `# Cursor Agent CLI
 contextkit-autocapture run cursor -- "Fix the failing checkout tests"
@@ -65,32 +54,21 @@ contextkit-autocapture run claude -- "Implement the webhook retry policy"
 # Codex CLI
 contextkit-autocapture run codex -- "Verify the payment callback"`;
 
-const openCodeAutoCapture = `export CONTEXTKIT_API_KEY="ck_live_your_scoped_key"
+const openCodeAutoCapture = `npx @basedchef/contextkit-autocapture setup --agents opencode`;
 
-# Project-local session.idle plugin
-contextkit-autocapture install opencode
+const openClawAutoCapture = `npx @basedchef/contextkit-autocapture setup --agents openclaw
 
-# Or install for every OpenCode workspace
-contextkit-autocapture install opencode --global`;
+# Restart the OpenClaw Gateway after setup`;
 
-const openClawAutoCapture = `export CONTEXTKIT_API_KEY="ck_live_your_scoped_key"
+const autoCaptureBootstrap = `npx @basedchef/contextkit-autocapture setup
 
-# Generate and link the native agent_end plugin
-contextkit-autocapture install openclaw --global
-
-# Permit final transcript access, then restart Gateway
-openclaw config set plugins.entries.contextkit-autocapture.hooks.allowConversationAccess true`;
-
-const autoCaptureBootstrap = `npm install -g @basedchef/contextkit-autocapture
-export CONTEXTKIT_API_KEY="ck_live_your_scoped_key"
-
-# Optional self-hosted API
-export CONTEXTKIT_BASE_URL="https://contextkit.pro"`;
+# Optional verification
+contextkit-autocapture doctor`;
 
 const extensionBuild = `npm run extension:package
 
 # Then install this file from the IDE extension screen
-extensions/contextkit-autocapture/contextkit-autocapture-0.1.0.vsix`;
+extensions/contextkit-autocapture/contextkit-autocapture-0.1.2.vsix`;
 
 type HostRunbook = {
   id: string;
@@ -114,11 +92,11 @@ const hostRunbooks: HostRunbook[] = [
     environment: "Terminal / IDE terminal",
     trigger: "Stop hook after each completed turn",
     mode: "Native hook",
-    code: `contextkit-autocapture install claude --global
+    code: `npx @basedchef/contextkit-autocapture setup --agents claude
 claude`,
     steps: [
-      "Install the global bridge and export a dedicated context:write API key.",
-      "Install the global Stop hook, or omit --global to keep it project-local.",
+      "Run setup once; browser OAuth replaces manual API-key export and installs the global Stop hook.",
+      "ContextKit stores a refreshable credential in a user-only file and verifies MCP before setup completes.",
       "Complete a non-trivial Claude Code task; ContextKit evaluates only the latest completed user-to-agent exchange."
     ],
     verify: "Inspect ~/.claude/settings.json and complete one test task. A qualified result reports a private draft ID.",
@@ -132,13 +110,13 @@ claude`,
     environment: "Desktop app / CLI",
     trigger: "Stop hook after a completed Codex turn",
     mode: "Native hook",
-    code: `contextkit-autocapture install codex --global
+    code: `npx @basedchef/contextkit-autocapture setup --agents codex
 codex
 
 # Inside Codex, review project hook trust
 /hooks`,
     steps: [
-      "Install globally for every workspace, or without --global for one repository.",
+      "Run setup once to connect with browser OAuth and install the global Codex hook.",
       "Open /hooks once and approve the generated project hook when Codex requests trust.",
       "Codex provides transcript_path; ContextKit sanitizes and evaluates the finished turn automatically."
     ],
@@ -153,11 +131,11 @@ codex
     environment: "Hermes Agent CLI",
     trigger: "post_llm_call after a successful turn",
     mode: "Native shell hook",
-    code: `contextkit-autocapture install hermes
+    code: `npx @basedchef/contextkit-autocapture setup --agents hermes
 hermes hooks list
 hermes hooks doctor`,
     steps: [
-      "The installer merges a real YAML list into ~/.hermes/config.yaml without replacing existing hooks.",
+      "Setup signs in through OAuth and merges a real YAML list into ~/.hermes/config.yaml without replacing existing hooks.",
       "Review the command with hermes hooks list and accept Hermes first-use hook consent.",
       "The hook receives user_message, assistant_response, and conversation_history after the turn finishes."
     ],
@@ -172,13 +150,12 @@ hermes hooks doctor`,
     environment: "Gateway / agent runtime",
     trigger: "agent_end after a successful run",
     mode: "Native runtime plugin",
-    code: `contextkit-autocapture install openclaw --global
-openclaw config set plugins.entries.contextkit-autocapture.hooks.allowConversationAccess true
+    code: `npx @basedchef/contextkit-autocapture setup --agents openclaw
 
 # Restart the OpenClaw Gateway after enabling`,
     steps: [
-      "Generate and link the ContextKit OpenClaw package through the plugin manager.",
-      "Explicitly allow final-conversation access for this plugin, then restart Gateway.",
+      "Setup connects OAuth, generates and links the ContextKit OpenClaw package through the plugin manager.",
+      "Setup enables final-conversation access for this plugin; restart Gateway afterward.",
       "On agent_end, the plugin sends final messages through local redaction, dedupe, and private-draft detection."
     ],
     verify: "OpenClaw plugin inspection must list contextkit-autocapture; a successful agent run should add a ContextKit log entry.",
@@ -192,10 +169,10 @@ openclaw config set plugins.entries.contextkit-autocapture.hooks.allowConversati
     environment: "TUI / terminal agent",
     trigger: "session.idle after completion",
     mode: "Native session plugin",
-    code: `contextkit-autocapture install opencode --global
+    code: `npx @basedchef/contextkit-autocapture setup --agents opencode
 opencode`,
     steps: [
-      "Install globally under ~/.config/opencode/plugins or omit --global for one project.",
+      "Setup connects OAuth and installs globally under ~/.config/opencode/plugins.",
       "The plugin waits until the session reaches idle, then reads that session's structured messages.",
       "Failed sessions, duplicate tasks, source-file bodies, and incomplete user-only messages are excluded."
     ],
@@ -231,7 +208,7 @@ ContextKit: Run Agent with Guaranteed Auto-Capture`,
     environment: "Desktop IDE",
     trigger: "ContextKit controlled agent runner",
     mode: "Guaranteed extension lane",
-    code: `code --install-extension extensions/contextkit-autocapture/contextkit-autocapture-0.1.0.vsix
+    code: `code --install-extension extensions/contextkit-autocapture/contextkit-autocapture-0.1.2.vsix
 
 # Command Palette
 ContextKit: Configure API Key
@@ -273,7 +250,7 @@ ContextKit: Run Agent with Guaranteed Auto-Capture`,
     environment: "Open-source VS Code build",
     trigger: "ContextKit controlled agent runner",
     mode: "Guaranteed extension lane",
-    code: `codium --install-extension extensions/contextkit-autocapture/contextkit-autocapture-0.1.0.vsix
+    code: `codium --install-extension extensions/contextkit-autocapture/contextkit-autocapture-0.1.2.vsix
 
 # Command Palette
 ContextKit: Configure API Key
@@ -373,7 +350,7 @@ export default function McpGuidePage() {
               <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-aqua">VS Code / Cursor / Windsurf / VSCodium</p>
               <h3 className="mt-3 text-xl font-semibold text-white">ContextKit Auto-Capture</h3>
               <p className="mt-3 text-sm leading-7 text-white/60">Build the VSIX from <code>extensions/contextkit-autocapture</code>, install it in a VS Code-compatible IDE, configure a scoped key in SecretStorage, then run <strong>ContextKit: Run Agent with Guaranteed Auto-Capture</strong>.</p>
-              <CodeBlock code={`npm run extension:package\ncode --install-extension extensions/contextkit-autocapture/contextkit-autocapture-0.1.0.vsix`} />
+              <CodeBlock code={`npm run extension:package\ncode --install-extension extensions/contextkit-autocapture/contextkit-autocapture-0.1.2.vsix`} />
             </article>
           </div>
           <p className="mt-5 rounded-xl border border-amber/20 bg-amber/[0.055] p-4 text-sm leading-7 text-white/62"><strong className="text-amber">Scope:</strong> Claude and Codex Stop hooks, Hermes <code>post_llm_call</code>, OpenClaw <code>agent_end</code>, OpenCode <code>session.idle</code>, and sessions launched through the IDE/CLI runner are automatically considered. Hosts exposing neither transcript access nor a completion event remain best-effort through MCP instructions.</p>
