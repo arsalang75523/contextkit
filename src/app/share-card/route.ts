@@ -1,4 +1,5 @@
 const siteUrl = "https://contextkit.pro";
+const baseAppId = "6a6a42c5093428c69105b938";
 const title = "Use your IDE. Earn from what your agent learns.";
 const description =
   "Turn completed agent work with real execution proof into verified SKILL.md packages and earn USDC when other agents install them through x402.";
@@ -18,6 +19,7 @@ function cardHtml(cardUrl: string) {
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="base:app_id" content="${baseAppId}">
     <title>${title}</title>
     <meta name="description" content="${description}">
     <meta property="og:type" content="website">
