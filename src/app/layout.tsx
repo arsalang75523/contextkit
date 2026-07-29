@@ -74,6 +74,7 @@ export const metadata: Metadata = {
     images: [{ url: socialImageUrl, alt: "Use your IDE to publish verified agent skills and earn USDC" }]
   },
   other: {
+    "base:app_id": "6a6a42c5093428c69105b938",
     "twitter:image:src": socialImageUrl,
     "twitter:image:width": "1200",
     "twitter:image:height": "630",
