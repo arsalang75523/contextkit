@@ -22,11 +22,13 @@ import { CreditService } from "@/services/credit-service";
 import { PaymentService } from "@/services/payment-service";
 import { AppKV } from "@/storage/app-kv";
 import { x402PaymentRequired } from "@/middleware/x402";
-import { requireApiKey, requireInternalToken } from "@/middleware/auth";
+import { acceptHostedDelegation, requireApiKey, requireInternalToken } from "@/middleware/auth";
 import { apiKeyRateLimit } from "@/middleware/rate-limit";
 import { dispatchWebhook } from "@/webhooks/dispatcher";
 import { createId } from "@/utils/id";
 import { endpointPricing } from "@/lib/pricing";
+import { callBankrForCreditRequest, type BankrProxyMode } from "@/lib/bankr-credit-proxy";
+import { log } from "@/lib/logger";
 import type { AppBindings } from "@/types/bindings";
 import type {
   CompressContextResponse,
@@ -137,7 +139,7 @@ async function createUploadedContext(
   );
 }
 
-contextRoutes.post("/summarize", requireApiKey("context:write"), apiKeyRateLimit(), apiCreditOrX402PaymentRequired("summarize"), zValidator("json", conversationRequestSchema), async (c) => {
+contextRoutes.post("/summarize", requireApiKey("context:write"), apiKeyRateLimit(), zValidator("json", conversationRequestSchema), apiCreditOrX402PaymentRequired("summarize"), async (c) => {
   const request = await resolveConversationRequest(c, c.req.valid("json"));
   const service = new ContextService({ env: c.env ?? {}, requestId: c.get("requestId") });
   const result = cachedResult<SummarizeResponse>(request, "summarize") ?? await service.summarize(request);
@@ -150,8 +152,8 @@ contextRoutes.post(
   "/compress-context",
   requireApiKey("context:write"),
   apiKeyRateLimit(),
-  apiCreditOrX402PaymentRequired("compress-context"),
   zValidator("json", conversationRequestSchema),
+  apiCreditOrX402PaymentRequired("compress-context"),
   async (c) => {
     const request = await resolveConversationRequest(c, c.req.valid("json"));
     const service = new ContextService({ env: c.env ?? {}, requestId: c.get("requestId") });
@@ -162,7 +164,7 @@ contextRoutes.post(
   }
 );
 
-contextRoutes.post("/handoff", requireApiKey("context:write"), apiKeyRateLimit(), apiCreditOrX402PaymentRequired("handoff"), zValidator("json", conversationRequestSchema), async (c) => {
+contextRoutes.post("/handoff", requireApiKey("context:write"), apiKeyRateLimit(), zValidator("json", conversationRequestSchema), apiCreditOrX402PaymentRequired("handoff"), async (c) => {
   const request = await resolveConversationRequest(c, c.req.valid("json"));
   const service = new ContextService({ env: c.env ?? {}, requestId: c.get("requestId") });
   const result = cachedResult<HandoffResponse>(request, "handoff") ?? await service.handoff(request);
@@ -175,8 +177,8 @@ contextRoutes.post(
   "/extract-profile",
   requireApiKey("context:write"),
   apiKeyRateLimit(),
-  apiCreditOrX402PaymentRequired("extract-profile"),
   zValidator("json", conversationRequestSchema),
+  apiCreditOrX402PaymentRequired("extract-profile"),
   async (c) => {
     const request = await resolveConversationRequest(c, c.req.valid("json"));
     const service = new ContextService({ env: c.env ?? {}, requestId: c.get("requestId") });
@@ -187,7 +189,7 @@ contextRoutes.post(
   }
 );
 
-contextRoutes.post("/memory-enrichment", requireApiKey("context:write"), apiKeyRateLimit(), apiCreditOrX402PaymentRequired("memory-enrichment"), zValidator("json", conversationRequestSchema), async (c) => {
+contextRoutes.post("/memory-enrichment", requireApiKey("context:write"), apiKeyRateLimit(), zValidator("json", conversationRequestSchema), apiCreditOrX402PaymentRequired("memory-enrichment"), async (c) => {
   const request = await resolveConversationRequest(c, c.req.valid("json"));
   const service = new ContextService({ env: c.env ?? {}, requestId: c.get("requestId") });
   const result = cachedResult<MemoryEnrichmentResponse>(request, "memory-enrichment") ?? await service.memoryEnrichment(request);
@@ -199,8 +201,8 @@ contextRoutes.post(
   "/experience/save",
   requireApiKey("context:write"),
   apiKeyRateLimit(),
-  apiCreditOrX402PaymentRequired("experience-save"),
   zValidator("json", experienceSaveSchema),
+  apiCreditOrX402PaymentRequired("experience-save", "experience-save"),
   async (c) => {
     const body = c.req.valid("json");
     const context = await resolveExperienceContext(c, body);
@@ -214,8 +216,8 @@ contextRoutes.post(
   "/experience/consider",
   requireApiKey("context:write"),
   apiKeyRateLimit(),
-  apiCreditOrX402PaymentRequired("experience-save"),
   zValidator("json", experienceConsiderSchema),
+  apiCreditOrX402PaymentRequired("experience-save", "experience-consider"),
   async (c) => {
     const body = c.req.valid("json");
     const context = await resolveExperienceConsiderContext(c, body);
@@ -229,8 +231,8 @@ contextRoutes.post(
   "/experience/publish",
   requireApiKey("context:write"),
   apiKeyRateLimit(),
-  apiCreditOrX402PaymentRequired("experience-publish"),
   zValidator("json", experiencePublishSchema),
+  apiCreditOrX402PaymentRequired("experience-publish", "experience-publish"),
   async (c) => {
     const body = c.req.valid("json");
     const context = await resolveExperienceContext(c, body);
@@ -244,8 +246,8 @@ contextRoutes.post(
   "/experience/search",
   requireApiKey("context:write"),
   apiKeyRateLimit(),
-  apiCreditOrX402PaymentRequired("experience-search"),
   zValidator("json", experienceSearchSchema),
+  apiCreditOrX402PaymentRequired("experience-search", "skill-search"),
   async (c) => {
     const body = c.req.valid("json");
     const result = await new ExperienceService(c.env ?? {}).search(body, accountOwnerId(c));
@@ -260,7 +262,7 @@ contextRoutes.post(
   apiKeyRateLimit(),
   zValidator("json", experienceBuySchema),
   purchasePreflight(),
-  apiCreditOrX402PaymentRequired("experience-buy"),
+  apiCreditOrX402PaymentRequired("experience-buy", "skill-buy"),
   async (c) => {
     const body = c.req.valid("json");
     const result = await runExperienceBuy(c, body);
@@ -275,8 +277,8 @@ contextRoutes.post(
   "/skills/compile",
   requireApiKey("context:write"),
   apiKeyRateLimit(),
-  apiCreditOrX402PaymentRequired("experience-save"),
   zValidator("json", experienceConsiderSchema),
+  apiCreditOrX402PaymentRequired("experience-save", "skill-compile"),
   async (c) => {
     const body = c.req.valid("json");
     const context = await resolveExperienceConsiderContext(c, body);
@@ -290,8 +292,8 @@ contextRoutes.post(
   "/skills/publish",
   requireApiKey("context:write"),
   apiKeyRateLimit(),
-  apiCreditOrX402PaymentRequired("experience-publish"),
   zValidator("json", experiencePublishSchema),
+  apiCreditOrX402PaymentRequired("experience-publish", "skill-repository-publish"),
   async (c) => {
     const body = c.req.valid("json");
     const context = await resolveExperienceContext(c, body);
@@ -306,8 +308,8 @@ for (const [path, forcedMode] of [["/skills/validate", "skill-validate"], ["/ski
     path,
     requireApiKey("context:write"),
     apiKeyRateLimit(),
-    apiCreditOrX402PaymentRequired("experience-save"),
     zValidator("json", skillBundlePushSchema),
+    apiCreditOrX402PaymentRequired("experience-save", forcedMode),
     async (c) => {
       const body = { ...c.req.valid("json"), mode: forcedMode } as SkillBundlePushInput;
       const result = await runExperienceWrite(() => new ExperienceService(c.env ?? {}).pushBundle(body, skillBundleContext(c, body)));
@@ -321,8 +323,8 @@ contextRoutes.post(
   "/skills/search",
   requireApiKey("context:write"),
   apiKeyRateLimit(),
-  apiCreditOrX402PaymentRequired("experience-search"),
   zValidator("json", experienceSearchSchema),
+  apiCreditOrX402PaymentRequired("experience-search", "skill-search"),
   async (c) => {
     const body = c.req.valid("json");
     const result = await new ExperienceService(c.env ?? {}).search({ ...body, verifiedOnly: true }, accountOwnerId(c));
@@ -335,8 +337,8 @@ contextRoutes.post(
   "/skills/inspect",
   requireApiKey("context:write"),
   apiKeyRateLimit(),
-  apiCreditOrX402PaymentRequired("experience-search"),
   zValidator("json", experienceSearchSchema),
+  apiCreditOrX402PaymentRequired("experience-search", "skill-inspect"),
   async (c) => {
     const body = { ...c.req.valid("json"), mode: "skill-inspect" as const };
     const result = await new ExperienceService(c.env ?? {}).search({ ...body, verifiedOnly: true }, accountOwnerId(c));
@@ -351,7 +353,7 @@ contextRoutes.post(
   apiKeyRateLimit(),
   zValidator("json", experienceBuySchema),
   purchasePreflight(),
-  apiCreditOrX402PaymentRequired("experience-buy"),
+  apiCreditOrX402PaymentRequired("experience-buy", "skill-buy"),
   async (c) => {
     const body = c.req.valid("json");
     const result = await runExperienceBuy(c, body);
@@ -366,7 +368,7 @@ contextRoutes.post(
   apiKeyRateLimit(),
   zValidator("json", experienceBuySchema),
   purchasePreflight(),
-  apiCreditOrX402PaymentRequired("experience-buy"),
+  apiCreditOrX402PaymentRequired("experience-buy", "skill-clone"),
   async (c) => {
     const body = { ...c.req.valid("json"), mode: "skill-clone" as const };
     const result = await runExperienceBuy(c, body);
@@ -453,7 +455,7 @@ contextRoutes.post(
   }
 );
 
-contextRoutes.post("/internal/summarize", requireInternalToken(), zValidator("json", conversationRequestSchema), async (c) => {
+contextRoutes.post("/internal/summarize", requireInternalToken(), acceptHostedDelegation(), zValidator("json", conversationRequestSchema), async (c) => {
   const request = await resolveConversationRequest(c, c.req.valid("json"));
   await markHostedPayment(c, "summarize", "/internal/summarize");
   const service = new ContextService({ env: c.env ?? {}, requestId: c.get("requestId") });
@@ -463,7 +465,7 @@ contextRoutes.post("/internal/summarize", requireInternalToken(), zValidator("js
   return c.json(result);
 });
 
-contextRoutes.post("/internal/compress-context", requireInternalToken(), zValidator("json", conversationRequestSchema), async (c) => {
+contextRoutes.post("/internal/compress-context", requireInternalToken(), acceptHostedDelegation(), zValidator("json", conversationRequestSchema), async (c) => {
   const request = await resolveConversationRequest(c, c.req.valid("json"));
   await markHostedPayment(c, "compress-context", "/internal/compress-context");
   const service = new ContextService({ env: c.env ?? {}, requestId: c.get("requestId") });
@@ -473,7 +475,7 @@ contextRoutes.post("/internal/compress-context", requireInternalToken(), zValida
   return c.json(result);
 });
 
-contextRoutes.post("/internal/handoff", requireInternalToken(), zValidator("json", conversationRequestSchema), async (c) => {
+contextRoutes.post("/internal/handoff", requireInternalToken(), acceptHostedDelegation(), zValidator("json", conversationRequestSchema), async (c) => {
   const request = await resolveConversationRequest(c, c.req.valid("json"));
   await markHostedPayment(c, "handoff", "/internal/handoff");
   const service = new ContextService({ env: c.env ?? {}, requestId: c.get("requestId") });
@@ -483,7 +485,7 @@ contextRoutes.post("/internal/handoff", requireInternalToken(), zValidator("json
   return c.json(result);
 });
 
-contextRoutes.post("/internal/extract-profile", requireInternalToken(), zValidator("json", conversationRequestSchema), async (c) => {
+contextRoutes.post("/internal/extract-profile", requireInternalToken(), acceptHostedDelegation(), zValidator("json", conversationRequestSchema), async (c) => {
   const request = await resolveConversationRequest(c, c.req.valid("json"));
   await markHostedPayment(c, "extract-profile", "/internal/extract-profile");
   const service = new ContextService({ env: c.env ?? {}, requestId: c.get("requestId") });
@@ -493,7 +495,7 @@ contextRoutes.post("/internal/extract-profile", requireInternalToken(), zValidat
   return c.json(result);
 });
 
-contextRoutes.post("/internal/memory-enrichment", requireInternalToken(), zValidator("json", conversationRequestSchema), async (c) => {
+contextRoutes.post("/internal/memory-enrichment", requireInternalToken(), acceptHostedDelegation(), zValidator("json", conversationRequestSchema), async (c) => {
   const request = await resolveConversationRequest(c, c.req.valid("json"));
   await markHostedPayment(c, "memory-enrichment", "/internal/memory-enrichment");
   const service = new ContextService({ env: c.env ?? {}, requestId: c.get("requestId") });
@@ -502,7 +504,7 @@ contextRoutes.post("/internal/memory-enrichment", requireInternalToken(), zValid
   return c.json(result);
 });
 
-contextRoutes.post("/internal/experience/save", requireInternalToken(), zValidator("json", experienceSaveSchema), async (c) => {
+contextRoutes.post("/internal/experience/save", requireInternalToken(), acceptHostedDelegation(), zValidator("json", experienceSaveSchema), async (c) => {
   const body = c.req.valid("json");
   await markHostedPayment(c, "experience-save", "/internal/experience/save");
   const context = await resolveExperienceContext(c, body);
@@ -511,7 +513,7 @@ contextRoutes.post("/internal/experience/save", requireInternalToken(), zValidat
   return c.json(result, 201);
 });
 
-contextRoutes.post("/internal/experience/consider", requireInternalToken(), zValidator("json", experienceConsiderSchema), async (c) => {
+contextRoutes.post("/internal/experience/consider", requireInternalToken(), acceptHostedDelegation(), zValidator("json", experienceConsiderSchema), async (c) => {
   const body = c.req.valid("json");
   await markHostedPayment(c, "experience-save", "/internal/experience/consider");
   const context = await resolveExperienceConsiderContext(c, body);
@@ -520,7 +522,7 @@ contextRoutes.post("/internal/experience/consider", requireInternalToken(), zVal
   return c.json(result);
 });
 
-contextRoutes.post("/internal/experience/publish", requireInternalToken(), zValidator("json", experiencePublishSchema), async (c) => {
+contextRoutes.post("/internal/experience/publish", requireInternalToken(), acceptHostedDelegation(), zValidator("json", experiencePublishSchema), async (c) => {
   const body = c.req.valid("json");
   await markHostedPayment(c, "experience-publish", "/internal/experience/publish");
   const context = await resolveExperienceContext(c, body);
@@ -529,7 +531,7 @@ contextRoutes.post("/internal/experience/publish", requireInternalToken(), zVali
   return c.json(result, 201);
 });
 
-contextRoutes.post("/internal/experience/search", requireInternalToken(), zValidator("json", experienceSearchSchema), async (c) => {
+contextRoutes.post("/internal/experience/search", requireInternalToken(), acceptHostedDelegation(), zValidator("json", experienceSearchSchema), async (c) => {
   const body = c.req.valid("json");
   await markHostedPayment(c, "experience-search", "/internal/experience/search");
   const result = await new ExperienceService(c.env ?? {}).search(body, accountOwnerId(c));
@@ -537,7 +539,7 @@ contextRoutes.post("/internal/experience/search", requireInternalToken(), zValid
   return c.json(result);
 });
 
-contextRoutes.post("/internal/experience/buy", requireInternalToken(), zValidator("json", experienceBuySchema), async (c) => {
+contextRoutes.post("/internal/experience/buy", requireInternalToken(), acceptHostedDelegation(), zValidator("json", experienceBuySchema), async (c) => {
   const body = c.req.valid("json");
   await preflightExperienceBuy(c, body);
   await markHostedPayment(c, "experience-buy", "/internal/experience/buy");
@@ -546,7 +548,7 @@ contextRoutes.post("/internal/experience/buy", requireInternalToken(), zValidato
   return c.json(result);
 });
 
-contextRoutes.post("/internal/skills/push", requireInternalToken(), zValidator("json", skillBundlePushSchema), async (c) => {
+contextRoutes.post("/internal/skills/push", requireInternalToken(), acceptHostedDelegation(), zValidator("json", skillBundlePushSchema), async (c) => {
   const body = c.req.valid("json");
   await markHostedPayment(c, "experience-save", "/internal/skills/push");
   const result = await runExperienceWrite(() => new ExperienceService(c.env ?? {}).pushBundle(body, skillBundleContext(c, body)));
@@ -558,7 +560,7 @@ async function resolveExperienceContext(
   c: Context<AppBindings>,
   body: ExperienceSaveInput | ExperiencePublishInput
 ) {
-  const ownerId = accountOwnerId(c) ?? body.creatorId ?? "bankr-hosted";
+  const ownerId = accountOwnerId(c) ?? "bankr-hosted";
   if (!body.contextId) {
     return {
       ownerId,
@@ -585,7 +587,7 @@ function skillBundleContext(c: Context<AppBindings>, body: SkillBundlePushInput)
 }
 
 async function resolveExperienceConsiderContext(c: Context<AppBindings>, body: ExperienceConsiderInput) {
-  const ownerId = accountOwnerId(c) ?? body.creatorId ?? "bankr-hosted";
+  const ownerId = accountOwnerId(c) ?? "bankr-hosted";
   if (!body.contextId) {
     return {
       ownerId,
@@ -747,6 +749,8 @@ async function runExperienceWrite<T>(operation: () => Promise<T>) {
 }
 
 function accountOwnerId(c: Context<AppBindings>) {
+  const delegatedOwnerId = c.get("delegatedOwnerId");
+  if (delegatedOwnerId) return delegatedOwnerId;
   const apiKey = c.get("apiKey");
   return apiKey?.ownerId ?? (apiKey ? `api-key:${apiKey.id}` : undefined);
 }
@@ -849,7 +853,9 @@ async function markHostedPayment(c: Context<AppBindings>, endpoint: keyof typeof
   });
 }
 
-function apiCreditOrX402PaymentRequired(endpoint: keyof typeof endpointPricing) {
+const creditProxyLocks = new Map<string, Promise<void>>();
+
+function apiCreditOrX402PaymentRequired(endpoint: keyof typeof endpointPricing, mode?: BankrProxyMode) {
   return async (c: Context<AppBindings>, next: () => Promise<void>) => {
     const apiKey = c.get("apiKey");
     if (apiKey) {
@@ -857,19 +863,86 @@ function apiCreditOrX402PaymentRequired(endpoint: keyof typeof endpointPricing) 
       const amountUsd = endpointPricing[endpoint];
       const credits = new CreditService(c.env ?? {});
       if (await credits.canDebit(ownerId, amountUsd)) {
-        c.set("creditCharge", {
-          ownerId,
-          apiKeyId: apiKey.id,
-          route: `/${endpoint}`,
-          amountUsd
+        return withCreditProxyLock(ownerId, async () => {
+          if (!await credits.canDebit(ownerId, amountUsd)) {
+            return x402PaymentRequired(endpoint)(c, next);
+          }
+
+          const requestId = c.get("requestId");
+          const route = c.req.path.replace(/^\/api/, "") || `/${endpoint}`;
+          const charge = { ownerId, apiKeyId: apiKey.id, route, amountUsd, requestId };
+          await credits.debit(charge);
+
+          try {
+            const result = await callBankrForCreditRequest(c.env ?? {}, {
+              endpoint,
+              mode,
+              rawBody: await c.req.text(),
+              ownerId,
+              apiKeyId: apiKey.id,
+              requestId
+            });
+
+            if (result.status < 200 || result.status >= 300) {
+              await credits.refund({ ...charge, note: `Bankr x402 returned HTTP ${result.status}.` });
+            } else {
+              await new ApiKeyService(c.env ?? {}).recordUsage(apiKey.hash, route, amountUsd);
+            }
+
+            const headers = new Headers({
+              "Content-Type": result.contentType,
+              "X-ContextKit-Paid-Via": "bankr-x402",
+              "X-ContextKit-Credit-Charged": result.status >= 200 && result.status < 300 ? amountUsd.toFixed(6) : "0"
+            });
+            if (result.paymentResponse) headers.set("Payment-Response", result.paymentResponse);
+            return new Response(result.body, { status: result.status, headers });
+          } catch (error) {
+            await credits.refund({
+              ...charge,
+              note: "Bankr x402 forwarding failed before a successful response."
+            });
+            log("error", "Credit-backed Bankr x402 forwarding failed", {
+              requestId,
+              endpoint,
+              mode,
+              error: String(error)
+            });
+            const configurationError = error instanceof Error && [
+              "bankr_x402_payer_not_configured",
+              "hosted_delegation_secret_not_configured"
+            ].includes(error.message);
+            return c.json({
+              error: {
+                code: configurationError ? "bankr_proxy_not_configured" : "bankr_proxy_failed",
+                message: configurationError
+                  ? "Credit-backed Bankr x402 forwarding is not configured."
+                  : "Bankr x402 could not complete the paid request; account credits were refunded.",
+                requestId
+              }
+            }, configurationError ? 503 : 502);
+          }
         });
-        await next();
-        return;
       }
     }
 
     return x402PaymentRequired(endpoint)(c, next);
   };
+}
+
+async function withCreditProxyLock<T>(ownerId: string, operation: () => Promise<T>) {
+  const previous = creditProxyLocks.get(ownerId) ?? Promise.resolve();
+  let release = () => {};
+  const current = new Promise<void>((resolve) => { release = resolve; });
+  const tail = previous.then(() => current);
+  creditProxyLocks.set(ownerId, tail);
+  await previous;
+
+  try {
+    return await operation();
+  } finally {
+    release();
+    if (creditProxyLocks.get(ownerId) === tail) creditProxyLocks.delete(ownerId);
+  }
 }
 
 async function complete(
@@ -898,7 +971,7 @@ async function complete(
     inputTokens: estimateTokens(request.messages as ConversationMessage[]),
     outputTokens: estimateTokens(output),
     paymentId,
-    apiKeyId: apiKey?.id,
+    apiKeyId: apiKey?.id ?? c.get("delegatedApiKeyId"),
     ownerId,
     amountUsd: payment?.amountUsd ?? creditCharge?.amountUsd,
     status: "success"
@@ -962,7 +1035,7 @@ async function completeOperation(
     inputTokens: estimateTokens(JSON.stringify(input)),
     outputTokens: estimateTokens(output),
     paymentId,
-    apiKeyId: apiKey?.id,
+    apiKeyId: apiKey?.id ?? c.get("delegatedApiKeyId"),
     ownerId,
     amountUsd: payment?.amountUsd ?? creditCharge?.amountUsd,
     status: "success"

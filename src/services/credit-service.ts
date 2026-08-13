@@ -69,6 +69,23 @@ export class CreditService {
     });
   }
 
+  async refund(input: { ownerId: string; amountUsd: number; route: string; requestId: string; apiKeyId?: string; note?: string }) {
+    const amountUsd = normalizeAmount(input.amountUsd);
+    if (amountUsd <= 0) throw new Error("invalid_credit_amount");
+    const next = Number(((await this.balance(input.ownerId)) + amountUsd).toFixed(6));
+    await this.kv.set(balanceKey(input.ownerId), next);
+    return this.recordEvent({
+      ownerId: input.ownerId,
+      type: "refund",
+      amountUsd,
+      balanceAfterUsd: next,
+      route: input.route,
+      requestId: input.requestId,
+      apiKeyId: input.apiKeyId,
+      note: input.note
+    });
+  }
+
   async events(ownerId: string) {
     const index = await this.kv.getMany<{ id: string }>(`credit-event-index:${ownerId}:`);
     const events = await Promise.all(index.map((item) => this.kv.get<CreditEvent>(`credit-event:${item.id}`)));

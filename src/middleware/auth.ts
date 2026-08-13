@@ -1,6 +1,7 @@
 import type { MiddlewareHandler } from "hono";
 import { readEnv } from "@/lib/env";
 import { ApiKeyService } from "@/services/api-key-service";
+import { hostedDelegationHeader, verifyHostedDelegation } from "@/lib/hosted-delegation";
 import type { AppBindings } from "@/types/bindings";
 
 export function requireApiKey(scope?: string): MiddlewareHandler<AppBindings> {
@@ -62,5 +63,34 @@ export function requireInternalToken(): MiddlewareHandler<AppBindings> {
     }
 
     await next();
+  };
+}
+
+export function acceptHostedDelegation(): MiddlewareHandler<AppBindings> {
+  return async (c, next) => {
+    const token = c.req.header(hostedDelegationHeader);
+    if (!token) {
+      await next();
+      return;
+    }
+
+    const secret = readEnv({ env: c.env ?? {} }).internalToken;
+    try {
+      const delegation = await verifyHostedDelegation(secret, token, {
+        path: c.req.path,
+        body: await c.req.text()
+      });
+      c.set("delegatedOwnerId", delegation.ownerId);
+      c.set("delegatedApiKeyId", delegation.apiKeyId);
+      await next();
+    } catch {
+      return c.json({
+        error: {
+          code: "invalid_hosted_delegation",
+          message: "Hosted account delegation is invalid or expired.",
+          requestId: c.get("requestId")
+        }
+      }, 401);
+    }
   };
 }

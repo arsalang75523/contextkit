@@ -326,9 +326,9 @@ export default function DocsPage() {
             <DocSection id="access-paths" title="Access Paths">
               <div className="grid gap-4 md:grid-cols-3">
                 <InfoCard title="Bankr-hosted x402" body="Best for users and autonomous agents. Run a Bankr x402 command, approve payment, and receive JSON. No ContextKit API key or SDK required." />
-                <InfoCard title="API key + credits" body="Best for server integrations. Use dashboard-created API keys and account credits to call direct /api routes without Bankr on every request." />
+                <InfoCard title="API key + credits" body="Best for server integrations. Direct paid routes reserve account credits, settle the matching Bankr x402 lane through ContextKit, and return the Bankr response." />
                 <InfoCard title="TypeScript SDK" body="Best for app developers. The SDK wraps direct API routes, attaches API keys, returns typed JSON, verifies webhooks, and can optionally handle x402 fallback." />
-                <InfoCard title="Hosted MCP" body="Best for agent hosts. Connect one Streamable HTTP MCP server with a scoped API key; tools use the same account credits and API policy as direct calls." />
+                <InfoCard title="Hosted MCP" body="Best for agent hosts. Paid tools use account credits while ContextKit performs the matching Bankr x402 request; read-only utility tools remain free." />
               </div>
             </DocSection>
 
@@ -386,7 +386,7 @@ export default function DocsPage() {
               </p>
               <div className="mt-4 grid gap-3 md:grid-cols-3">
                 <InfoCard title="Liveness" body="/api/health proves the process is running without querying storage or consuming normal request budgets." />
-                <InfoCard title="Readiness" body="/api/ready verifies persistent storage and production configuration; storage failure returns HTTP 503." />
+                <InfoCard title="Readiness" body="/api/ready verifies storage, hosted identity delegation, and the dedicated Bankr x402 credit-settlement wallet; storage failure returns HTTP 503." />
                 <InfoCard title="Launch gates" body="/api/public/launch-readiness counts verified usage, quality, retention, and paid-payout evidence without activating a token." />
               </div>
               <div className="mt-4">
@@ -532,7 +532,7 @@ export default function DocsPage() {
 
             <DocSection id="api-credits" title="API Credits">
               <p>
-                Credits let API-key and SDK users call paid direct endpoints without Bankr per request. Direct paid routes spend credits first; if credits are insufficient, ContextKit returns a normal HTTP 402 x402 challenge.
+                Credits remove wallet prompts, not Bankr settlement. Every successful paid API-key, SDK, or MCP operation is executed through its matching Bankr-hosted x402 lane. ContextKit reserves the account credit, pays from a dedicated server wallet, returns the Bankr response, and refunds the credit if forwarding fails. Insufficient balances still return HTTP 402.
               </p>
               <CodeBlock code={creditsCurl} />
               <p className="mt-3">
@@ -549,7 +549,7 @@ export default function DocsPage() {
 
             <DocSection id="direct-api" title="Direct API">
               <p>
-                Direct API routes are for SDK and backend integrations. They require an API key. Paid generation routes use credits first and return 402 when payment is still required.
+                Direct API routes are for SDK and backend integrations. They require an API key. Paid routes use credits as the user-facing balance and Bankr x402 as the execution and settlement path; unpaid utility routes stay local.
               </p>
               <CodeBlock code={directApiExample} />
               <p className="mt-4">Token estimates are API-key only and do not require Bankr payment:</p>
@@ -558,7 +558,7 @@ export default function DocsPage() {
 
             <DocSection id="sdk" title="SDK">
               <p>
-                The SDK is a TypeScript wrapper around the direct API. It attaches API keys, sends typed requests, uses account credits, returns typed JSON, exposes credit balance, verifies webhooks, and supports optional x402 fallback.
+                The SDK is a TypeScript wrapper around the direct API. It attaches API keys, sends typed requests, uses account credits, receives Bankr-backed paid responses, exposes credit balance, verifies webhooks, and supports direct x402 handling when needed.
               </p>
               <div className="mt-4 grid gap-4">
                 <div>

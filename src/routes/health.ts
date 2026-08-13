@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { hasDatabaseUrl } from "@/db/client";
 import { readEnv } from "@/lib/env";
+import { bankrCreditPayerConfigured } from "@/lib/bankr-credit-proxy";
 import { AppKV } from "@/storage/app-kv";
 import type { AppBindings } from "@/types/bindings";
 
@@ -35,6 +36,8 @@ export const healthRoutes = new Hono<AppBindings>()
     const configuration = {
       bankrLlm: Boolean(env.bankrLlmKey),
       internalAuth: Boolean(env.internalToken),
+      hostedDelegation: env.internalToken.length >= 24,
+      bankrCreditPayer: bankrCreditPayerConfigured(c.env ?? {}),
       webhookSigning: Boolean(env.webhookSecret && env.webhookSecret !== "dev-webhook-secret-change-me"),
       x402Wallet: /^0x[a-fA-F0-9]{40}$/.test(env.x402PayTo)
         && env.x402PayTo !== "0x0000000000000000000000000000000000000000"

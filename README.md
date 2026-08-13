@@ -53,7 +53,7 @@ curl -fsS https://contextkit.pro/api/public/launch-readiness
 ```
 
 - `GET /api/health` is a dependency-independent liveness probe. It does not query storage and bypasses normal request-budget and concurrency accounting.
-- `GET /api/ready` checks persistent storage and required production configuration. It returns `200` for `ready` or `degraded`, and `503` only when storage is unavailable.
+- `GET /api/ready` checks persistent storage, signed hosted delegation, and the dedicated Bankr x402 credit-settlement wallet. It returns `200` for `ready` or `degraded`, and `503` only when storage is unavailable.
 - `GET /api/public/launch-readiness` reports closed-beta usage, validation, buyer-retention, and paid-payout gates with `tokenLaunch: "not-started"`.
 
 Optional seller closed beta:
@@ -127,7 +127,7 @@ The caller runs a `bankr x402 call`, approves USDC payment, and receives JSON. N
 
 ### 2. API Key Credits
 
-Dashboard users can create API keys and buy account credits. Direct `/api/*` routes spend credits first, so apps can call paid endpoints without asking the user to approve Bankr on every request.
+Dashboard users can create API keys and buy account credits. Direct `/api/*` routes authenticate the account and reserve credits, then ContextKit settles the matching Bankr-hosted x402 lane from its dedicated operational wallet. The Bankr response is returned unchanged and credits are refunded automatically if forwarding fails, so users do not approve a wallet payment on every request.
 
 ### 3. TypeScript SDK
 
@@ -135,7 +135,7 @@ Advanced developers can install `@basedchef/contextkit` for typed API calls, cre
 
 ### 4. Hosted MCP
 
-Agent hosts can connect to the stateless Streamable HTTP MCP endpoint at `https://contextkit.pro/mcp`. MCP uses a normal dashboard-created API key with `context:write` and spends the same account credits as direct API calls.
+Agent hosts can connect to the stateless Streamable HTTP MCP endpoint at `https://contextkit.pro/mcp`. MCP uses a normal dashboard-created API key with `context:write`; every paid tool spends account credits and is executed through the matching Bankr x402 lane.
 
 ## Paid Endpoints
 
@@ -146,7 +146,7 @@ Agent hosts can connect to the stateless Streamable HTTP MCP endpoint at `https:
 | `POST /api/skills/search`, `/inspect` | `contextkit-experience-search` | Search previews or inspect digest, manifest, and validation | `$0.01` |
 | `POST /api/skills/buy`, `/clone` | `contextkit-experience-buy` | Buy or clone a complete repository bundle | `$0.05` |
 
-Utility endpoints such as token estimates, credits, analytics, keys, and webhooks use dashboard API keys instead of Bankr-hosted pay-per-call.
+Utility endpoints such as token estimates, credit reads, analytics, keys, and webhooks are not paid compute and do not call Bankr x402.
 
 ## Bankr-Hosted x402 Commands
 
@@ -610,7 +610,7 @@ Use `.env.example` as a placeholder reference only. Never commit real `.env` fil
 
 `402 Payment Required`
 
-The API key has no credits. Top up credits or use Bankr-hosted x402.
+The API key has no credits. Top up credits or call the Bankr-hosted x402 lane directly.
 
 `401 Unauthorized`
 
