@@ -99,6 +99,21 @@ test("enforces minimum and available payout balances without network calls", asy
   assert.equal(summary.paidOutUsd, 0);
 });
 
+test("requires reconfirmation when the verified payout destination changes and preserves six-digit USDC amounts", async () => {
+  const kv = memoryNamespace();
+  const service = new SellerPayoutService({ CONTEXTKIT_KV: kv });
+  const sellerId = "seller-wallet-changed";
+  await seedSale(kv, sellerId, 1.250999, "precise-sale");
+  const firstWallet = await verifySellerWallet(service, sellerId);
+  const secondWallet = await verifySellerWallet(service, sellerId, otherAccount);
+
+  await assert.rejects(service.request(sellerId, 1.250999, firstWallet.address), /payout_wallet_changed/);
+  assert.equal((await service.summary(sellerId)).reservedUsd, 0);
+  const payout = await service.request(sellerId, 1.250999, secondWallet.address);
+  assert.equal(payout.destination, secondWallet.address);
+  assert.equal(payout.amountUnits, "1250999");
+});
+
 test("rejects conflicting payout transitions before any on-chain verification", async () => {
   const kv = memoryNamespace();
   const service = new SellerPayoutService({ CONTEXTKIT_KV: kv });

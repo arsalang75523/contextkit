@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, LoaderCircle, LogOut, ShieldCheck, Wallet } from "lucide-react";
+import { Check, ExternalLink, LoaderCircle, LogOut, ShieldCheck, Wallet } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { Address } from "viem";
 import { useConnect, useConnection, useDisconnect, useSignMessage } from "wagmi";
@@ -61,7 +61,7 @@ function SellerPayoutPanelInner({
   const availableUsd = Number(payout.availableUsd ?? 0);
   const minimumPayoutUsd = Number(payout.minimumPayoutUsd ?? 1);
   const verifiedAddress = payout.wallet?.address;
-  const [amount, setAmount] = useState(availableUsd ? availableUsd.toFixed(3) : "");
+  const [amount, setAmount] = useState(availableUsd ? String(availableUsd) : "");
   const [phase, setPhase] = useState<"idle" | "challenging" | "signing" | "verifying" | "requesting">("idle");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -72,8 +72,12 @@ function SellerPayoutPanelInner({
   );
 
   useEffect(() => {
-    if (availableUsd > 0) setAmount(availableUsd.toFixed(3));
+    setAmount(availableUsd > 0 ? String(availableUsd) : "");
   }, [availableUsd]);
+
+  const amountUsd = Number(amount);
+  const validAmount = /^\d+(?:\.\d{1,6})?$/.test(amount)
+    && amountUsd >= minimumPayoutUsd && amountUsd <= availableUsd;
 
   async function verifyPayoutWallet() {
     if (!address) return;
@@ -114,12 +118,12 @@ function SellerPayoutPanelInner({
   }
 
   async function requestPayout() {
-    const amountUsd = Number(amount);
-    if (!Number.isFinite(amountUsd) || amountUsd < minimumPayoutUsd || amountUsd > availableUsd) {
-      setError(`Enter an amount from ${minimumPayoutUsd.toFixed(2)} to ${availableUsd.toFixed(3)} USDC.`);
+    if (!verifiedAddress || busy) return;
+    if (!validAmount) {
+      setError(`Enter an amount from ${formatAmount(minimumPayoutUsd)} to ${formatAmount(availableUsd)} USDC.`);
       return;
     }
-    if (!window.confirm(`Request ${amountUsd.toFixed(3)} USDC to ${shortAddress(verifiedAddress)}?`)) return;
+    if (!window.confirm(`Request ${formatAmount(amountUsd)} USDC on Base to ${verifiedAddress}?`)) return;
 
     setError("");
     setMessage("");
@@ -128,7 +132,7 @@ function SellerPayoutPanelInner({
       const response = await fetch("/api/dashboard/payout/request", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amountUsd })
+        body: JSON.stringify({ amountUsd, expectedDestination: verifiedAddress })
       });
       const payload = await response.json() as ChallengePayload;
       if (!response.ok) throw new Error(payload.error?.message ?? "Payout request failed.");
@@ -146,16 +150,16 @@ function SellerPayoutPanelInner({
       <div className="flex items-center justify-between border-b border-amber/15 px-5 py-4">
         <div>
           <p className="font-mono text-[9px] uppercase tracking-[0.16em] text-amber">Settlement ledger</p>
-          <h3 className="mt-1 text-xl font-semibold text-white">Verified Base payout</h3>
+          <h3 className="mt-1 text-xl font-semibold text-white">USDC payouts on Base</h3>
         </div>
         <BanknoteMark />
       </div>
 
       <div className="p-5">
         <div className="grid grid-cols-3 gap-px overflow-hidden rounded-xl border border-amber/15 bg-amber/15">
-          <PayoutMetric label="Available" value={`$${availableUsd.toFixed(3)}`} />
-          <PayoutMetric label="Reserved" value={`$${Number(payout.reservedUsd ?? 0).toFixed(3)}`} />
-          <PayoutMetric label="Paid" value={`$${Number(payout.paidOutUsd ?? 0).toFixed(3)}`} />
+          <PayoutMetric label="Available" value={`$${formatAmount(availableUsd)}`} />
+          <PayoutMetric label="Reserved" value={`$${formatAmount(Number(payout.reservedUsd ?? 0))}`} />
+          <PayoutMetric label="Paid" value={`$${formatAmount(Number(payout.paidOutUsd ?? 0))}`} />
         </div>
 
         {!isConnected ? (
@@ -165,7 +169,7 @@ function SellerPayoutPanelInner({
                 <Wallet className="h-4 w-4" />
               </span>
               <div>
-                <p className="font-medium text-white">Connect the wallet that should receive seller USDC.</p>
+                <p className="font-medium text-white">{verifiedAddress ? "Connect a wallet to change the receiver." : "Connect the wallet that should receive seller USDC."}</p>
                 <p className="mt-1 text-xs leading-5 text-white/43">Verification signs a human-readable message only. ContextKit never requests custody, approval, or spending access.</p>
               </div>
             </div>
@@ -206,44 +210,46 @@ function SellerPayoutPanelInner({
                 {busy ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
                 {verificationLabel(phase)}
               </button>
-            ) : (
-              <div className="mt-4">
-                <label className="block">
-                  <span className="font-mono text-[9px] uppercase tracking-[0.14em] text-white/35">Payout amount / USDC</span>
-                  <div className="mt-2 flex h-11 items-center rounded-lg border border-line bg-carbon/70 px-3 focus-within:border-amber/45">
-                    <span className="font-mono text-amber">$</span>
-                    <input
-                      type="number"
-                      min={minimumPayoutUsd}
-                      max={availableUsd}
-                      step="0.001"
-                      inputMode="decimal"
-                      value={amount}
-                      onChange={(event) => setAmount(event.target.value)}
-                      disabled={busy}
-                      className="h-full min-w-0 flex-1 bg-transparent px-2 text-sm text-white outline-none"
-                    />
-                    <span className="font-mono text-[10px] text-white/35">USDC</span>
-                  </div>
-                </label>
-                <button
-                  type="button"
-                  disabled={busy || availableUsd < minimumPayoutUsd}
-                  onClick={() => void requestPayout()}
-                  className="mt-3 inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-amber px-4 text-sm font-semibold text-ink transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-45"
-                >
-                  {phase === "requesting" ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                  {availableUsd < minimumPayoutUsd ? `Minimum ${minimumPayoutUsd.toFixed(2)} USDC` : "Request payout"}
-                </button>
-              </div>
-            )}
+            ) : null}
           </div>
         )}
 
         {verifiedAddress ? (
-          <p className="mt-3 break-all font-mono text-[10px] text-white/35">
-            Receiver: {verifiedAddress}
-          </p>
+          <div className="mt-5 rounded-xl border border-line bg-ink/60 p-4">
+            <label className="block">
+              <span className="font-mono text-[9px] uppercase tracking-[0.14em] text-white/55">Payout amount (USDC)</span>
+              <div className="mt-2 flex h-11 items-center rounded-lg border border-line bg-carbon/70 px-3 focus-within:border-amber/45">
+                <input
+                  type="number"
+                  min={minimumPayoutUsd}
+                  max={availableUsd}
+                  step="0.000001"
+                  inputMode="decimal"
+                  value={amount}
+                  onChange={(event) => setAmount(event.target.value)}
+                  disabled={busy}
+                  aria-describedby="payout-preview"
+                  className="h-full min-w-0 flex-1 bg-transparent px-2 text-sm text-white outline-none"
+                />
+                <span aria-hidden="true" className="font-mono text-[10px] text-white/35">USDC</span>
+              </div>
+            </label>
+            <p id="payout-preview" className="mt-3 text-xs leading-5 text-white/60">
+              {validAmount
+                ? `Requested payout: ${formatAmount(amountUsd)} USDC (≈ $${formatAmount(amountUsd)}), subject to review.`
+                : `Minimum withdrawal: ${formatAmount(minimumPayoutUsd)} USDC. Enter up to six decimal places.`}
+            </p>
+            <p className="mt-1 break-all font-mono text-[10px] text-white/55">Receiver: {verifiedAddress}</p>
+            <button
+              type="button"
+              disabled={busy || !validAmount}
+              onClick={() => void requestPayout()}
+              className="mt-3 inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-amber px-4 text-sm font-semibold text-ink transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-45"
+            >
+              {phase === "requesting" ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+              Request USDC payout
+            </button>
+          </div>
         ) : null}
         {connectError ? <p className="mt-3 text-sm text-coral">{errorMessage(connectError)}</p> : null}
         {error ? <p className="mt-3 rounded-lg border border-coral/20 bg-coral/[0.06] p-3 text-sm text-coral">{error}</p> : null}
@@ -275,8 +281,13 @@ function PayoutHistory({ requests }: { requests: PayoutRequest[] }) {
       <div className="mt-3 grid gap-2">
         {requests.slice(0, 4).map((request, index) => (
           <div key={request.id ?? index} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-line bg-carbon/65 px-3 py-2.5 text-xs">
-            <span className="font-mono text-white">${Number(request.amountUsd ?? 0).toFixed(3)}</span>
+            <span className="font-mono text-white">{formatAmount(Number(request.amountUsd ?? 0))} USDC</span>
             <span className="text-white/35">{request.createdAt ? new Date(request.createdAt).toLocaleDateString() : "Pending"}</span>
+            {request.status === "paid" && request.txHash && /^0x[0-9a-f]{64}$/i.test(request.txHash) ? (
+              <a href={`https://basescan.org/tx/${request.txHash}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-aqua hover:underline">
+                View transaction <ExternalLink className="h-3 w-3" />
+              </a>
+            ) : null}
             <span className={`rounded-full border px-2 py-0.5 font-mono text-[8px] uppercase tracking-[0.1em] ${request.status === "paid" ? "border-mint/25 text-mint" : request.status === "rejected" ? "border-coral/25 text-coral" : "border-amber/25 text-amber"}`}>
               {request.status ?? "requested"}
             </span>
@@ -285,6 +296,10 @@ function PayoutHistory({ requests }: { requests: PayoutRequest[] }) {
       </div>
     </div>
   );
+}
+
+function formatAmount(value: number) {
+  return value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 6 });
 }
 
 function BanknoteMark() {

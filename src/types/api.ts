@@ -180,7 +180,8 @@ export const payoutWalletVerifySchema = z.object({
 });
 
 export const payoutRequestSchema = z.object({
-  amountUsd: z.number().positive().max(1_000_000).optional()
+  amountUsd: z.number().positive().max(1_000_000).optional(),
+  expectedDestination: payoutWalletChallengeSchema.shape.address.optional()
 });
 
 export const payoutAdminActionSchema = z.object({

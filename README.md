@@ -77,7 +77,7 @@ Seller payout flow:
 
 1. Create a ten-minute wallet challenge with `POST /api/dashboard/payout/wallet/challenge`.
 2. Sign the returned message and verify it with `POST /api/dashboard/payout/wallet/verify`. The message does not authorize a transaction; ContextKit never receives a private key.
-3. Request at least `1 USDC` with `POST /api/dashboard/payout/request`.
+3. Check the Base wallet, requested USDC amount, and approximate USD value in the dashboard. Request at least `1 USDC` with `POST /api/dashboard/payout/request`. Pass `expectedDestination` when the user confirms a specific receiver.
 4. A server administrator reviews with `GET /api/admin/payouts`, then approves or rejects through `POST /api/admin/payouts/:payoutId`.
 5. After the treasury sends Base USDC manually, `action: mark-paid` verifies the confirmed on-chain transfer, destination, token contract, amount, and one-time transaction hash before updating the ledger.
 

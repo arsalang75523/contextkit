@@ -132,13 +132,16 @@ export class SellerPayoutService {
     };
   }
 
-  async request(ownerId: string, amountUsd?: number) {
+  async request(ownerId: string, amountUsd?: number, expectedDestination?: string) {
     const lockKey = `seller-payout-lock:${ownerId}`;
     const lockCount = await this.kv.increment(lockKey, 120);
     if (lockCount > 1) throw new Error("payout_request_in_progress");
     try {
       const summary = await this.summary(ownerId);
       if (!summary.wallet) throw new Error("payout_wallet_required");
+      if (expectedDestination && normalizeAddress(expectedDestination) !== summary.wallet.address.toLowerCase()) {
+        throw new Error("payout_wallet_changed");
+      }
       const amount = money(amountUsd ?? summary.availableUsd);
       if (amount < summary.minimumPayoutUsd) throw new Error("payout_below_minimum");
       if (amount > summary.availableUsd) throw new Error("payout_insufficient_balance");

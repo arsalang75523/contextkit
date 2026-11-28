@@ -642,7 +642,7 @@ registry.registerPath({
   method: "post",
   path: "/api/dashboard/payout/request",
   summary: "Request seller settlement in Base USDC",
-  description: "Reserves the requested available seller balance for manual review. A verified payout wallet and a minimum balance of 1 USDC are required.",
+  description: "Reserves the requested available seller balance for manual review. A verified payout wallet and a minimum balance of 1 USDC are required. Set expectedDestination to the address shown in the confirmation to reject requests made after a wallet change.",
   tags: ["Seller Payouts"],
   security: [{ DashboardSession: [] }],
   request: {
@@ -655,7 +655,7 @@ registry.registerPath({
   responses: {
     201: response("Payout request recorded.", z.object({ payout: payoutRecordSchema })),
     401: response("Dashboard login required.", errorSchema),
-    409: response("A request is already in progress.", errorSchema),
+    409: response("A request is already in progress or the payout destination changed.", errorSchema),
     422: response("Wallet, balance, or minimum-payout validation failed.", errorSchema)
   }
 });

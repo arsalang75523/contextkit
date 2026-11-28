@@ -135,11 +135,13 @@ marketplaceRoutes.post(
   async (c) => {
     const session = await dashboardAccount(c);
     if (!session) return unauthorized(c);
+    const { amountUsd, expectedDestination } = c.req.valid("json");
     try {
       return c.json({
         payout: await new SellerPayoutService(c.env ?? {}).request(
           session.account.id,
-          c.req.valid("json").amountUsd
+          amountUsd,
+          expectedDestination
         )
       }, 201);
     } catch (error) {
@@ -331,6 +333,7 @@ function payoutError(c: Context<AppBindings>, error: unknown) {
     wallet_challenge_expired: { status: 409, message: "Wallet verification challenge expired. Create and sign a new challenge." },
     wallet_signature_invalid: { status: 422, message: "The wallet signature could not be verified." },
     payout_wallet_required: { status: 422, message: "Verify a Base payout wallet before requesting settlement." },
+    payout_wallet_changed: { status: 409, message: "The payout wallet changed. Refresh and confirm the current receiver." },
     payout_below_minimum: { status: 422, message: "The minimum payout is 1 USDC." },
     payout_insufficient_balance: { status: 422, message: "Requested payout exceeds the available seller balance." },
     payout_request_in_progress: { status: 409, message: "A payout request is already being processed. Retry in one minute." },
